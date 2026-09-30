@@ -14,6 +14,16 @@
       "chars": 11057,
       "cpt": 3.5,
       "est_tokens": 3159
+    },
+    {
+      "ts": "2026-09-30T10:13:16+08:00",
+      "type": "task",
+      "task": "AC-03 Audit",
+      "route": "Fitur baru (vertical slice)",
+      "files": 8,
+      "chars": 43245,
+      "cpt": 3.5,
+      "est_tokens": 12356
     }
   ],
   "measured_sessions": {}

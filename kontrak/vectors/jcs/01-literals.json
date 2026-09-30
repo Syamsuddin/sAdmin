@@ -1,0 +1,10 @@
+{
+  "description": "Literal null/true/false dalam larik",
+  "input": [
+    null,
+    true,
+    false
+  ],
+  "canonical": "[null,true,false]",
+  "sha256": "37257214f22b92121c5ff4d7e29ed2d31b3f1129ee698e96e581ec05cb2e3cf7"
+}

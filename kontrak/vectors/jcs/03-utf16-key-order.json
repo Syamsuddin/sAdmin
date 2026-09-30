@@ -1,0 +1,14 @@
+{
+  "description": "RFC 8785 §3.2.3: urutan per unit kode UTF-16 (emoji sebelum U+FB33, beda dari urutan byte UTF-8)",
+  "input": {
+    "€": "Euro Sign",
+    "\r": "Carriage Return",
+    "דּ": "Hebrew Letter Dalet With Dagesh",
+    "1": "One",
+    "😀": "Emoji: Grinning Face",
+    "": "Control",
+    "ö": "Latin Small Letter O With Diaeresis"
+  },
+  "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}",
+  "sha256": "5e321556d22018a9656991a9e94f77ec175fa193e52a2429d312f8419ec8b08c"
+}
