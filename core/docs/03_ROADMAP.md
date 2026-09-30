@@ -5,7 +5,7 @@ Pemilik urutan fase untuk kedua paket. Tiap tonggak = vertical slice yang bisa d
 ## MVP
 | Tonggak | Demo (lulus bila terlihat) | Fitur (`docs/01_PRD.md`) | Kerja core | Kerja edge |
 |---|---|---|---|---|
-| M1 Kerangka | Agen di VM terhubung, inventaris tampil di console via WireGuard, `sadmin audit verify` hijau | F-01…F-05, F-17 | install.sh, login passkey, inventaris, audit berantai, tema | agen+gateway, enrolment, aksi L0, jangkar audit lokal, harness dasar |
+| M1 Kerangka | Agen di VM terhubung, inventaris tampil di console via WireGuard, `sadmin audit verify` hijau | F-01…F-05, F-17 | install.sh (+ Subresource Integrity aset console, docs/21 — diputuskan pemilik 2026-09-30), login passkey, inventaris, audit berantai, tema | agen+gateway, enrolment, aksi L0, jangkar audit lokal, harness dasar |
 | M2 Aksi tulis & persetujuan | Rencana disetujui passkey; L3 menunggu jeda + notifikasi; `ssh.harden` kembali sendiri tanpa konfirmasi | F-06…F-09 | rencana, persetujuan, runner, kunci sumber daya, pembatalan | ±30 aksi, kebijakan & roster, jeda, pembatalan bertimer, `Notifier` |
 | M3 Kapsul inti | Server kosong → situs Laravel HTTPS → diarsipkan dengan jejak nol | F-10…F-12 | 4 kapsul, formulir, linimasa, peringatan | aksi web/DB/SSL/DNS, backup restic, timer lokal, metrik |
 | M4 Ketahanan | Control plane dihapus lalu dipulihkan dari backup + kit pemulihan; aksi darurat lokal tanpa core | F-13…F-16 | backup/restore core, memori, AI read-only | mode darurat lokal, sangga & sinkron |
