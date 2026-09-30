@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='Audit|Jcs|ForbiddenScan'"
+    "test_satu": "php artisan test --filter='ForbiddenScan|MailTransportGuard'"
   },
   "sesi": [
     {
@@ -23,14 +23,29 @@
       "step": 7,
       "detik": 815,
       "tok_est": 41095
+    },
+    {
+      "mulai": "2026-09-30T19:08:49+08:00",
+      "selesai": null,
+      "step": 4,
+      "detik": 238,
+      "tok_est": 20158
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "60b7da4ac5ed8e44",
+    "sidik": "cb2255868f364d63",
     "dokumen": 27,
-    "disegel": "2026-09-30T09:53:18+08:00"
+    "disegel": "2026-09-30T19:08:49+08:00",
+    "sidik_sebelumnya": "60b7da4ac5ed8e44",
+    "riwayat": [
+      {
+        "dari": "60b7da4ac5ed8e44",
+        "ke": "cb2255868f364d63",
+        "pada": "2026-09-30T19:08:49+08:00"
+      }
+    ]
   },
   "riwayat_fitur": [
     {
@@ -238,13 +253,103 @@
         "Tabel sessions & model Admin (slice login passkey); config/auth.php masih merujuk App\\Models\\User bawaan"
       ],
       "selesai": "2026-09-30T10:13:16+08:00"
+    },
+    {
+      "fitur": "Keputusan 1A+2B larangan eksekusi",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-09-30T19:08:49+08:00",
+      "rencana": [
+        "docs/09_STACK.md",
+        "docs/11_COMMANDS.md",
+        "docs/_MANIFEST.json",
+        "app/Console/Commands/ForbiddenScanCommand.php",
+        "app/Providers/AppServiceProvider.php",
+        "config/mail.php",
+        "tests/Feature/ForbiddenScanTest.php",
+        "tests/Feature/MailTransportGuardTest.php",
+        "../CHANGELOG.md"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Dokumen pemilik (09, 11, manifest)",
+          "mulai": "2026-09-30T19:08:49+08:00",
+          "selesai": "2026-09-30T19:09:03+08:00",
+          "detik": 15,
+          "tok_est": 5459,
+          "muat": [
+            "docs/09_STACK.md",
+            "docs/11_COMMANDS.md",
+            "docs/_MANIFEST.json"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Tes dulu (merah)",
+          "mulai": "2026-09-30T19:09:03+08:00",
+          "selesai": "2026-09-30T19:10:59+08:00",
+          "detik": 116,
+          "tok_est": 2034,
+          "muat": [
+            "tests/Feature/ForbiddenScanTest.php",
+            "tests/Feature/MailTransportGuardTest.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Implementasi scanner + penjaga mail",
+          "mulai": "2026-09-30T19:10:59+08:00",
+          "selesai": "2026-09-30T19:10:59+08:00",
+          "detik": 0,
+          "tok_est": 8746,
+          "muat": [
+            "app/Console/Commands/ForbiddenScanCommand.php",
+            "app/Providers/AppServiceProvider.php",
+            "config/mail.php",
+            "vendor/laravel/framework/src/Illuminate/Mail/MailManager.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-09-30T19:10:59+08:00",
+          "selesai": "2026-09-30T19:12:45+08:00",
+          "detik": 107,
+          "tok_est": 3919,
+          "muat": [
+            "../CHANGELOG.md",
+            "/Users/syams/.claude/skills/coding-vcbd/scripts/gerbang.sh"
+          ]
+        }
+      ],
+      "detik": 238,
+      "tok_est": 20158,
+      "deviasi": [
+        "gerbang S7 WARN karena path git relatif root repo vs rencana relatif core/ — semua berkas sesuai rencana"
+      ],
+      "asumsi": [
+        "Laravel menggabungkan config mail bawaan framework; penjaga MailManager::extend adalah kontrol sebenarnya"
+      ],
+      "dokumen_diperbarui": [
+        "docs/09_STACK.md",
+        "docs/11_COMMANDS.md",
+        "docs/_MANIFEST.json"
+      ],
+      "landmine_tersentuh": [
+        "Scheduler Laravel (Scheduling/Event.php) menjalankan tiap Schedule::command lewat proc_open — disable_functions tak bisa dipasang di php-cli selama scheduler dipakai"
+      ],
+      "ditunda": [
+        "disable_functions FPM + penjadwal systemd timer per tugas: slice install.sh (F-01)"
+      ],
+      "selesai": "2026-09-30T19:12:45+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 815,
-    "tok_est": 41095,
+    "detik": 1053,
+    "tok_est": 61253,
     "tok_terukur": 0,
-    "step": 7,
-    "fitur": 1
+    "step": 11,
+    "fitur": 2
   }
 }

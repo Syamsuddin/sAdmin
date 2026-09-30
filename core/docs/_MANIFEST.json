@@ -152,7 +152,7 @@
         "frontend": "livewire"
       },
       "forbidden": [
-        "exec/shell_exec/proc_open/system/passthru/popen & pustaka SSH di core",
+        "exec/shell_exec/proc_open/system/passthru/popen/mail/sendmail/FFI & pustaka SSH di kode milik proyek core (docs/09)",
         "SPA React/Vue",
         "Redis di MVP",
         "melonggarkan verifikasi tanda tangan",
