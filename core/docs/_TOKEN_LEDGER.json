@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "created": "2026-09-29T15:44:55+00:00",
+    "unit": "token",
+    "cpt_default": 3.5
+  },
+  "est_entries": [
+    {
+      "ts": "2026-09-29T15:44:55+00:00",
+      "type": "genesis",
+      "task": "paket lahir (scaffold)",
+      "route": "-",
+      "files": 29,
+      "chars": 11057,
+      "cpt": 3.5,
+      "est_tokens": 3159
+    }
+  ],
+  "measured_sessions": {}
+}

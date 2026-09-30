@@ -1,0 +1,447 @@
+{
+  "app": {
+    "name": "sAdmin — paket core",
+    "description": "Control plane sAdmin (console, core, brankas) untuk panel administrasi root Ubuntu Server milik instansi: aksi bertipe dari satu katalog, persetujuan passkey yang diverifikasi agen, kapsul dengan pembatalan bersih, audit berjangkar, memori institusi, AI opsional.",
+    "type": "greenfield",
+    "source_design": "sadmin-desain-v0_3_1.md",
+    "license": "MIT (sumber terbuka)"
+  },
+  "confirmed_at": "2026-09-29T00:00:00+08:00",
+  "package": {
+    "name": "core",
+    "monorepo_root": "..",
+    "role_note": "Paket induk produk: pemilik fakta tingkat produk (00-06, 22, 24, 25) untuk KEDUA paket. Paket edge merujuk ke sini.",
+    "sibling": "../edge",
+    "shared_homes": {
+      "protocol": "../kontrak/KONTRAK.md",
+      "action_catalog_and_risk_levels": "../catalog/CATALOG.md",
+      "capsule_recipes": "../capsules/CAPSULES.md",
+      "monorepo_map_crosspkg_commands": "../README.md"
+    }
+  },
+  "requirements": {
+    "goal": "Satu admin bisa menyiapkan server Ubuntu baru, memasang situs Laravel dari GitHub sampai HTTPS dengan satu sentuhan passkey, membatalkannya dengan bersih, dan membuktikan setiap aksi yang pernah terjadi.",
+    "success_metric": "Median site.create <= 5 menit (tanpa tunggu DNS); 0 server setengah jadi di uji injeksi gangguan; 0 aksi L2/L3 tereksekusi tanpa tanda tangan terverifikasi agen.",
+    "features": [
+      {
+        "name": "M1 Kerangka: agen+gateway+core+console di balik WireGuard, inventaris, audit berantai berjangkar, harness VM",
+        "priority": "mvp"
+      },
+      {
+        "name": "M2 Aksi tulis & persetujuan: ~30 aksi check/apply/verify/compensate, runner kapsul, passkey+roster tersemat, kebijakan bertanda tangan, jeda L3, pembatalan bertimer",
+        "priority": "mvp"
+      },
+      {
+        "name": "M3 Kapsul inti: server.onboard, site.create, site.redeploy, site.archive, backup restic, timer rutin, monitoring+peringatan",
+        "priority": "mvp"
+      },
+      {
+        "name": "M4 Ketahanan: kit pemulihan, sadmin.backup/restore, mode darurat lokal, memori dasar, asisten AI read-only opsional",
+        "priority": "mvp"
+      },
+      {
+        "name": "Fase 2-4 (deploy lengkap, email, armada, MCP, brownfield, dst.)",
+        "priority": "later"
+      }
+    ],
+    "out_of_scope": [
+      "Modul email hosting (mail server maupun relay yang dikelola sAdmin) — kirim notifikasi via SMTP eksternal milik instansi TETAP boleh",
+      "Server brownfield dan Apache",
+      "Webhook & GitHub App",
+      "MCP dan AI penyusun rencana eksekusi",
+      "Platform selain ubuntu-24.04",
+      "HA control plane",
+      "Multi-tenant aktif (kolom tenant_id saja)",
+      "Aplikasi seluler",
+      "Registrasi domain"
+    ],
+    "roles": [
+      {
+        "name": "admin",
+        "can": [
+          "semua fungsi console",
+          "setujui L2/L3 via passkey",
+          "kelola memori",
+          "ubah roster/kebijakan (L3, jeda 24 jam)"
+        ],
+        "cannot": [
+          "melompati jeda L3 dari console"
+        ]
+      },
+      {
+        "name": "saksi",
+        "can": [
+          "menerima notifikasi L3 & perubahan roster",
+          "membatalkan selama jeda"
+        ],
+        "cannot": [
+          "login console (MVP: kontak, bukan akun)"
+        ]
+      },
+      {
+        "name": "asisten_ai",
+        "can": [
+          "membaca data L0 sesuai kebijakan aliran data",
+          "menjelaskan rencana & kegagalan"
+        ],
+        "cannot": [
+          "menandatangani",
+          "menjalankan aksi",
+          "menulis memori permanen"
+        ]
+      },
+      {
+        "name": "runner",
+        "can": [
+          "memajukan kapsul yang disetujui"
+        ],
+        "cannot": [
+          "membuat persetujuan"
+        ]
+      }
+    ],
+    "processes": [
+      {
+        "name": "Instalasi sAdmin (Mode Tunggal)",
+        "happy_path": "install.sh -> segel kunci -> 2 passkey + profil WG -> kit pemulihan -> wawancara awal -> sadmin.backup aktif -> onboard server sendiri",
+        "failure": "tanpa TPM & tolak frasa sandi -> berhenti; kit belum dikonfirmasi -> peringatan terus"
+      },
+      {
+        "name": "server.onboard",
+        "happy_path": "IP+akses awal -> pasang agen -> sematkan CA/roster -> hardening bertimer -> cabut akses awal",
+        "failure": "tak dikonfirmasi 5 menit -> rollback SSH/firewall; agen tak terhubung -> kompensasi"
+      },
+      {
+        "name": "site.create",
+        "happy_path": "domain+sumber+branch+server -> deteksi -> rencana -> 1 passkey -> langkah",
+        "failure": "DNS belum mengarah -> waiting 48 jam; build gagal -> kompensasi; ZIP berbahaya -> tolak preflight"
+      },
+      {
+        "name": "Persetujuan L3",
+        "happy_path": "passkey -> agen verifikasi -> jeda -> notifikasi dari agen -> eksekusi",
+        "failure": "dibatalkan saksi/admin -> tidak dieksekusi, tercatat"
+      },
+      {
+        "name": "sadmin.restore",
+        "happy_path": "server kosong + backup offsite + kunci pemulihan -> pulih -> agen tersambung -> rekonsiliasi audit",
+        "failure": "rekonsiliasi tak cocok -> peringatan keamanan"
+      }
+    ],
+    "entities": "lihat docs/07_DATA_MODEL.md (10 kelompok: identitas, armada, situs, eksekusi, audit, rahasia, backup, notifikasi, memori, AI)",
+    "sensitive_data": [
+      "rahasia (password DB, .env, deploy key, token API) hanya di secrets terenkripsi envelope",
+      "parameter aksi bertanda rahasia disamarkan",
+      "passkey: hanya kunci publik",
+      "kunci privat WireGuard tidak disimpan",
+      "profil admin minimal (UU PDP, dapat dihapus)",
+      "audit append-only"
+    ],
+    "stack": {
+      "backend": "PHP 8.3 (paket Ubuntu 24.04) + Laravel rilis stabil terbaru [VERIFIKASI]",
+      "frontend": "Livewire (rilis stabil terbaru yang kompatibel) [VERIFIKASI] + Tabler (Bootstrap 5) [VERIFIKASI]",
+      "db": "PostgreSQL 16 (paket Ubuntu 24.04); pgvector pasca-MVP",
+      "versions": {
+        "php": "8.3",
+        "postgresql": "16",
+        "laravel": "[VERIFIKASI] rilis stabil terbaru saat mulai",
+        "livewire": "[VERIFIKASI]",
+        "tabler": "[VERIFIKASI] 1.x"
+      },
+      "framework": {
+        "backend": "laravel",
+        "frontend": "livewire"
+      },
+      "forbidden": [
+        "exec/shell_exec/proc_open/system/passthru/popen & pustaka SSH di core",
+        "SPA React/Vue",
+        "Redis di MVP",
+        "melonggarkan verifikasi tanda tangan",
+        "dependency tanpa alasan tertulis"
+      ]
+    },
+    "ui": {
+      "enabled": true,
+      "anchor": "Tabler (Bootstrap 5, MIT) + token docs/26; light & dark"
+    },
+    "split": {
+      "enabled": false,
+      "note": "Mode split VCBD terkunci ke openapi.yaml BE/FE; protokol pesan WebSocket core<->agen tidak cocok. Dipakai dua paket mode tunggal + rumah bersama ../kontrak, ../catalog, ../capsules."
+    },
+    "architecture": {
+      "pattern": "Monolit modular Laravel berlapis; eksekusi hanya via modul Dispatch -> gateway -> agen",
+      "integrations": [
+        "Cloudflare DNS API (opsional per domain)",
+        "GitHub via deploy key",
+        "Penyimpanan offsite S3 object lock (restic + jangkar audit)",
+        "Telegram bot kirim-saja + SMTP eksternal instansi (notifikasi)",
+        "Penyedia model AI (opsional)"
+      ]
+    },
+    "environment": {
+      "os": "Ubuntu 24.04 LTS",
+      "services": [
+        "nginx",
+        "php8.3-fpm",
+        "postgresql-16",
+        "wireguard",
+        "sadmin-runner",
+        "sadmin-reverb",
+        "sadmin-gateway",
+        "sadmin-agent"
+      ],
+      "commands": "lihat docs/11_COMMANDS.md"
+    },
+    "testing": "lihat docs/13_TESTING.md",
+    "security": "lihat docs/21_SECURITY_RULES.md",
+    "acceptance": "lihat docs/23_ACCEPTANCE_CRITERIA.md",
+    "definition_of_done": "lihat docs/24_DEFINITION_OF_DONE.md",
+    "change_policy": "lihat docs/22_CHANGE_POLICY.md"
+  },
+  "decisions": [
+    {
+      "id": "D-01",
+      "topic": "Model distribusi",
+      "value": "Sumber terbuka, lisensi MIT",
+      "by": "pemilik produk"
+    },
+    {
+      "id": "D-02",
+      "topic": "Mode tema console",
+      "value": "Light & dark; default mengikuti OS, override per admin",
+      "by": "pemilik produk"
+    },
+    {
+      "id": "D-03",
+      "topic": "Bahasa agen & gateway",
+      "value": "Go (biner statis)",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-04",
+      "topic": "Pemetaan VCBD",
+      "value": "Dua paket mode tunggal core & edge + rumah bersama di root",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-05",
+      "topic": "Kanal notifikasi",
+      "value": "Antarmuka Notifier di agen: Telegram + SMTP eksternal instansi; layanan self-hosted (mis. ntfy) dievaluasi Fase 4",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-06",
+      "topic": "Port gateway",
+      "value": "8443/tcp publik, hanya di host sAdmin; 443 tetap milik Nginx situs",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-07",
+      "topic": "Pertanyaan kapsul",
+      "value": "Formulir (MVP); percakapan pasca-MVP",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-08",
+      "topic": "Jangkar UI",
+      "value": "Tabler",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-09",
+      "topic": "Gateway<->core",
+      "value": "HTTP di atas Unix domain socket, dua arah; gateway tanpa kredensial DB",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-10",
+      "topic": "Antrean & cache core",
+      "value": "Driver database PostgreSQL; tanpa Redis di MVP",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-11",
+      "topic": "Hostname console",
+      "value": "Subdomain instansi ber-A-record IP wg0 + sertifikat LE via DNS-01; RP ID WebAuthn = hostname ini (tak boleh IP)",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-12",
+      "topic": "Pasca-MVP: deploy produksi",
+      "value": "Selalu L2 (passkey); webhook hanya boleh auto-deploy staging (L1)",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-13",
+      "topic": "Pasca-MVP: memori admin kedua",
+      "value": "Lingkup server/situs langsung berlaku; lingkup institusi butuh persetujuan admin lain",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-14",
+      "topic": "Pasca-MVP: server email",
+      "value": "Postfix+Dovecot+Rspamd; Stalwart dievaluasi ulang Fase 3",
+      "by": "ditutup Claude atas delegasi"
+    },
+    {
+      "id": "D-15",
+      "topic": "Konfirmasi pembatalan bertimer",
+      "value": "sadmin-agent confirm <kode> dari sesi SSH BARU",
+      "by": "ditutup Claude atas delegasi"
+    }
+  ],
+  "canonical_owners": {
+    "product_value": "00/01",
+    "features": "01",
+    "scope": "02",
+    "roadmap": "03",
+    "domain_terms": "04",
+    "roles": "05",
+    "business_process": "06",
+    "schema": "07",
+    "architecture": "08",
+    "stack": "09",
+    "dev_env": "10",
+    "commands": "11",
+    "project_structure": "12",
+    "testing": "13",
+    "error_handling": "14",
+    "observability": "15",
+    "landmines": "16",
+    "repair_rules": "18",
+    "guardrails": "20",
+    "security": "21",
+    "change_policy": "22",
+    "definition_of_done": "24",
+    "ui": "26"
+  },
+  "referenced_by": {
+    "01": [
+      "02",
+      "03",
+      "23",
+      "../edge"
+    ],
+    "02": [
+      "03",
+      "17",
+      "22",
+      "23",
+      "CLAUDE",
+      "../edge"
+    ],
+    "03": [
+      "../edge"
+    ],
+    "04": [
+      "06",
+      "07",
+      "../edge"
+    ],
+    "05": [
+      "06",
+      "21",
+      "23",
+      "../edge"
+    ],
+    "06": [
+      "23"
+    ],
+    "07": [
+      "06",
+      "16",
+      "18",
+      "21",
+      "23"
+    ],
+    "08": [
+      "CLAUDE"
+    ],
+    "09": [
+      "08",
+      "10",
+      "CLAUDE"
+    ],
+    "10": [],
+    "11": [
+      "10",
+      "13",
+      "16",
+      "23",
+      "25",
+      "CLAUDE"
+    ],
+    "12": [
+      "26",
+      "CLAUDE"
+    ],
+    "13": [
+      "23",
+      "24"
+    ],
+    "14": [
+      "16",
+      "26"
+    ],
+    "15": [
+      "16"
+    ],
+    "16": [
+      "18"
+    ],
+    "18": [
+      "17",
+      "../edge"
+    ],
+    "20": [
+      "24",
+      "CLAUDE"
+    ],
+    "21": [
+      "06",
+      "20",
+      "22",
+      "23"
+    ],
+    "22": [
+      "25",
+      "CLAUDE",
+      "../edge"
+    ],
+    "24": [
+      "23",
+      "25",
+      "../edge"
+    ],
+    "25": [
+      "../edge"
+    ],
+    "26": [
+      "23",
+      "CLAUDE"
+    ]
+  },
+  "collapsed": [
+    "17",
+    "19"
+  ],
+  "landmines": [
+    "RP ID WebAuthn tidak boleh alamat IP dan tak bisa diganti tanpa mendaftar ulang semua passkey (perubahan roster L3)",
+    "Kanonisasi JCS PHP vs Go harus identik byte-per-byte; angka pecahan & escape unicode paling rawan",
+    "Mode Tunggal: host sAdmin juga server terkelola — 443 milik Nginx situs, gateway di 8443",
+    "metric_samples terpartisi harian; hapus data = DROP partisi, bukan DELETE"
+  ],
+  "assumptions": [
+    "Saksi di MVP adalah kontak notifikasi, bukan akun console",
+    "Server terkelola punya egress internet (paket, GitHub, Cloudflare, offsite, gateway 8443)",
+    "Tersedia penyimpanan offsite kompatibel S3 dengan object lock",
+    "DNS yang tak dikelola via API -> instruksi manual + status waiting",
+    "Mode Tunggal, maksimal tiga server terkelola",
+    "Jeda L3 default 30 menit (15-120); rencana berlaku 24 jam; checkpoint audit tiap 15 menit atau 100 entri",
+    "Pemegang hak cipta di LICENSE: Syamsuddin dan kontributor sAdmin"
+  ],
+  "open_questions": [
+    "[VERIFIKASI] versi Laravel, Livewire, Tabler, laragear/webauthn, opis/json-schema saat proyek dimulai",
+    "[VERIFIKASI] rujukan pasal UU 27/2022, Perpres 95/2018, pedoman BSSN — saat modul laporan kepatuhan (Fase 4)",
+    "[VERIFIKASI] sumber paket PHP multi-versi di Ubuntu 24.04"
+  ]
+}

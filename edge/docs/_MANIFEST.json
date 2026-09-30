@@ -1,0 +1,76 @@
+{
+  "app": {
+    "name": "sAdmin — paket edge",
+    "description": "Agen (di tiap server terkelola) dan gateway (publik, tanpa rahasia) sAdmin dalam Go: satu-satunya pengeksekusi aksi katalog, pemverifikasi tanda tangan passkey terhadap roster tersemat, penjaga jeda L3, audit lokal berjangkar, mode darurat lokal.",
+    "type": "greenfield",
+    "source_design": "sadmin-desain-v0_3_1.md",
+    "license": "MIT (sumber terbuka)"
+  },
+  "confirmed_at": "2026-09-29T00:00:00+08:00",
+  "package": {
+    "name": "edge",
+    "monorepo_root": "..",
+    "role_note": "Paket eksekusi. Fakta tingkat produk (00-05, 22, 24, 25) dimiliki ../core/docs; dokumen itu di sini adalah stub penunjuk.",
+    "sibling": "../core",
+    "shared_homes": {
+      "protocol": "../kontrak/KONTRAK.md",
+      "action_catalog_and_risk_levels": "../catalog/CATALOG.md",
+      "capsule_recipes": "../capsules/CAPSULES.md",
+      "monorepo_map_crosspkg_commands": "../README.md"
+    }
+  },
+  "requirements": {
+    "goal": "lihat ../core/docs/00_EXECUTIVE_SUMMARY.md",
+    "features": "lihat ../core/docs/01_PRD.md",
+    "out_of_scope": "lihat ../core/docs/02_SCOPE.md (termasuk batas paket edge)",
+    "roles": "lihat ../core/docs/05_USER_ROLE.md; kepercayaan sisi agen: docs/21_SECURITY_RULES.md",
+    "processes": [
+      {"name": "Pipa verifikasi amplop", "happy_path": "terima -> skema -> kebijakan -> tanda tangan layanan -> passkey (L2/L3) -> nonce/kedaluwarsa -> plan_hash/step -> idempotensi -> eksekusi", "failure": "gagal satu pemeriksaan -> tolak, audit lokal, Result rejected"},
+      {"name": "Jeda L3", "happy_path": "verifikasi -> simpan tertunda -> notifikasi dari agen -> habis jeda -> eksekusi", "failure": "dibatalkan -> tidak dieksekusi"},
+      {"name": "Pembatalan bertimer", "happy_path": "apply -> kode konfirmasi -> sadmin-agent confirm dari sesi SSH baru", "failure": "habis 5 menit -> compensate otomatis"},
+      {"name": "Terputus dari gateway", "happy_path": "sangga kejadian & audit -> sambung ulang -> sinkron berurutan", "failure": "> batas -> notifikasi darurat"},
+      {"name": "Mode darurat lokal", "happy_path": "root: sadmin-agent local run -> eksekusi -> audit emergency_local -> sinkron", "failure": "aksi tak dikenal kebijakan -> tolak"}
+    ],
+    "entities": "state lokal agen: lihat docs/07_DATA_MODEL.md",
+    "sensitive_data": ["kunci privat sertifikat mTLS agen (0600 root)", "token bot Telegram & kredensial SMTP (kirim-saja)", "parameter rahasia di amplop tidak ditulis ke log/audit lokal"],
+    "stack": {
+      "backend": "Go rilis stabil terbaru [VERIFIKASI], biner statis CGO_ENABLED=0",
+      "frontend": "tidak ada",
+      "db": "bbolt (berkas lokal agen) + JSONL append-only untuk audit",
+      "versions": {"go": "[VERIFIKASI] rilis stabil terbaru", "target_platform": "ubuntu-24.04"},
+      "framework": {"backend": "none-stdlib"},
+      "forbidden": ["cgo", "aksi 'jalankan perintah bebas'", "shell -c dengan interpolasi parameter", "profil platform selain ubuntu-24.04 di MVP", "abstraksi spekulatif multi-distro", "melonggarkan verifikasi tanda tangan"]
+    },
+    "ui": {"enabled": false},
+    "split": {"enabled": false, "note": "Dua paket mode tunggal; kontrak bersama di ../kontrak"},
+    "architecture": {"pattern": "Dua biner Go (cmd/agent, cmd/gateway) + paket internal; satu paket per aksi; adaptor platform", "integrations": ["Telegram Bot API (kirim)", "SMTP eksternal instansi", "Cloudflare API (aksi dns.*)", "GitHub SSH (source.fetch_git)", "offsite S3 (restic, jangkar audit)"]},
+    "environment": {"os": "Ubuntu 24.04 LTS", "commands": "lihat docs/11_COMMANDS.md"},
+    "testing": "lihat docs/13_TESTING.md",
+    "security": "lihat docs/21_SECURITY_RULES.md",
+    "acceptance": "lihat docs/23_ACCEPTANCE_CRITERIA.md",
+    "definition_of_done": "lihat ../core/docs/24_DEFINITION_OF_DONE.md",
+    "change_policy": "lihat ../core/docs/22_CHANGE_POLICY.md"
+  },
+  "decisions": "lihat ../core/docs/_MANIFEST.json field decisions (satu rumah)",
+  "canonical_owners": {
+    "business_process": "06", "schema": "07",
+    "architecture": "08", "stack": "09", "dev_env": "10", "commands": "11",
+    "project_structure": "12", "testing": "13", "error_handling": "14",
+    "observability": "15", "landmines": "16", "guardrails": "20", "security": "21"
+  },
+  "referenced_by": {
+    "06": ["23"], "07": ["06","16","21","23"], "08": ["CLAUDE"], "09": ["08","10","CLAUDE"],
+    "11": ["10","13","16","23","CLAUDE"], "12": ["CLAUDE"], "13": ["23"], "14": ["16"], "15": ["16"],
+    "20": ["CLAUDE"], "21": ["06","20","23"]
+  },
+  "collapsed": ["00","01","02","03","04","05","17","18","19","22","24","25"],
+  "landmines": [
+    "Mengulang aksi yang hasilnya tidak diketahui = bahaya; selalu StatusQuery berdasarkan idempotency_key",
+    "chattr +a pada audit lokal membuat logrotate biasa gagal; rotasi via buka berkas baru, bukan truncate",
+    "Pembatalan bertimer harus tetap berjalan bila agen restart (timer dipulihkan dari bbolt saat start)",
+    "Perubahan firewall bisa memutus koneksi agen sendiri — koneksi keluar ke gateway 8443 wajib selalu diizinkan di aturan dasar",
+    "Kanonisasi JCS Go vs PHP harus identik; uji dengan vektor bersama ../kontrak/vectors/"
+  ],
+  "assumptions": "lihat ../core/docs/_MANIFEST.json",
+  "open_questions": ["[VERIFIKASI] versi Go dan modul: go-webauthn/webauthn, go.etcd.io/bbolt, coder/websocket, santhosh-tekuri/jsonschema, gowebpki/jcs, go.yaml.in/yaml"]
+}
