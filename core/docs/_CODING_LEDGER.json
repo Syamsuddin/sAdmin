@@ -41,9 +41,9 @@
     {
       "mulai": "2026-10-01T00:01:45+08:00",
       "selesai": null,
-      "step": 5,
-      "detik": 196,
-      "tok_est": 9858
+      "step": 6,
+      "detik": 197,
+      "tok_est": 17335
     }
   ],
   "step_berjalan": null,
@@ -729,110 +729,162 @@
         "Rute storage/{path} (PUT unggah) dari disk local serve=true"
       ],
       "selesai": "2026-09-30T23:09:28+08:00"
+    },
+    {
+      "fitur": "F-17 Tema console",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-10-01T00:05:49+08:00",
+      "rencana": [
+        "app/Models/Admin.php",
+        "app/Domain/Identity/Data/ThemePreference.php",
+        "app/Domain/Identity/Actions/UpdateThemePreference.php",
+        "app/Http/Controllers/Settings/ThemeController.php",
+        "routes/web.php",
+        "lang/id/errors.php",
+        "resources/views/components/ui/theme-switch.blade.php",
+        "resources/views/components/ui/toast.blade.php",
+        "resources/views/layouts/app.blade.php",
+        "resources/views/layouts/guest.blade.php",
+        "resources/icons/tabler/sun.svg",
+        "resources/icons/tabler/moon.svg",
+        "resources/icons/tabler/device-desktop.svg",
+        "tests/Feature/Identity/ThemePreferenceTest.php"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Model/akses data",
+          "mulai": "2026-10-01T00:05:59+08:00",
+          "selesai": "2026-10-01T00:06:19+08:00",
+          "detik": 20,
+          "tok_est": 937,
+          "muat": [
+            "app/Models/Admin.php",
+            "app/Domain/Identity/Data/ThemePreference.php",
+            "app/Domain/Identity/Data/PasskeyRejected.php",
+            "app/Domain/Audit/Data/AuditOutcome.php"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Service/logika domain",
+          "mulai": "2026-10-01T00:06:24+08:00",
+          "selesai": "2026-10-01T00:06:47+08:00",
+          "detik": 24,
+          "tok_est": 1901,
+          "muat": [
+            "app/Domain/Identity/Actions/UpdateThemePreference.php",
+            "app/Domain/Audit/Actions/AppendAuditEntry.php",
+            "app/Domain/Identity/Actions/InviteAdmin.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Endpoint/controller/rute",
+          "mulai": "2026-10-01T00:07:55+08:00",
+          "selesai": "2026-10-01T00:08:19+08:00",
+          "detik": 25,
+          "tok_est": 1653,
+          "muat": [
+            "app/Http/Controllers/Settings/ThemeController.php",
+            "routes/web.php",
+            "lang/id/errors.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "UI + empat state",
+          "mulai": "2026-10-01T00:08:51+08:00",
+          "selesai": "2026-10-01T00:09:22+08:00",
+          "detik": 32,
+          "tok_est": 1689,
+          "muat": [
+            "resources/views/components/ui/theme-switch.blade.php",
+            "resources/views/components/ui/toast.blade.php",
+            "resources/views/layouts/app.blade.php",
+            "resources/views/layouts/guest.blade.php",
+            "resources/icons/tabler/sun.svg",
+            "resources/icons/tabler/moon.svg",
+            "resources/icons/tabler/device-desktop.svg"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "Tes",
+          "mulai": "2026-10-01T00:09:44+08:00",
+          "selesai": "2026-10-01T00:11:19+08:00",
+          "detik": 95,
+          "tok_est": 3678,
+          "muat": [
+            "tests/Feature/Identity/ThemePreferenceTest.php",
+            "tests/TestCase.php",
+            "tests/Support/InteractsWithPasskeys.php",
+            "app/Domain/Audit/Data/ChainVerification.php"
+          ]
+        },
+        {
+          "no": 6,
+          "nama": "Review adversarial + tambalan + gerbang",
+          "mulai": "2026-10-01T00:38:12+08:00",
+          "selesai": "2026-10-01T00:38:12+08:00",
+          "detik": 1,
+          "tok_est": 7477,
+          "muat": [
+            "resources/css/app.css",
+            "tests/Feature/Identity/ThemePreferenceTest.php",
+            "docs/14_ERROR_HANDLING.md",
+            "tests/Feature/Audit/AppendAuditEntryTest.php"
+          ]
+        }
+      ],
+      "detik": 197,
+      "tok_est": 17335,
+      "deviasi": [
+        "resources/css/app.css di luar rencana — tambal temuan review R-2 (toast galat 375 px), nilai hanya dari token",
+        "../CHANGELOG.md di luar rencana — entri [Belum dirilis] sesuai konvensi docs/22",
+        "Nama admin di topbar disembunyikan < 576 px (d-none d-sm-inline) agar topbar muat di 375 px",
+        "Admin.php: anotasi @property ThemePreference $theme karena Larastan proyek ini tak membaca cast Eloquent"
+      ],
+      "warn_dilewati": [
+        "S1: kriteria F-17 ada di blok AC-01 bersama F-01/F-03; dibuktikan ThemePreferenceTest 16 lulus",
+        "S6: diperiksa manual + review adversarial subagen (0 kritis, 0 tinggi; SEDANG/RENDAH slice ditambal)",
+        "S7: path berawalan core/ vs rencana relatif; tambahan nyata hanya app.css & CHANGELOG (lihat deviasi)",
+        "S8 (run 1): theme-switch bukan komponen berdata — sukses=toast, gagal=toast galat"
+      ],
+      "asumsi": [
+        "Tafsiran 'console + tema' = F-17 Console light/dark; sidebar, pemilih server, lonceng peringatan bukan bagian F-17",
+        "Halaman Pengaturan > Tema terpisah tidak dibuat; pengalih di topbar = kontrol tunggal",
+        "Penolakan validasi tema tanpa ID korelasi: docs/14 kelas Validasi input = pesan per-field, tanpa log",
+        "Ganti tema = perubahan state -> audit admin.theme_change {from,to}; memilih ulang tema sama = no-op tanpa audit",
+        "back() dipertahankan (CSRF + SameSite=Strict); previousPath() membuang query string"
+      ],
+      "dokumen_diperbarui": [
+        "../CHANGELOG.md ([Belum dirilis])"
+      ],
+      "landmine_tersentuh": [
+        "Larastan tak menerapkan cast Eloquent di proyek ini (last_login_at terbaca string",
+        "null) — properti ber-cast yang dibaca bertipe perlu @property"
+      ],
+      "ditunda": [
+        "P-1 pra-ada: POST non-Livewire (logout, tema) setelah idle 30 mnt -> halaman 419 'Page Expired' bawaan berbahasa Inggris; butuh errors/419 berformat docs/14",
+        "P-2 pra-ada: --tblr-secondary belum dipetakan ke token (tombol sekunder berwarna abu Tabler)",
+        "P-3 pra-ada: toast tak bisa ditutup dan tak hilang sendiri",
+        "Pra-ada F-03: tabel passkey meluap ~3 px di 375 px (belum table-responsive)",
+        "Sidebar kiri console: lebar 'sidebar ringkas' 768-1199 tak ada di tabel token docs/26 — perlu keputusan pemilik",
+        "R-5: ganti tema memuat ulang halaman penuh — tinjau sebelum halaman formulir pertama (isian belum tersimpan bisa hilang)",
+        "R-8: throttle rute tema (opsional)",
+        "Uji browser headless di CI untuk skrip mode system",
+        "Merge ke main & tag v0.1.0-alpha.5: keputusan pemilik produk"
+      ],
+      "selesai": "2026-10-01T00:38:12+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 3266,
-    "tok_est": 149112,
+    "detik": 3267,
+    "tok_est": 156589,
     "tok_terukur": 0,
-    "step": 30,
-    "fitur": 5
-  },
-  "fitur_aktif": {
-    "fitur": "F-17 Tema console",
-    "rute": "Fitur baru (vertical slice)",
-    "mulai": "2026-10-01T00:05:49+08:00",
-    "rencana": [
-      "app/Models/Admin.php",
-      "app/Domain/Identity/Data/ThemePreference.php",
-      "app/Domain/Identity/Actions/UpdateThemePreference.php",
-      "app/Http/Controllers/Settings/ThemeController.php",
-      "routes/web.php",
-      "lang/id/errors.php",
-      "resources/views/components/ui/theme-switch.blade.php",
-      "resources/views/components/ui/toast.blade.php",
-      "resources/views/layouts/app.blade.php",
-      "resources/views/layouts/guest.blade.php",
-      "resources/icons/tabler/sun.svg",
-      "resources/icons/tabler/moon.svg",
-      "resources/icons/tabler/device-desktop.svg",
-      "tests/Feature/Identity/ThemePreferenceTest.php"
-    ],
-    "total_step": 0,
-    "step": [
-      {
-        "no": 1,
-        "nama": "Model/akses data",
-        "mulai": "2026-10-01T00:05:59+08:00",
-        "selesai": "2026-10-01T00:06:19+08:00",
-        "detik": 20,
-        "tok_est": 937,
-        "muat": [
-          "app/Models/Admin.php",
-          "app/Domain/Identity/Data/ThemePreference.php",
-          "app/Domain/Identity/Data/PasskeyRejected.php",
-          "app/Domain/Audit/Data/AuditOutcome.php"
-        ]
-      },
-      {
-        "no": 2,
-        "nama": "Service/logika domain",
-        "mulai": "2026-10-01T00:06:24+08:00",
-        "selesai": "2026-10-01T00:06:47+08:00",
-        "detik": 24,
-        "tok_est": 1901,
-        "muat": [
-          "app/Domain/Identity/Actions/UpdateThemePreference.php",
-          "app/Domain/Audit/Actions/AppendAuditEntry.php",
-          "app/Domain/Identity/Actions/InviteAdmin.php"
-        ]
-      },
-      {
-        "no": 3,
-        "nama": "Endpoint/controller/rute",
-        "mulai": "2026-10-01T00:07:55+08:00",
-        "selesai": "2026-10-01T00:08:19+08:00",
-        "detik": 25,
-        "tok_est": 1653,
-        "muat": [
-          "app/Http/Controllers/Settings/ThemeController.php",
-          "routes/web.php",
-          "lang/id/errors.php"
-        ]
-      },
-      {
-        "no": 4,
-        "nama": "UI + empat state",
-        "mulai": "2026-10-01T00:08:51+08:00",
-        "selesai": "2026-10-01T00:09:22+08:00",
-        "detik": 32,
-        "tok_est": 1689,
-        "muat": [
-          "resources/views/components/ui/theme-switch.blade.php",
-          "resources/views/components/ui/toast.blade.php",
-          "resources/views/layouts/app.blade.php",
-          "resources/views/layouts/guest.blade.php",
-          "resources/icons/tabler/sun.svg",
-          "resources/icons/tabler/moon.svg",
-          "resources/icons/tabler/device-desktop.svg"
-        ]
-      },
-      {
-        "no": 5,
-        "nama": "Tes",
-        "mulai": "2026-10-01T00:09:44+08:00",
-        "selesai": "2026-10-01T00:11:19+08:00",
-        "detik": 95,
-        "tok_est": 3678,
-        "muat": [
-          "tests/Feature/Identity/ThemePreferenceTest.php",
-          "tests/TestCase.php",
-          "tests/Support/InteractsWithPasskeys.php",
-          "app/Domain/Audit/Data/ChainVerification.php"
-        ]
-      }
-    ],
-    "detik": 196,
-    "tok_est": 9858
+    "step": 31,
+    "fitur": 6
   }
 }

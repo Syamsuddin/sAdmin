@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Identity;
 
+use App\Domain\Audit\Actions\AppendAuditEntry;
 use App\Domain\Audit\Services\AuditChainVerifier;
 use App\Domain\Identity\Actions\UpdateThemePreference;
 use App\Domain\Identity\Data\ThemePreference;
 use App\Http\Middleware\EnforceAbsoluteSessionLifetime;
 use App\Models\Admin;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -37,8 +39,23 @@ class ThemePreferenceTest extends TestCase
         $page = $this->page($this->admin);
 
         $this->assertNull($this->renderedTheme($page));
-        $page->assertSee(self::FOLLOWS_OS, false);
+        $this->assertFollowsOs($page);
         $this->assertSame('system', $this->pressedOption($page));
+        $this->assertSame(ThemePreference::System, (new Admin)->theme);
+    }
+
+    /** Tanpa token CSRF setiap klik berakhir 419 di produksi; tes Laravel mematikan pemeriksaannya, jadi markup dijaga di sini. */
+    public function test_switch_is_a_csrf_protected_labelled_form(): void
+    {
+        $html = (string) $this->page($this->admin)->getContent();
+
+        $this->assertSame(1, preg_match('#<form method="POST" action="[^"]*/pengaturan/tema">(.*?)</form>#s', $html, $form));
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="_token" value="[^"]+"/', $form[1]);
+        $this->assertStringContainsString('<input type="hidden" name="_method" value="PUT">', $form[1]);
+        $this->assertStringContainsString('role="group" aria-label="Mode tema"', $form[1]);
+        foreach (['Ikuti sistem', 'Terang', 'Gelap'] as $label) {
+            $this->assertStringContainsString('<span class="visually-hidden">'.$label.'</span>', $form[1]);
+        }
     }
 
     public function test_dark_choice_survives_reload_with_server_rendered_attribute(): void
@@ -69,7 +86,7 @@ class ThemePreferenceTest extends TestCase
 
         $page = $this->page($this->admin);
         $this->assertNull($this->renderedTheme($page));
-        $page->assertSee(self::FOLLOWS_OS, false);
+        $this->assertFollowsOs($page);
         $this->assertSame('system', $this->pressedOption($page));
     }
 
@@ -128,6 +145,30 @@ class ThemePreferenceTest extends TestCase
         $this->assertSame(ThemePreference::Light, $staleCopy->theme);
     }
 
+    /** Tema dan entri auditnya jadi atau batal bersama (docs/21): rantai audit yang terkunci menggagalkan keduanya. */
+    public function test_theme_is_not_saved_when_its_audit_entry_cannot_be_written(): void
+    {
+        config(['database.connections.penulis_lain' => config('database.connections.pgsql')]);
+        $other = DB::connection('penulis_lain');
+        $other->beginTransaction();
+        $other->select('SELECT pg_advisory_xact_lock(?)', [AppendAuditEntry::CHAIN_LOCK_KEY]);
+        DB::statement("SET lock_timeout = '300ms'");
+
+        try {
+            app(UpdateThemePreference::class)->handle($this->admin, ThemePreference::Dark);
+            $this->fail('Perubahan tema seharusnya gagal selama rantai audit dikunci penulis lain.');
+        } catch (QueryException $e) {
+            $this->assertSame('55P03', $e->getCode());
+        } finally {
+            $other->rollBack();
+            $other->disconnect();
+        }
+
+        $this->assertSame('system', DB::table('admins')->where('id', $this->admin->id)->value('theme'));
+        $this->assertSame(ThemePreference::System, $this->admin->theme);
+        $this->assertSame(0, DB::table('audit_entries')->count());
+    }
+
     public function test_unknown_theme_is_rejected_without_change_or_audit(): void
     {
         foreach (['sepia', '', 'DARK'] as $value) {
@@ -169,7 +210,7 @@ class ThemePreferenceTest extends TestCase
         $page = $this->get('/masuk')->assertOk();
 
         $this->assertNull($this->renderedTheme($page));
-        $page->assertSee(self::FOLLOWS_OS, false);
+        $this->assertFollowsOs($page);
     }
 
     /** @return TestResponse<Response> */
@@ -179,6 +220,19 @@ class ThemePreferenceTest extends TestCase
             ->withSession([EnforceAbsoluteSessionLifetime::STARTED_AT => time()])
             ->get(self::PAGE)
             ->assertOk();
+    }
+
+    /**
+     * Skrip `system` (kedua layout): terapkan mode OS saat dimuat dan ikuti bila OS berganti mode.
+     *
+     * @param  TestResponse<Response>  $page
+     */
+    private function assertFollowsOs(TestResponse $page): void
+    {
+        $page->assertSee("window.matchMedia('(prefers-color-scheme: dark)')", false)
+            ->assertSee("setAttribute('data-bs-theme', media.matches ? 'dark' : 'light')", false)
+            ->assertSee('apply();', false)
+            ->assertSee("media.addEventListener('change', apply);", false);
     }
 
     /**
@@ -227,6 +281,9 @@ class ThemePreferenceTest extends TestCase
         $this->assertCount(3, $buttons[0]);
         $pressed = array_values(array_filter($buttons[0], fn (string $button): bool => str_contains($button, 'aria-pressed="true"')));
         $this->assertCount(1, $pressed);
+        // Pilihan aktif bergaya primer (warna token), yang lain tidak.
+        $this->assertCount(1, array_filter($buttons[0], fn (string $button): bool => str_contains($button, 'btn-primary')));
+        $this->assertStringContainsString('btn-primary', $pressed[0]);
         $this->assertSame(1, preg_match('/\bvalue="([^"]*)"/', $pressed[0], $value));
 
         return $value[1];
