@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='ForbiddenScan|MailTransportGuard'"
+    "test_satu": "php artisan test --filter='Identity|Passkey|UiTokenScan|Login'"
   },
   "sesi": [
     {
@@ -30,22 +30,34 @@
       "step": 7,
       "detik": 533,
       "tok_est": 38621
+    },
+    {
+      "mulai": "2026-09-30T22:38:17+08:00",
+      "selesai": null,
+      "step": 8,
+      "detik": 1480,
+      "tok_est": 49876
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "cb2255868f364d63",
+    "sidik": "4dcc55515f1921b3",
     "dokumen": 27,
-    "disegel": "2026-09-30T19:08:49+08:00",
-    "sidik_sebelumnya": "60b7da4ac5ed8e44",
+    "disegel": "2026-09-30T22:38:17+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
         "ke": "cb2255868f364d63",
         "pada": "2026-09-30T19:08:49+08:00"
+      },
+      {
+        "dari": "cb2255868f364d63",
+        "ke": "4dcc55515f1921b3",
+        "pada": "2026-09-30T22:38:17+08:00"
       }
-    ]
+    ],
+    "sidik_sebelumnya": "cb2255868f364d63"
   },
   "riwayat_fitur": [
     {
@@ -494,13 +506,224 @@
         "edge: verifikasi gowebpki/jcs terhadap vektor tolak (edge/docs/09 [VERIFIKASI])"
       ],
       "selesai": "2026-09-30T19:18:06+08:00"
+    },
+    {
+      "fitur": "F-03 Login passkey",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-09-30T22:44:51+08:00",
+      "rencana": [
+        "docs/adr/0002-pustaka-webauthn.md",
+        "docs/09_STACK.md",
+        "docs/10_DEV_ENV.md",
+        "docs/11_COMMANDS.md",
+        "composer.json",
+        "composer.lock",
+        "package.json",
+        "package-lock.json",
+        "vite.config.js",
+        ".env.example",
+        "phpunit.xml",
+        "config/auth.php",
+        "config/session.php",
+        "config/sadmin.php",
+        "bootstrap/app.php",
+        "routes/web.php",
+        "database/migrations",
+        "database/factories",
+        "app/Models",
+        "app/Infrastructure/WebAuthn",
+        "app/Domain/Identity",
+        "app/Console/Commands",
+        "app/Http/Middleware",
+        "app/Providers/AppServiceProvider.php",
+        "app/Livewire",
+        "resources/views",
+        "resources/css",
+        "resources/js",
+        "lang/id",
+        "tests/Support",
+        "tests/Feature",
+        "tests/Unit",
+        "../CHANGELOG.md"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Dokumen pemilik: ADR 0002 + 09/10/11",
+          "mulai": "2026-09-30T22:44:51+08:00",
+          "selesai": "2026-09-30T22:47:17+08:00",
+          "detik": 147,
+          "tok_est": 10202,
+          "muat": [
+            "docs/05_USER_ROLE.md",
+            "docs/26_UI_CONVENTIONS.md",
+            "../kontrak/KONTRAK.md",
+            "docs/adr/0002-pustaka-webauthn.md",
+            "docs/09_STACK.md",
+            "docs/10_DEV_ENV.md",
+            "docs/11_COMMANDS.md",
+            "docs/12_PROJECT_STRUCTURE.md",
+            "docs/08_ARCHITECTURE.md"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Skema/migrasi",
+          "mulai": "2026-09-30T22:47:17+08:00",
+          "selesai": "2026-09-30T22:48:03+08:00",
+          "detik": 46,
+          "tok_est": 1314,
+          "muat": [
+            "database/migrations/2026_09_30_000300_create_institutions_table.php",
+            "database/migrations/2026_09_30_000400_create_admins_table.php",
+            "database/migrations/2026_09_30_000500_create_authenticators_table.php",
+            "database/migrations/2026_09_30_000600_create_sessions_table.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Model/akses data",
+          "mulai": "2026-09-30T22:48:03+08:00",
+          "selesai": "2026-09-30T22:49:03+08:00",
+          "detik": 60,
+          "tok_est": 1693,
+          "muat": [
+            "app/Models/Casts/Bytea.php",
+            "app/Models/Institution.php",
+            "app/Models/Admin.php",
+            "app/Models/Authenticator.php",
+            "database/factories/InstitutionFactory.php",
+            "database/factories/AdminFactory.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Service: adaptor WebAuthn + aksi Identity",
+          "mulai": "2026-09-30T22:49:03+08:00",
+          "selesai": "2026-09-30T22:55:00+08:00",
+          "detik": 358,
+          "tok_est": 10327,
+          "muat": [
+            "vendor/web-auth/webauthn-lib/src/CeremonyStep/CeremonyStepManagerFactory.php",
+            "vendor/web-auth/webauthn-lib/src/CredentialRecord.php",
+            "app/Infrastructure/WebAuthn/WebAuthnServer.php",
+            "app/Domain/Identity/Actions/CompletePasskeyLogin.php",
+            "app/Domain/Identity/Actions/CompletePasskeyRegistration.php",
+            "tests/Support/VirtualAuthenticator.php",
+            "lang/id/errors.php"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "Endpoint: rute, sesi, middleware",
+          "mulai": "2026-09-30T22:55:00+08:00",
+          "selesai": "2026-09-30T22:57:06+08:00",
+          "detik": 126,
+          "tok_est": 7932,
+          "muat": [
+            "config/auth.php",
+            "config/session.php",
+            "config/sadmin.php",
+            "app/Http/Middleware/EnforceAbsoluteSessionLifetime.php",
+            "app/Http/Controllers/Auth/LogoutController.php",
+            "routes/web.php",
+            "bootstrap/app.php",
+            "vendor/livewire/livewire/config/livewire.php"
+          ]
+        },
+        {
+          "no": 6,
+          "nama": "UI: Livewire + Tabler + token + empat state",
+          "mulai": "2026-09-30T22:57:06+08:00",
+          "selesai": "2026-09-30T23:00:59+08:00",
+          "detik": 233,
+          "tok_est": 5264,
+          "muat": [
+            "resources/css/tokens.css",
+            "resources/css/app.css",
+            "resources/js/passkey.js",
+            "resources/views/layouts/guest.blade.php",
+            "resources/views/layouts/app.blade.php",
+            "app/Livewire/Auth/Login.php",
+            "app/Livewire/Auth/RegisterPasskeys.php",
+            "app/Livewire/Settings/Passkeys.php",
+            "app/Console/Commands/UiTokenScanCommand.php"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Tes",
+          "mulai": "2026-09-30T23:00:59+08:00",
+          "selesai": "2026-09-30T23:08:50+08:00",
+          "detik": 471,
+          "tok_est": 10813,
+          "muat": [
+            "tests/Feature/Identity/PasskeyLoginTest.php",
+            "tests/Feature/Identity/PasskeyRegistrationTest.php",
+            "tests/Feature/Identity/ConsoleSessionTest.php",
+            "tests/Feature/Identity/PasskeysPageTest.php",
+            "tests/Feature/Identity/BootstrapCommandsTest.php",
+            "tests/Feature/UiTokenScanTest.php",
+            "../CHANGELOG.md"
+          ]
+        },
+        {
+          "no": 8,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-09-30T23:08:50+08:00",
+          "selesai": "2026-09-30T23:09:28+08:00",
+          "detik": 39,
+          "tok_est": 2331,
+          "muat": [
+            "/Users/syams/.claude/skills/coding-vcbd/scripts/gerbang.sh"
+          ]
+        }
+      ],
+      "detik": 1480,
+      "tok_est": 49876,
+      "deviasi": [
+        "Komponen pembantu ui/icon (render Tabler Icons) di luar inventaris docs/26",
+        "config/database.php timezone UTC di luar rencana — perbaikan bug waktu bergeser",
+        "Token --row-height, --card-padding, --color-on-accent-button: nama tak ditetapkan docs/26, nilai sesuai tabel",
+        "Gerbang S8 WARN: heuristik per berkas; empat state dibuktikan PasskeysPageTest"
+      ],
+      "asumsi": [
+        "maintenance_window awal {days:[],22:00-04:00} dan backup_retention {7,4,6} dari contoh docs/07, diisi wizard kelak",
+        "Admin undangan berstatus active tanpa passkey; tak bisa masuk sampai 2 terdaftar",
+        "CHECK alg IN (-7,-8) lebih ketat dari catatan docs/07",
+        "Pendaftaran lebih dari 2 passkey = perubahan roster L3 (docs/21) sehingga ditolak di slice ini"
+      ],
+      "dokumen_diperbarui": [
+        "docs/adr/0002-pustaka-webauthn.md (baru)",
+        "docs/08_ARCHITECTURE.md",
+        "docs/09_STACK.md",
+        "docs/10_DEV_ENV.md",
+        "docs/11_COMMANDS.md",
+        "docs/12_PROJECT_STRUCTURE.md",
+        "docs/_MANIFEST.json"
+      ],
+      "landmine_tersentuh": [
+        "PDO pgsql memotong biner mentah bytea di NUL tanpa galat — selalu lewat cast Bytea (hex)",
+        "Tanpa timezone UTC di koneksi pgsql, waktu Eloquent tersimpan bergeser zona server PG",
+        "CheckOrigin bawaan web-auth mengizinkan subdomain RP ID — wajib setAllowedOrigins eksplisit",
+        "cbor-php normalize() mengembalikan integer sebagai string"
+      ],
+      "ditunda": [
+        "Tema per admin F-17",
+        "install.sh/WireGuard F-01",
+        "Tambah/cabut passkey = roster L3",
+        "Uji browser nyata passkey.js",
+        "Rute storage/{path} (PUT unggah) dari disk local serve=true"
+      ],
+      "selesai": "2026-09-30T23:09:28+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 1590,
-    "tok_est": 89378,
+    "detik": 3070,
+    "tok_est": 139254,
     "tok_terukur": 0,
-    "step": 17,
-    "fitur": 4
+    "step": 25,
+    "fitur": 5
   }
 }

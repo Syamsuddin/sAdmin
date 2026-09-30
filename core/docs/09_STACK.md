@@ -7,15 +7,15 @@ Pemilik daftar teknologi & versi paket core. Stack agen/gateway: `../edge/docs/0
 | OS host | Ubuntu Server | 24.04 LTS |
 | Runtime | PHP-FPM (paket Ubuntu), ekstensi: pgsql, sodium, intl, mbstring, openssl, bcmath | 8.3 |
 | Framework | Laravel | 13.x (dimulai 13.34.0, 2026-09-30); `composer.json` mengunci platform PHP 8.3 |
-| UI | Livewire | rilis stabil terbaru yang kompatibel `[VERIFIKASI]` |
-| Komponen UI | Tabler (Bootstrap 5, MIT) + Tabler Icons | 1.x `[VERIFIKASI]`; dibundel lokal via Vite, tanpa CDN |
+| UI | Livewire | 4.x (dimulai 4.4.7) |
+| Komponen UI | Tabler (Bootstrap 5, MIT) + Tabler Icons; font Inter & JetBrains Mono (OFL) | `@tabler/core` 1.6.x, `@tabler/icons` 3.x (SVG yang dipakai disalin ke `resources/icons/tabler/`, dijaga tes asal-usul), `@fontsource/*` 5.x; dibundel lokal, tanpa CDN |
 | Real-time console | Laravel Reverb | ikut rilis Laravel `[VERIFIKASI]`; hanya 127.0.0.1 |
 | Basis data | PostgreSQL (paket Ubuntu) | 16; pgvector pasca-MVP |
-| WebAuthn | `laragear/webauthn` | `[VERIFIKASI]` |
+| WebAuthn | `web-auth/webauthn-lib` (MIT), hanya lewat adaptor `app/Infrastructure/WebAuthn` (ADR 0002) | 5.3.x |
 | JSON Schema | `opis/json-schema` | `[VERIFIKASI]` |
 | Kanonisasi JCS | implementasi internal `app/Infrastructure/Jcs` (± 150 baris) + vektor bersama | — (menghindari pustaka kecil tak terawat) |
 | Kripto | ext-sodium (Ed25519, XChaCha20-Poly1305), ext-openssl (CA ECDSA P-256) | bawaan PHP |
-| Build aset | Node.js LTS + Vite (hanya saat build/rilis) | `[VERIFIKASI]` |
+| Build aset | Node.js LTS + Vite (hanya saat build/rilis) | Node 22 LTS, Vite 8 |
 | Tes | PHPUnit (bawaan Laravel) | 12.x |
 | Analisis statis | Larastan (PHPStan) — alasan: perintah lint `docs/11_COMMANDS.md` | 3.x (PHPStan 2.x), level 6, hanya dev |
 | Web server | Nginx (paket Ubuntu) | 1.24 |

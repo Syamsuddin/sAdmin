@@ -18,7 +18,7 @@ PHP 8.3 + ekstensi di `docs/09_STACK.md`, Composer, Node.js LTS, PostgreSQL 16 l
 | `APP_KEY`, `APP_URL`, `APP_ENV` | standar Laravel (`APP_KEY` bukan kunci brankas) |
 | `DB_CONNECTION=pgsql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | PostgreSQL |
 | `QUEUE_CONNECTION=database`, `CACHE_STORE=database`, `SESSION_DRIVER=database` | A7 |
-| `SADMIN_RP_ID`, `SADMIN_ORIGIN` | WebAuthn |
+| `SADMIN_RP_ID`, `SADMIN_ORIGIN` | WebAuthn: RP ID sebenarnya = `institutions.console_hostname`; `SADMIN_RP_ID` hanya nilai bawaan `sadmin:institution-init`; `SADMIN_ORIGIN` kosong = `https://<hostname>`, diisi hanya di dev bila ada port (ADR 0002) |
 | `SADMIN_GATEWAY_SOCKET`, `SADMIN_INBOX_SOCKET` | Unix socket ke/dari gateway |
 | `SADMIN_VAULT_CRED` | nama kredensial `systemd-creds` kunci induk (dev: `SADMIN_VAULT_DEV_KEY` dari berkas lokal, **dilarang** di produksi) |
 | `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT` | Reverb |

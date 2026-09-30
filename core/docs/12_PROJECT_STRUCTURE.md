@@ -12,7 +12,7 @@ core/
 │   │   └── Data/                  # DTO bertipe (readonly class)
 │   ├── Domain/Execution/Dispatch/ # SATU-SATUNYA pengirim amplop
 │   ├── Domain/Execution/Runner/   # loop runner, state machine run/langkah
-│   ├── Infrastructure/{Gateway,Vault,Jcs,Notify,Ai}/
+│   ├── Infrastructure/{Gateway,Vault,Jcs,Notify,Ai,WebAuthn}/
 │   ├── Livewire/<Halaman>/        # komponen halaman (lihat docs/26_UI_CONVENTIONS.md)
 │   ├── Models/                    # Eloquent
 │   └── Console/Commands/          # sadmin:* artisan

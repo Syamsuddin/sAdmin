@@ -29,7 +29,7 @@ Admin ──WireGuard wg0──▶ Nginx (vhost console, listen 10.77.0.1:443)
 | Action/Service | `app/Domain/<Modul>/Actions`, `…/Services` | semua logika domain; satu Action = satu kasus penggunaan |
 | Dispatch | `app/Domain/Execution/Dispatch` | **satu-satunya** jalur ke agen: susun amplop, JCS, tanda tangan layanan, kirim via socket gateway |
 | Persistensi | Eloquent model `app/Models` | tanpa logika bisnis selain relasi & cast |
-| Infrastruktur | `app/Infrastructure/{Gateway,Vault,Jcs,Notify,Ai}` | adaptor ke luar |
+| Infrastruktur | `app/Infrastructure/{Gateway,Vault,Jcs,Notify,Ai,WebAuthn}` | adaptor ke luar |
 
 Modul domain: `Identity`, `Fleet`, `Sites`, `Catalog`, `Execution` (rencana, runner, kunci), `Audit`, `Vault`, `Backup`, `Alerts`, `Memory`, `Ai`, `Onboarding`.
 

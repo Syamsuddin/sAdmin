@@ -1,0 +1,70 @@
+/*
+ * Token UI sAdmin — SATU-SATUNYA rumah nilai warna/ukuran/font di kode (docs/26_UI_CONVENTIONS.md, BEKU).
+ * Berkas lain hanya boleh merujuk var(--…); dicek `php artisan sadmin:ui-token-scan`.
+ */
+:root,
+[data-bs-theme="light"] {
+    --color-primary: #1D4ED8;
+    --color-primary-hover: #1E40AF;
+    --color-link: #1D4ED8;
+    --color-bg: #F8FAFC;
+    --color-surface: #FFFFFF;
+    --color-border: #E2E8F0;
+    --color-text: #0F172A;
+    --color-text-muted: #475569;
+    --color-success: #15803D;
+    --color-warning: #B45309;
+    --color-danger: #B91C1C;
+    --color-info: #0369A1;
+    --risk-l0: #475569;
+    --risk-l1: #0369A1;
+    --risk-l2: #B45309;
+    --risk-l3: #B91C1C;
+    /* 26: teks di atas lencana berwarna; tombol primer punya nilai sendiri di mode gelap. */
+    --color-on-accent: #FFFFFF;
+    --color-on-accent-button: #FFFFFF;
+    --shadow-float: 0 4px 12px rgba(15, 23, 42, .12);
+}
+
+[data-bs-theme="dark"] {
+    --color-primary: #2563EB;
+    --color-primary-hover: #1D4ED8;
+    --color-link: #60A5FA;
+    --color-bg: #0F172A;
+    --color-surface: #1E293B;
+    --color-border: #334155;
+    --color-text: #F1F5F9;
+    --color-text-muted: #94A3B8;
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    --color-info: #38BDF8;
+    --risk-l0: #94A3B8;
+    --risk-l1: #38BDF8;
+    --risk-l2: #F59E0B;
+    --risk-l3: #EF4444;
+    --color-on-accent: #0F172A;
+    --color-on-accent-button: #FFFFFF;
+    --shadow-float: 0 4px 12px rgba(0, 0, 0, .5);
+}
+
+:root {
+    --font-ui: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    --fs-sm: 12px;
+    --fs-base: 14px;
+    --fs-lg: 16px;
+    --fs-xl: 20px;
+    --lh: 1.5;
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 24px;
+    --sp-6: 32px;
+    /* 26 "Kepadatan": tinggi baris tabel / padding kartu. */
+    --row-height: 36px;
+    --card-padding: 16px;
+    --radius-control: 6px;
+    --radius-card: 8px;
+}

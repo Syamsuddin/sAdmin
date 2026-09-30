@@ -50,6 +50,7 @@ Kontras: pasangan teks/latar di atas memenuhi WCAG AA (≥ 4.5:1 teks normal). F
 | Panel asisten AI | tersembunyi bila AI nonaktif | `app/Livewire/Ai/Panel.php` |
 | Empty state | ikon + kalimat + satu ajakan | `components/ui/empty.blade.php` |
 | Pengalih tema | system / light / dark | `components/ui/theme-switch.blade.php` |
+| Ikon | Tabler Icons outline, SVG disalin apa adanya ke `resources/icons/tabler/` (dijaga tes asal-usul), dirender inline dengan `aria-hidden` | `components/ui/icon.blade.php` |
 
 ## Halaman → pola
 Navigasi: sidebar kiri + topbar (pemilih server, lonceng peringatan, pengalih tema, akun).

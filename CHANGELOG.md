@@ -6,6 +6,40 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.4] — 2026-09-30
+
+Tonggak **M1 Kerangka**, slice 2: login console dengan passkey (F-03).
+
+### Ditambahkan
+- core: tabel `institutions`, `admins`, dan `authenticators` sesuai docs/07, serta tabel `sessions` berkunci ULID.
+- core: `php artisan sadmin:institution-init <hostname>` menetapkan RP ID permanen; hostname wajib FQDN dan tidak boleh alamat IP. `php artisan sadmin:admin-invite "<nama>"` mencetak tautan bertanda tangan 15 menit untuk mendaftarkan tepat dua passkey.
+- core: login passkey tanpa nama pengguna (passkey dapat-ditemukan). Aturannya: algoritme ES256/EdDSA, verifikasi pengguna wajib, attestation `none`, origin eksplisit (wajib HTTPS, subdomain ditolak), tipe clientData sesuai ceremony, ceremony lintas origin ditolak, counter anti-klon, dan challenge sekali pakai yang kedaluwarsa dalam 5 menit. Satu ID korelasi menghubungkan pesan di layar, log detail, dan audit penolakan.
+- core: halaman *Masuk*, *Daftarkan passkey*, dan *Passkey Anda*, lengkap dengan empat state wajib.
+- core: sesi console memakai cookie Secure/HttpOnly/SameSite=Strict, batas idle 30 menit dan mutlak 12 jam, ID sesi diregenerasi saat login, dan batas 10 percobaan login per menit per IP. Admin yang dinonaktifkan kehilangan sesinya pada permintaan berikutnya.
+- core: entri audit untuk `console.login` (ok maupun ditolak), `console.logout`, `admin.invite`, `institution.initialize`, dan `authenticator.register`.
+- core: Livewire 4, Tabler 1.6, `resources/css/tokens.css` (docs/26), dan `php artisan sadmin:ui-token-scan`. Tabler Icons disalin apa adanya dan dijaga tes asal-usul.
+- core: autentikator virtual deterministik untuk tes, sehingga verifikasi WebAuthn tidak pernah di-bypass (docs/13).
+
+### Diubah
+- WebAuthn memakai `web-auth/webauthn-lib` lewat adaptor tunggal `app/Infrastructure/WebAuthn` (ADR 0002, dipilih pemilik produk), menggantikan `laragear/webauthn` yang bertentangan dengan skema docs/07.
+- docs/09: Livewire 4.x, Tabler 1.6.x, Node 22/Vite 8, dan WebAuthn kini terverifikasi. docs/08, 10, 11, dan 12 disesuaikan. Komponen Ikon (Tabler Icons tervendor) ditambahkan ke inventaris docs/26.
+
+### Keamanan
+- Rute `storage/{path}` bawaan Laravel 13 ditutup, termasuk rute PUT unggah bertanda tangan: disk `local` kini memakai `serve: false`.
+- Sebelum merge, slice ini melewati audit keamanan adversarial (docs/22) dengan hasil 0 kritis dan 0 tinggi. Dua temuan sedang dan dua temuan rendah sudah ditambal; setiap mutan dari laporan audit kini terbukti membuat tes merah.
+
+### Diperbaiki
+- Zona waktu sesi PostgreSQL kini dipaksa UTC. Sebelumnya stempel waktu Eloquent tersimpan bergeser mengikuti zona server PostgreSQL (di dev +8 jam), padahal docs/07 mewajibkan UTC. Rantai audit tidak terdampak karena selalu ditulis dengan akhiran `Z`.
+
+### Catatan migrasi
+- Migrasi baru, semuanya non-destruktif: `institutions`, `admins`, `authenticators`, `sessions`.
+- Setelah `sadmin:institution-init` dijalankan, hostname console (RP ID) bersifat permanen.
+
+### Belum tercakup
+- Tema per admin (F-17), WireGuard dan `install.sh` (F-01), serta menambah atau mencabut passkey (perubahan roster L3).
+- `passkey.js` baru diverifikasi lewat Node terhadap server PHP; uji browser sungguhan dengan autentikator nyata belum dilakukan.
+- Aset console belum memakai Subresource Integrity yang diwajibkan docs/21 §Rilis. Menambahkannya butuh plugin Vite baru sebagai dependensi, sehingga menunggu keputusan pemilik produk.
+
 ## [0.1.0-alpha.3] — 2026-09-30
 
 Menutup keputusan terbuka 3 dari 0.1.0-alpha.1: aturan masukan kanonisasi di kontrak protokol. **Kontrak naik ke 0.2.0.**

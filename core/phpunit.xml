@@ -28,6 +28,7 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="pgsql"/>
         <env name="DB_DATABASE" value="sadmin_test"/>
+        <env name="SADMIN_TEST_PASSKEY_SEED" value="5ad0e1a5c0de0f0e1d2c3b4a59687766554433221100ffeeddccbbaa99887766"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
