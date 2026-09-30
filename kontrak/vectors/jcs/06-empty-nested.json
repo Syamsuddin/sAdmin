@@ -1,0 +1,15 @@
+{
+  "description": "Objek & larik kosong dan bersarang tetap dibedakan",
+  "input": {
+    "a": {},
+    "b": [],
+    "c": [
+      {}
+    ],
+    "d": {
+      "e": []
+    }
+  },
+  "canonical": "{\"a\":{},\"b\":[],\"c\":[{}],\"d\":{\"e\":[]}}",
+  "sha256": "f6134eb6134f4e6ca1f2c46d313aa3d20ed458f1ed9ad6dce4306a0015dd2a42"
+}

@@ -6,7 +6,7 @@ Pemilik daftar teknologi & versi paket core. Stack agen/gateway: `../edge/docs/0
 |---|---|---|
 | OS host | Ubuntu Server | 24.04 LTS |
 | Runtime | PHP-FPM (paket Ubuntu), ekstensi: pgsql, sodium, intl, mbstring, openssl, bcmath | 8.3 |
-| Framework | Laravel | rilis stabil terbaru saat mulai `[VERIFIKASI]` |
+| Framework | Laravel | 13.x (dimulai 13.34.0, 2026-09-30); `composer.json` mengunci platform PHP 8.3 |
 | UI | Livewire | rilis stabil terbaru yang kompatibel `[VERIFIKASI]` |
 | Komponen UI | Tabler (Bootstrap 5, MIT) + Tabler Icons | 1.x `[VERIFIKASI]`; dibundel lokal via Vite, tanpa CDN |
 | Real-time console | Laravel Reverb | ikut rilis Laravel `[VERIFIKASI]`; hanya 127.0.0.1 |
@@ -16,7 +16,8 @@ Pemilik daftar teknologi & versi paket core. Stack agen/gateway: `../edge/docs/0
 | Kanonisasi JCS | implementasi internal `app/Infrastructure/Jcs` (± 150 baris) + vektor bersama | — (menghindari pustaka kecil tak terawat) |
 | Kripto | ext-sodium (Ed25519, XChaCha20-Poly1305), ext-openssl (CA ECDSA P-256) | bawaan PHP |
 | Build aset | Node.js LTS + Vite (hanya saat build/rilis) | `[VERIFIKASI]` |
-| Tes | Pest atau PHPUnit (bawaan Laravel) | ikut Laravel |
+| Tes | PHPUnit (bawaan Laravel) | 12.x |
+| Analisis statis | Larastan (PHPStan) — alasan: perintah lint `docs/11_COMMANDS.md` | 3.x (PHPStan 2.x), level 6, hanya dev |
 | Web server | Nginx (paket Ubuntu) | 1.24 |
 | Jaringan admin | WireGuard | paket Ubuntu |
 

@@ -1,0 +1,13 @@
+{
+  "description": "Integer dalam rentang ±(2^53-1); angka pecahan dilarang oleh kontrak",
+  "input": [
+    0,
+    -1,
+    1,
+    1000000,
+    9007199254740991,
+    -9007199254740991
+  ],
+  "canonical": "[0,-1,1,1000000,9007199254740991,-9007199254740991]",
+  "sha256": "11b3f587ce9bad701f270baa70ae13526e9487bd8eea3a72aa812dd0b736e9ed"
+}

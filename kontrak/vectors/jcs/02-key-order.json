@@ -1,0 +1,17 @@
+{
+  "description": "Kunci objek diurutkan, termasuk objek bersarang; urutan larik dipertahankan",
+  "input": {
+    "b": 2,
+    "a": 1,
+    "c": {
+      "z": 0,
+      "y": [
+        3,
+        2,
+        1
+      ]
+    }
+  },
+  "canonical": "{\"a\":1,\"b\":2,\"c\":{\"y\":[3,2,1],\"z\":0}}",
+  "sha256": "db526ee1c242720986eccbd26bd7c4525412de8483e9d08f2714e13ebcea565e"
+}

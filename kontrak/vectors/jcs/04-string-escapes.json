@@ -1,0 +1,8 @@
+{
+  "description": "Escape wajib hanya \" \\ dan U+0000–U+001F (bentuk pendek bila ada); '/', DEL, U+2028, non-ASCII tetap literal",
+  "input": {
+    "s": "kutip\" miring\\ garis/ tab\t baris\n cr\r bs\b ff\f us\u001f nul\u0000 del ls  é 😀"
+  },
+  "canonical": "{\"s\":\"kutip\\\" miring\\\\ garis/ tab\\t baris\\n cr\\r bs\\b ff\\f us\\u001f nul\\u0000 del ls  é 😀\"}",
+  "sha256": "8e78970f12c89162652ccc86e652303945784d7d973842f9435814df520c8fd2"
+}

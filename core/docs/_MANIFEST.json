@@ -440,8 +440,9 @@
     "Pemegang hak cipta di LICENSE: Syamsuddin dan kontributor sAdmin"
   ],
   "open_questions": [
-    "[VERIFIKASI] versi Laravel, Livewire, Tabler, laragear/webauthn, opis/json-schema saat proyek dimulai",
+    "[VERIFIKASI] versi Livewire, Tabler, laragear/webauthn, opis/json-schema saat modulnya dipasang (Laravel terverifikasi 13.x: docs/09_STACK.md)",
     "[VERIFIKASI] rujukan pasal UU 27/2022, Perpres 95/2018, pedoman BSSN — saat modul laporan kepatuhan (Fase 4)",
     "[VERIFIKASI] sumber paket PHP multi-versi di Ubuntu 24.04"
-  ]
+  ],
+  "archive_pattern": "23-*.md"
 }
