@@ -6,6 +6,14 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+### Diubah
+- core: ADR 0001 (format hash rantai audit) disusun ulang menjadi spesifikasi normatif yang lengkap: tabel dua belas anggota badan entri, kanonisasi, rumus hash, penyimpanan, penulisan, algoritme verifikasi, vektor emas, alternatif yang ditolak, konsekuensi, dan tes penegak. Spesifikasinya diuji dengan implementasi independen yang ditulis hanya dari teks ADR, dan hasilnya sama persis dengan vektor emas. Isi normatif tidak berubah; statusnya masih *diusulkan*.
+- core: `docs/adr/README.md` berisi indeks dan templat ADR; ADR 0002 diselaraskan dengan templat itu.
+- Roadmap M1: Subresource Integrity aset console dijadwalkan di slice `install.sh` (F-01), sesuai keputusan pemilik produk.
+
+### Ditambahkan
+- core: `WebAuthnBoundaryTest` menegakkan aturan satu pintu ADR 0002, yaitu hanya adaptor `app/Infrastructure/WebAuthn` yang memakai pustaka WebAuthn/COSE/CBOR.
+
 ## [0.1.0-alpha.4] — 2026-09-30
 
 Tonggak **M1 Kerangka**, slice 2: login console dengan passkey (F-03).
