@@ -12,6 +12,7 @@ Panel server berdaulat untuk instansi: setiap aksi berbahaya disetujui dengan pa
 | `capsules/` | Resep kapsul (YAML) | `capsules/CAPSULES.md` (+ `*.yaml` saat M2) |
 | `harness/` | Uji VM LXD, injeksi gangguan, uji keamanan, evaluasi AI | Strategi: `edge/docs/13_TESTING.md` |
 | `deploy/` | `install.sh`, unit systemd, template Nginx | Struktur: `core/docs/12_PROJECT_STRUCTURE.md` |
+| `CHANGELOG.md` | Riwayat perubahan per versi (Keep a Changelog) | Skema versi: `core/docs/22_CHANGE_POLICY.md` §Git |
 
 Semua path di dokumen paket ditulis relatif terhadap **root paket** (`core/` atau `edge/`), mis. `../catalog/CATALOG.md`; path di berkas rumah bersama (`README.md`, `kontrak/`, `catalog/`, `capsules/`) relatif terhadap root monorepo.
 
