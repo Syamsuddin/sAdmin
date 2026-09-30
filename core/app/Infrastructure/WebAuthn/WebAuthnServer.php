@@ -21,6 +21,7 @@ use Webauthn\AuthenticatorAttestationResponse;
 use Webauthn\AuthenticatorAttestationResponseValidator;
 use Webauthn\AuthenticatorSelectionCriteria;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
+use Webauthn\CollectedClientData;
 use Webauthn\CredentialRecord;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
 use Webauthn\PublicKeyCredential;
@@ -94,6 +95,7 @@ final class WebAuthnServer
             if (! $response instanceof AuthenticatorAttestationResponse) {
                 throw PasskeyVerificationFailed::because('Respons bukan attestation.');
             }
+            self::assertClientData($response->clientDataJSON, 'webauthn.create');
             $options = $this->serializer->deserialize($optionsJson, PublicKeyCredentialCreationOptions::class, 'json');
 
             $record = AuthenticatorAttestationResponseValidator::create($this->ceremonies($rp)->creationCeremony())
@@ -127,6 +129,7 @@ final class WebAuthnServer
             if (! $response instanceof AuthenticatorAssertionResponse) {
                 throw PasskeyVerificationFailed::because('Respons bukan assertion.');
             }
+            self::assertClientData($response->clientDataJSON, 'webauthn.get');
             if ($response->userHandle === null || ! hash_equals($stored->userHandle, $response->userHandle)) {
                 throw PasskeyVerificationFailed::because('User handle tak cocok dengan pemilik kredensial.');
             }
@@ -153,6 +156,21 @@ final class WebAuthnServer
         }
 
         return new VerifiedAssertion($updated->publicKeyCredentialId, $updated->userHandle, $updated->counter);
+    }
+
+    /**
+     * Spesifikasi WebAuthn §7.1 langkah 7 / §7.2 langkah 11: tipe harus sesuai ceremony. Kolektor bawaan
+     * web-auth 5.3 menerima kedua tipe untuk kedua ceremony, dan CheckTopOrigin lolos bila topOrigin kosong,
+     * sehingga keduanya diperiksa di sini; console tak pernah dibuka dalam iframe lintas origin.
+     */
+    private static function assertClientData(CollectedClientData $clientData, string $expectedType): void
+    {
+        if ($clientData->type !== $expectedType) {
+            throw PasskeyVerificationFailed::because("Tipe clientData {$clientData->type} bukan {$expectedType}.");
+        }
+        if ($clientData->crossOrigin) {
+            throw PasskeyVerificationFailed::because('Ceremony lintas origin (iframe) ditolak.');
+        }
     }
 
     private function ceremonies(RelyingParty $rp): CeremonyStepManagerFactory

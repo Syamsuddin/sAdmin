@@ -41,9 +41,7 @@ final class CompletePasskeyLogin
             try {
                 $credentialId = $this->webAuthn->assertedCredentialId($credentialJson);
             } catch (PasskeyVerificationFailed $e) {
-                Log::warning('passkey_login_rejected', ['detail' => $e->getMessage()]);
-
-                throw new PasskeyRejected('verification_failed');
+                throw $this->rejected('verification_failed', $e, null);
             }
 
             $authenticator = Authenticator::query()
@@ -64,9 +62,7 @@ final class CompletePasskeyLogin
                     $authenticator->sign_count,
                 ));
             } catch (PasskeyVerificationFailed $e) {
-                Log::warning('passkey_login_rejected', ['admin_id' => $admin->id, 'detail' => $e->getMessage()]);
-
-                throw new PasskeyRejected('verification_failed');
+                throw $this->rejected('verification_failed', $e, $admin->id);
             }
 
             return DB::transaction(function () use ($authenticator, $admin, $verified, $ip): Admin {
@@ -81,11 +77,20 @@ final class CompletePasskeyLogin
                 $admin instanceof Admin ? $admin->tenant_id : $this->relyingParty->institution()->tenant_id,
                 $admin?->id,
                 AuditOutcome::Rejected,
-                ['reason' => $e->reason, 'ip' => $ip],
+                ['reason' => $e->reason, 'ip' => $ip, 'correlation_id' => $e->correlationId],
             );
 
             throw $e;
         }
+    }
+
+    /** Detail teknis hanya ke log, dengan ID korelasi yang sama dengan yang tampil ke admin (docs/14). */
+    private function rejected(string $reason, PasskeyVerificationFailed $e, ?string $adminId): PasskeyRejected
+    {
+        $rejection = new PasskeyRejected($reason);
+        Log::warning('passkey_login_rejected', ['correlation_id' => $rejection->correlationId, 'admin_id' => $adminId, 'detail' => $e->getMessage()]);
+
+        return $rejection;
     }
 
     /** @param  array<string, string|null>  $params */

@@ -35,6 +35,11 @@ final class VirtualAuthenticator
 
     public bool $userPresent = true;
 
+    /** Menimpa `type` clientDataJSON (null = sesuai ceremony). */
+    public ?string $clientDataType = null;
+
+    public bool $crossOrigin = false;
+
     public readonly string $credentialId;
 
     private string $userHandle = '';
@@ -134,10 +139,10 @@ final class VirtualAuthenticator
     private function clientData(string $type, string $challenge): string
     {
         return json_encode([
-            'type' => $type,
+            'type' => $this->clientDataType ?? $type,
             'challenge' => $challenge,
             'origin' => $this->origin,
-            'crossOrigin' => false,
+            'crossOrigin' => $this->crossOrigin,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 

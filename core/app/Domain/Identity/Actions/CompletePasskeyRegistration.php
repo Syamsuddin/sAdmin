@@ -39,9 +39,10 @@ final class CompletePasskeyRegistration
         try {
             $credential = $this->webAuthn->verifyRegistration($credentialJson, $options, $this->relyingParty->resolve());
         } catch (PasskeyVerificationFailed $e) {
-            Log::warning('passkey_registration_rejected', ['admin_id' => $admin->id, 'detail' => $e->getMessage()]);
+            $rejection = new PasskeyRejected('verification_failed');
+            Log::warning('passkey_registration_rejected', ['correlation_id' => $rejection->correlationId, 'admin_id' => $admin->id, 'detail' => $e->getMessage()]);
 
-            throw new PasskeyRejected('verification_failed');
+            throw $rejection;
         }
 
         return DB::transaction(function () use ($admin, $credential, $label): Authenticator {

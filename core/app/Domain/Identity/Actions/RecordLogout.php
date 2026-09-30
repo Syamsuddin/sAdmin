@@ -12,7 +12,7 @@ final class RecordLogout
 {
     public function __construct(private readonly AppendAuditEntry $audit) {}
 
-    /** @param  string  $reason  `manual` atau `absolute_timeout` (batas mutlak 12 jam, docs/21) */
+    /** @param  string  $reason  `manual`, `absolute_timeout` (batas mutlak 12 jam, docs/21), atau `admin_disabled` */
     public function handle(Admin $admin, string $reason): void
     {
         $this->audit->handle(new AuditEntryData(

@@ -8,6 +8,7 @@ use App\Models\Admin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -85,6 +86,12 @@ class PasskeyLoginTest extends TestCase
         yield 'tanpa kehadiran pengguna' => [static function (VirtualAuthenticator $a): void {
             $a->userPresent = false;
         }, 'verification_failed'];
+        yield 'tipe clientData webauthn.create' => [static function (VirtualAuthenticator $a): void {
+            $a->clientDataType = 'webauthn.create';
+        }, 'verification_failed'];
+        yield 'lintas origin (iframe)' => [static function (VirtualAuthenticator $a): void {
+            $a->crossOrigin = true;
+        }, 'verification_failed'];
     }
 
     /** @param  callable(VirtualAuthenticator): void  $forge */
@@ -157,6 +164,67 @@ class PasskeyLoginTest extends TestCase
         $this->key->origin = 'https://sadmin.localhost';
         $this->loginWith($this->key)->assertSet('errorReason', 'rate_limited');
         $this->assertFalse(Auth::check());
+    }
+
+    public function test_rate_limit_window_is_a_full_minute(): void
+    {
+        $this->key->origin = 'https://jahat.example';
+        for ($i = 0; $i < 10; $i++) {
+            $this->loginWith($this->key);
+        }
+        $this->key->origin = 'https://sadmin.localhost';
+
+        $this->travel(59)->seconds();
+        $this->loginWith($this->key)->assertSet('errorReason', 'rate_limited');
+
+        $this->travel(2)->seconds();
+        $this->loginWith($this->key)->assertRedirect(route('home'));
+    }
+
+    public function test_rate_limit_is_counted_per_client_ip(): void
+    {
+        RateLimiter::clear('passkey-login:10.77.0.9');
+        for ($i = 0; $i < 10; $i++) {
+            RateLimiter::hit('passkey-login:10.77.0.9', 60);
+        }
+
+        $this->loginWith($this->key)->assertRedirect(route('home'));
+        Auth::logout();
+
+        for ($i = 0; $i < 10; $i++) {
+            RateLimiter::hit('passkey-login:127.0.0.1', 60);
+        }
+        $this->loginWith($this->key)->assertSet('errorReason', 'rate_limited');
+    }
+
+    public function test_challenge_expires_after_five_minutes(): void
+    {
+        $this->ceremony(Livewire::test(Login::class), function (string $options): string {
+            $this->travel(301)->seconds();
+
+            return $this->key->assert($options);
+        })->assertSet('errorReason', 'challenge_missing');
+
+        $this->assertFalse(Auth::check());
+    }
+
+    public function test_correlation_id_links_the_screen_the_log_and_the_audit_entry(): void
+    {
+        $details = [];
+        Log::listen(function ($event) use (&$details): void {
+            if ($event->message === 'passkey_login_rejected') {
+                $details[] = $event->context;
+            }
+        });
+        $this->key->origin = 'https://jahat.example';
+
+        $shown = $this->loginWith($this->key)->get('correlationId');
+
+        $this->assertNotEmpty($shown);
+        $this->assertSame($shown, $details[0]['correlation_id'] ?? null);
+        $this->assertStringContainsString('origin', strtolower($details[0]['detail']));
+        $audit = DB::table('audit_entries')->where('action_key', 'console.login')->where('outcome', 'rejected')->value('params_redacted');
+        $this->assertSame($shown, json_decode($audit, true)['correlation_id']);
     }
 
     public function test_browser_errors_map_to_fixed_reasons_and_are_never_echoed(): void

@@ -26,10 +26,11 @@ trait ReportsPasskeyErrors
         });
     }
 
-    protected function fail(string $reason): void
+    /** @param  string|null  $correlationId  dari PasskeyRejected, agar ID yang tampil = ID di log detail & audit */
+    protected function fail(string $reason, ?string $correlationId = null): void
     {
         $this->errorReason = in_array($reason, PasskeyRejected::REASONS, true) ? $reason : 'verification_failed';
-        $this->correlationId = (string) Str::ulid();
+        $this->correlationId = $correlationId ?? (string) Str::ulid();
         Log::warning('passkey_rejected', ['reason' => $this->errorReason, 'correlation_id' => $this->correlationId]);
     }
 

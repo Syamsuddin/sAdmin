@@ -12,13 +12,13 @@ final class PasskeyChallengeStore
 
     public function put(string $purpose, string $optionsJson): void
     {
-        session()->put($this->key($purpose), ['options' => $optionsJson, 'at' => time()]);
+        session()->put($this->key($purpose), ['options' => $optionsJson, 'at' => now()->getTimestamp()]);
     }
 
     public function pull(string $purpose): ?string
     {
         $entry = session()->pull($this->key($purpose));
-        if (! is_array($entry) || ! isset($entry['options'], $entry['at']) || time() - (int) $entry['at'] > self::TTL_SECONDS) {
+        if (! is_array($entry) || ! isset($entry['options'], $entry['at']) || now()->getTimestamp() - (int) $entry['at'] > self::TTL_SECONDS) {
             return null;
         }
 

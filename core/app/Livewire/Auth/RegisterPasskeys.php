@@ -53,7 +53,7 @@ class RegisterPasskeys extends Component
 
             return $begin->handle($this->admin());
         } catch (PasskeyRejected $e) {
-            $this->fail($e->reason);
+            $this->fail($e->reason, $e->correlationId);
 
             return null;
         }
@@ -65,7 +65,7 @@ class RegisterPasskeys extends Component
             $this->guardInvite();
             $authenticator = $complete->handle($this->admin(), $credential, $this->label);
         } catch (PasskeyRejected $e) {
-            $this->fail($e->reason);
+            $this->fail($e->reason, $e->correlationId);
 
             return;
         }
@@ -76,7 +76,7 @@ class RegisterPasskeys extends Component
 
     private function guardInvite(): void
     {
-        if (time() > $this->expiresAt) {
+        if (now()->getTimestamp() > $this->expiresAt) {
             throw new PasskeyRejected('invite_expired');
         }
     }

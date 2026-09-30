@@ -6,6 +6,7 @@ use App\Http\Middleware\EnforceAbsoluteSessionLifetime;
 use App\Models\Admin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Tests\Support\InteractsWithPasskeys;
 use Tests\TestCase;
 
@@ -74,11 +75,25 @@ class ConsoleSessionTest extends TestCase
         $this->assertSame(1, DB::table('audit_entries')->where('action_key', 'console.logout')->where('actor_id', $this->admin->id)->where('params_redacted->reason', 'manual')->count());
     }
 
-    public function test_logged_in_admin_cannot_open_an_invitation_page(): void
+    public function test_logged_in_admin_cannot_open_login_or_an_invitation_page(): void
     {
+        $invite = URL::temporarySignedRoute('passkeys.register', now()->addMinutes(15), ['admin' => $this->newAdmin()->id], absolute: false);
+        $session = [EnforceAbsoluteSessionLifetime::STARTED_AT => now()->getTimestamp()];
+
+        $this->actingAs($this->admin)->withSession($session)->get(route('login'))->assertRedirect(route('home'));
+        $this->actingAs($this->admin)->withSession($session)->get($invite)->assertRedirect(route('home'));
+    }
+
+    public function test_disabled_admin_loses_an_open_session_on_the_next_request(): void
+    {
+        $this->admin->forceFill(['status' => 'disabled'])->save();
+
         $this->actingAs($this->admin)
-            ->withSession([EnforceAbsoluteSessionLifetime::STARTED_AT => time()])
-            ->get(route('login'))
-            ->assertRedirect(route('home'));
+            ->withSession([EnforceAbsoluteSessionLifetime::STARTED_AT => now()->getTimestamp()])
+            ->get('/pengaturan/passkey')
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+        $this->assertSame(1, DB::table('audit_entries')->where('action_key', 'console.logout')->where('params_redacted->reason', 'admin_disabled')->count());
     }
 }

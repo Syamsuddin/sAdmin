@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Identity;
 
+use App\Models\Admin;
 use App\Models\Authenticator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -68,6 +69,73 @@ class PasskeyRegistrationTest extends TestCase
         $this->assertSame(2, $admin->activeAuthenticators()->count());
     }
 
+    public function test_invite_expiry_cannot_be_extended_by_the_client(): void
+    {
+        $page = $this->registrationPage($this->newAdmin());
+
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+        $page->set('expiresAt', PHP_INT_MAX);
+    }
+
+    public function test_invitation_expiring_mid_ceremony_is_refused_at_completion(): void
+    {
+        $page = $this->registrationPage($this->newAdmin())->set('label', 'Kunci');
+        $this->ceremony($page, function (string $options): string {
+            $this->travel(16)->minutes();
+
+            return VirtualAuthenticator::eddsa()->register($options);
+        })->assertSet('errorReason', 'invite_expired');
+
+        $this->assertSame(0, Authenticator::query()->count());
+    }
+
+    public function test_disabled_admin_cannot_register_at_either_step(): void
+    {
+        $this->registrationPage($this->newAdmin('disabled'))->set('label', 'Kunci')->call('begin')
+            ->assertReturned(null)
+            ->assertSet('errorReason', 'admin_inactive');
+
+        $admin = $this->newAdmin();
+        $this->ceremony($this->registrationPage($admin)->set('label', 'Kunci'), function (string $options) use ($admin): string {
+            $admin->forceFill(['status' => 'disabled'])->save();
+
+            return VirtualAuthenticator::eddsa()->register($options);
+        })->assertSet('errorReason', 'admin_inactive');
+
+        $this->assertSame(0, Authenticator::query()->count());
+    }
+
+    /**
+     * Pemeriksaan batas 2 di dalam transaksi hanya aman bila baris admin dikunci FOR UPDATE: tanpa itu, dua
+     * pendaftaran paralel hanya saling memegang kunci KEY SHARE dari cek FK dan bisa menghasilkan 3 passkey.
+     * Uji dua koneksi sungguhan butuh baris ter-commit di luar transaksi tes (dan bisa mengunci dirinya sendiri
+     * bila kode salah), jadi yang dipatok di sini: kunci diambil sebelum passkey dihitung ulang.
+     */
+    public function test_completion_locks_the_admin_row_before_recounting(): void
+    {
+        $admin = $this->newAdmin();
+        $page = $this->registrationPage($admin)->set('label', 'Kunci');
+        $queries = [];
+        $options = null;
+        $page->call('begin')->assertReturned(function ($value) use (&$options): bool {
+            $options = $value;
+
+            return true;
+        });
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = strtolower($query->sql);
+        });
+
+        $page->call('complete', VirtualAuthenticator::eddsa()->register($options));
+
+        $lockAt = array_key_first(array_filter($queries, fn (string $sql): bool => str_contains($sql, 'from "admins"') && str_contains($sql, 'for update')));
+        $countAt = array_key_first(array_filter($queries, fn (string $sql): bool => str_contains($sql, 'count(*)') && str_contains($sql, '"authenticators"')));
+        $this->assertNotNull($lockAt, 'Baris admin harus dikunci FOR UPDATE saat penyelesaian.');
+        $this->assertNotNull($countAt);
+        $this->assertLessThan($countAt, $lockAt, 'Kunci harus diambil sebelum passkey dihitung ulang.');
+        $this->assertSame(1, Authenticator::query()->count());
+    }
+
     public function test_label_is_required_before_the_ceremony_starts(): void
     {
         $this->registrationPage($this->newAdmin())->call('begin')
@@ -105,6 +173,12 @@ class PasskeyRegistrationTest extends TestCase
         }];
         yield 'tanpa kehadiran pengguna' => [static function (VirtualAuthenticator $a): void {
             $a->userPresent = false;
+        }];
+        yield 'tipe clientData webauthn.get' => [static function (VirtualAuthenticator $a): void {
+            $a->clientDataType = 'webauthn.get';
+        }];
+        yield 'lintas origin (iframe)' => [static function (VirtualAuthenticator $a): void {
+            $a->crossOrigin = true;
         }];
     }
 

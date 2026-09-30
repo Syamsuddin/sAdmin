@@ -2,6 +2,7 @@
 
 namespace App\Domain\Identity\Data;
 
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -16,8 +17,12 @@ final class PasskeyRejected extends RuntimeException
         'cancelled', 'unsupported', 'origin_mismatch',
     ];
 
-    public function __construct(public readonly string $reason)
+    /** ID korelasi yang sama tampil ke admin, tercatat di log detail, dan di audit penolakan (docs/14). */
+    public readonly string $correlationId;
+
+    public function __construct(public readonly string $reason, ?string $correlationId = null)
     {
+        $this->correlationId = $correlationId ?? (string) Str::ulid();
         parent::__construct("Passkey ditolak: {$reason}");
     }
 }

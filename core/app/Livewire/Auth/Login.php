@@ -41,14 +41,14 @@ class Login extends Component
         try {
             $admin = $complete->handle($credential, request()->ip());
         } catch (PasskeyRejected $e) {
-            $this->fail($e->reason);
+            $this->fail($e->reason, $e->correlationId);
 
             return;
         }
 
         Auth::login($admin);
         session()->regenerate();
-        session()->put(EnforceAbsoluteSessionLifetime::STARTED_AT, time());
+        session()->put(EnforceAbsoluteSessionLifetime::STARTED_AT, now()->getTimestamp());
 
         $this->redirect(route('home'));
     }
