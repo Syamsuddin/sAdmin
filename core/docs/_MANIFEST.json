@@ -143,9 +143,9 @@
       "versions": {
         "php": "8.3",
         "postgresql": "16",
-        "laravel": "[VERIFIKASI] rilis stabil terbaru saat mulai",
-        "livewire": "[VERIFIKASI]",
-        "tabler": "[VERIFIKASI] 1.x"
+        "laravel": "13.x",
+        "livewire": "4.x",
+        "tabler": "1.6.x"
       },
       "framework": {
         "backend": "laravel",
@@ -440,7 +440,7 @@
     "Pemegang hak cipta di LICENSE: Syamsuddin dan kontributor sAdmin"
   ],
   "open_questions": [
-    "[VERIFIKASI] versi Livewire, Tabler, laragear/webauthn, opis/json-schema saat modulnya dipasang (Laravel terverifikasi 13.x: docs/09_STACK.md)",
+    "[VERIFIKASI] versi opis/json-schema saat modulnya dipasang (Laravel, Livewire, Tabler, WebAuthn terverifikasi: docs/09_STACK.md, ADR 0002)",
     "[VERIFIKASI] rujukan pasal UU 27/2022, Perpres 95/2018, pedoman BSSN — saat modul laporan kepatuhan (Fase 4)",
     "[VERIFIKASI] sumber paket PHP multi-versi di Ubuntu 24.04"
   ],

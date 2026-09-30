@@ -97,6 +97,8 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Eloquent menulis waktu tanpa zona; sesi PG wajib UTC agar sama dengan app.timezone (docs/07: waktu UTC).
+            'timezone' => 'UTC',
         ],
 
         'sqlsrv' => [

@@ -1,0 +1,65 @@
+/* Tabler dibundel lokal (docs/09); semua nilai dari tokens.css — di sini hanya var(--…). */
+@import '@tabler/core/dist/css/tabler.min.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import './tokens.css';
+
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --tblr-primary: var(--color-primary);
+    --tblr-primary-fg: var(--color-on-accent-button);
+    --tblr-link-color: var(--color-link);
+    --tblr-body-bg: var(--color-bg);
+    --tblr-bg-surface: var(--color-surface);
+    --tblr-border-color: var(--color-border);
+    --tblr-body-color: var(--color-text);
+    --tblr-secondary-color: var(--color-text-muted);
+    --tblr-success: var(--color-success);
+    --tblr-warning: var(--color-warning);
+    --tblr-danger: var(--color-danger);
+    --tblr-info: var(--color-info);
+    --tblr-font-sans-serif: var(--font-ui);
+    --tblr-font-monospace: var(--font-mono);
+    --tblr-body-font-size: var(--fs-base);
+    --tblr-body-line-height: var(--lh);
+    --tblr-border-radius: var(--radius-control);
+    --tblr-border-radius-lg: var(--radius-card);
+}
+
+.btn-primary {
+    --tblr-btn-hover-bg: var(--color-primary-hover);
+    --tblr-btn-active-bg: var(--color-primary-hover);
+}
+
+.card-body {
+    padding: var(--card-padding);
+}
+
+.table > :not(caption) > * > * {
+    height: var(--row-height);
+}
+
+.ui-icon {
+    width: var(--fs-xl);
+    height: var(--fs-xl);
+}
+
+.ui-empty {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+}
+
+.ui-toast {
+    position: fixed;
+    right: var(--sp-5);
+    bottom: var(--sp-5);
+    box-shadow: var(--shadow-float);
+}
+
+.ui-skeleton {
+    height: var(--row-height);
+    border-radius: var(--radius-control);
+    background: var(--color-border);
+}

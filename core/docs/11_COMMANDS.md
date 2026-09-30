@@ -18,6 +18,8 @@ Pemilik perintah paket core. Jalankan dari `core/`. Perintah lintas-paket (`make
 | Worker antrean | `php artisan queue:work --queue=default,notify` | produksi: `sadmin-queue.service` |
 | WebSocket console | `php artisan reverb:start --host=127.0.0.1 --port=8080` | |
 | Penjadwal | `php artisan schedule:work` | produksi: systemd timer `sadmin-schedule.timer` |
+| Inisialisasi instansi | `php artisan sadmin:institution-init <hostname>` | sekali; hostname = RP ID WebAuthn permanen (menolak bila sudah ada) |
+| Undang admin | `php artisan sadmin:admin-invite "<nama panggilan>"` | mencetak tautan bertanda tangan 15 menit untuk mendaftarkan 2 passkey |
 | Verifikasi audit | `php artisan sadmin:audit-verify` (dibungkus `sadmin audit verify`) | exit 0 = hijau |
 | Buat checkpoint audit manual | `php artisan sadmin:audit-checkpoint` | |
 | Tanya status langkah ke agen | `php artisan sadmin:status-query <idempotency_key>` | diagnosa; tidak mengirim ulang amplop |

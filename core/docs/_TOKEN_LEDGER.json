@@ -54,6 +54,16 @@
       "chars": 43365,
       "cpt": 3.5,
       "est_tokens": 12390
+    },
+    {
+      "ts": "2026-09-30T23:09:28+08:00",
+      "type": "task",
+      "task": "F-03 Login passkey",
+      "route": "Fitur baru (vertical slice)",
+      "files": 8,
+      "chars": 43878,
+      "cpt": 3.5,
+      "est_tokens": 12537
     }
   ],
   "measured_sessions": {}
