@@ -12,6 +12,14 @@ return [
         ],
     ],
 
+    'theme' => [
+        'invalid' => [
+            'langkah' => 'Simpan tema',
+            'penyebab' => 'pilihan tema tidak dikenal.',
+            'tindakan' => 'pilih Ikuti sistem, Terang, atau Gelap.',
+        ],
+    ],
+
     'passkey' => [
         'challenge_missing' => [
             'langkah' => 'Verifikasi passkey',

@@ -1,10 +1,21 @@
+@use('App\Domain\Identity\Data\ThemePreference')
+@php($theme = auth()->user()?->theme ?? ThemePreference::System)
 <!DOCTYPE html>
-<html lang="id">
+{{-- F-17 (docs/26): pilihan light/dark dirender server agar tak berkedip; `system` diserahkan ke OS lewat skrip di bawah. --}}
+<html lang="id" @if ($theme !== ThemePreference::System) data-bs-theme="{{ $theme->value }}" @endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'sAdmin' }}</title>
-    <script>document.documentElement.setAttribute('data-bs-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');</script>
+    @if ($theme === ThemePreference::System)
+        <script>
+            (function (media) {
+                const apply = () => document.documentElement.setAttribute('data-bs-theme', media.matches ? 'dark' : 'light');
+                apply();
+                media.addEventListener('change', apply);
+            })(window.matchMedia('(prefers-color-scheme: dark)'));
+        </script>
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
@@ -13,7 +24,8 @@
             <div class="container-xl">
                 <span class="navbar-brand">sAdmin</span>
                 <div class="navbar-nav flex-row order-md-last align-items-center gap-3">
-                    <span class="text-secondary">{{ auth()->user()?->display_name }}</span>
+                    <x-ui.theme-switch :current="$theme" />
+                    <span class="text-secondary d-none d-sm-inline">{{ auth()->user()?->display_name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <x-ui.button type="submit" variant="secondary">
@@ -27,5 +39,11 @@
             {{ $slot }}
         </main>
     </div>
+    @if (session('status'))
+        <x-ui.toast :message="session('status')" />
+    @endif
+    @error('theme')
+        <x-ui.toast variant="danger" :message="$message" />
+    @enderror
 </body>
 </html>

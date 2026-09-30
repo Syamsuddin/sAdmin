@@ -37,14 +37,21 @@
       "step": 8,
       "detik": 1480,
       "tok_est": 49876
+    },
+    {
+      "mulai": "2026-10-01T00:01:45+08:00",
+      "selesai": null,
+      "step": 5,
+      "detik": 196,
+      "tok_est": 9858
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "4dcc55515f1921b3",
+    "sidik": "0f594247e1b863eb",
     "dokumen": 27,
-    "disegel": "2026-09-30T22:38:17+08:00",
+    "disegel": "2026-10-01T00:01:45+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -55,9 +62,14 @@
         "dari": "cb2255868f364d63",
         "ke": "4dcc55515f1921b3",
         "pada": "2026-09-30T22:38:17+08:00"
+      },
+      {
+        "dari": "4dcc55515f1921b3",
+        "ke": "0f594247e1b863eb",
+        "pada": "2026-10-01T00:01:45+08:00"
       }
     ],
-    "sidik_sebelumnya": "cb2255868f364d63"
+    "sidik_sebelumnya": "4dcc55515f1921b3"
   },
   "riwayat_fitur": [
     {
@@ -720,10 +732,107 @@
     }
   ],
   "akumulasi": {
-    "detik": 3070,
-    "tok_est": 139254,
+    "detik": 3266,
+    "tok_est": 149112,
     "tok_terukur": 0,
-    "step": 25,
+    "step": 30,
     "fitur": 5
+  },
+  "fitur_aktif": {
+    "fitur": "F-17 Tema console",
+    "rute": "Fitur baru (vertical slice)",
+    "mulai": "2026-10-01T00:05:49+08:00",
+    "rencana": [
+      "app/Models/Admin.php",
+      "app/Domain/Identity/Data/ThemePreference.php",
+      "app/Domain/Identity/Actions/UpdateThemePreference.php",
+      "app/Http/Controllers/Settings/ThemeController.php",
+      "routes/web.php",
+      "lang/id/errors.php",
+      "resources/views/components/ui/theme-switch.blade.php",
+      "resources/views/components/ui/toast.blade.php",
+      "resources/views/layouts/app.blade.php",
+      "resources/views/layouts/guest.blade.php",
+      "resources/icons/tabler/sun.svg",
+      "resources/icons/tabler/moon.svg",
+      "resources/icons/tabler/device-desktop.svg",
+      "tests/Feature/Identity/ThemePreferenceTest.php"
+    ],
+    "total_step": 0,
+    "step": [
+      {
+        "no": 1,
+        "nama": "Model/akses data",
+        "mulai": "2026-10-01T00:05:59+08:00",
+        "selesai": "2026-10-01T00:06:19+08:00",
+        "detik": 20,
+        "tok_est": 937,
+        "muat": [
+          "app/Models/Admin.php",
+          "app/Domain/Identity/Data/ThemePreference.php",
+          "app/Domain/Identity/Data/PasskeyRejected.php",
+          "app/Domain/Audit/Data/AuditOutcome.php"
+        ]
+      },
+      {
+        "no": 2,
+        "nama": "Service/logika domain",
+        "mulai": "2026-10-01T00:06:24+08:00",
+        "selesai": "2026-10-01T00:06:47+08:00",
+        "detik": 24,
+        "tok_est": 1901,
+        "muat": [
+          "app/Domain/Identity/Actions/UpdateThemePreference.php",
+          "app/Domain/Audit/Actions/AppendAuditEntry.php",
+          "app/Domain/Identity/Actions/InviteAdmin.php"
+        ]
+      },
+      {
+        "no": 3,
+        "nama": "Endpoint/controller/rute",
+        "mulai": "2026-10-01T00:07:55+08:00",
+        "selesai": "2026-10-01T00:08:19+08:00",
+        "detik": 25,
+        "tok_est": 1653,
+        "muat": [
+          "app/Http/Controllers/Settings/ThemeController.php",
+          "routes/web.php",
+          "lang/id/errors.php"
+        ]
+      },
+      {
+        "no": 4,
+        "nama": "UI + empat state",
+        "mulai": "2026-10-01T00:08:51+08:00",
+        "selesai": "2026-10-01T00:09:22+08:00",
+        "detik": 32,
+        "tok_est": 1689,
+        "muat": [
+          "resources/views/components/ui/theme-switch.blade.php",
+          "resources/views/components/ui/toast.blade.php",
+          "resources/views/layouts/app.blade.php",
+          "resources/views/layouts/guest.blade.php",
+          "resources/icons/tabler/sun.svg",
+          "resources/icons/tabler/moon.svg",
+          "resources/icons/tabler/device-desktop.svg"
+        ]
+      },
+      {
+        "no": 5,
+        "nama": "Tes",
+        "mulai": "2026-10-01T00:09:44+08:00",
+        "selesai": "2026-10-01T00:11:19+08:00",
+        "detik": 95,
+        "tok_est": 3678,
+        "muat": [
+          "tests/Feature/Identity/ThemePreferenceTest.php",
+          "tests/TestCase.php",
+          "tests/Support/InteractsWithPasskeys.php",
+          "app/Domain/Audit/Data/ChainVerification.php"
+        ]
+      }
+    ],
+    "detik": 196,
+    "tok_est": 9858
   }
 }

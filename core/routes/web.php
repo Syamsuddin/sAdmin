@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Settings\ThemeController;
 use App\Livewire\Auth\Login;
 use App\Livewire\Auth\RegisterPasskeys;
 use App\Livewire\Settings\Passkeys;
@@ -17,5 +18,6 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::redirect('/', '/pengaturan/passkey')->name('home');
     Route::livewire('/pengaturan/passkey', Passkeys::class)->name('settings.passkeys');
+    Route::put('/pengaturan/tema', ThemeController::class)->name('settings.theme');
     Route::post('/keluar', LogoutController::class)->name('logout');
 });
