@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionProperty;
+use Symfony\Component\Mailer\Transport\FailoverTransport;
 use Symfony\Component\Mailer\Transport\RoundRobinTransport;
 use Symfony\Component\Mailer\Transport\SendmailTransport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
@@ -43,7 +44,6 @@ class MailTransportGuardTest extends TestCase
             'MAIL_URL mail://' => 'mail://default',
             'MAIL_URL SENDMAIL://' => 'SENDMAIL://default',
             'MAIL_URL Sendmail:// dengan path' => 'Sendmail://default?path=/usr/bin/true%20-bs',
-            'MAIL_URL native://' => 'native://default',
         ] as $label => $url) {
             yield $label => [static function () use ($url) {
                 config(['mail.mailers.smtp.url' => $url]);
@@ -61,6 +61,12 @@ class MailTransportGuardTest extends TestCase
             return Mail::mailer('cadangan');
         }];
         yield 'Mail::build on-demand' => [static fn () => Mail::build(['transport' => 'mail'])];
+        yield 'creator kustom mengembalikan failover berisi sendmail' => [static function () {
+            Mail::extend('kustom', static fn () => new FailoverTransport([new SendmailTransport]));
+            config(['mail.mailers.jalan' => ['transport' => 'kustom']]);
+
+            return Mail::mailer('jalan');
+        }];
     }
 
     #[DataProvider('sendmailRoutes')]
@@ -68,13 +74,25 @@ class MailTransportGuardTest extends TestCase
     {
         try {
             $mailer = $route();
-        } catch (LogicException|InvalidArgumentException) {
-            $this->addToAssertionCount(1);
+        } catch (LogicException $e) {
+            $this->assertStringContainsString('sendmail dilarang', $e->getMessage(), 'Ditolak, tetapi bukan oleh penjaga.');
 
             return;
         }
 
         $this->assertFalse(self::containsSendmail($mailer->getSymfonyTransport()), 'Jalur ini berujung SendmailTransport.');
+    }
+
+    /** `native://` sudah ditolak Laravel sendiri (bukan oleh penjaga); dipatok agar perubahan Laravel ketahuan. */
+    public function test_native_transport_is_unsupported_by_laravel(): void
+    {
+        config(['mail.mailers.smtp.url' => 'native://default']);
+        Mail::purge('smtp');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported mail transport [native]');
+
+        Mail::mailer('smtp');
     }
 
     /** @return iterable<string, array{string}> */

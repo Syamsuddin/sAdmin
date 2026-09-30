@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Closure;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Blade;
 use PhpToken;
@@ -21,8 +22,8 @@ class ForbiddenScanCommand extends Command
     /** Semua kode PHP milik proyek yang berjalan di produksi; vendor/ tests/ storage/ di luar cakupan. */
     public const DEFAULT_PATHS = ['app', 'bootstrap', 'config', 'database', 'lang', 'public', 'resources/views', 'routes', 'artisan'];
 
-    /** Hasil generator framework, bukan kode proyek. */
-    private const EXCLUDED = ['bootstrap/cache'];
+    /** Hasil generator framework dan symlink unggahan (storage:link), bukan kode proyek. */
+    private const EXCLUDED = ['bootstrap/cache', 'public/storage'];
 
     private const FUNCTIONS = ['exec', 'shell_exec', 'system', 'passthru', 'proc_open', 'popen', 'pcntl_exec', 'mail', 'mb_send_mail', 'imap_mail'];
 
@@ -45,7 +46,10 @@ class ForbiddenScanCommand extends Command
      * Pengecualian baru = keputusan docs/09 + review, bukan jalan pintas agar pemindaian hijau.
      */
     private const ALLOWED_REFERENCES = [
-        'app/Infrastructure/Notify/SendmailRefusingMailManager.php' => ['symfony\\component\\mailer\\transport\\sendmailtransport'],
+        'app/Infrastructure/Notify/SendmailRefusingMailManager.php' => [
+            'symfony\\component\\mailer\\transport\\sendmailtransport',
+            'symfony\\component\\mailer\\transport\\roundrobintransport',
+        ],
     ];
 
     /** Skema DSN yang memilih transport sendmail (termasuk `mail`/`native` Laravel & Symfony). */
@@ -137,16 +141,17 @@ class ForbiddenScanCommand extends Command
         $where = static fn (PhpToken $token): string => $relative.':'.$token->line.($blade ? ' (hasil kompilasi Blade)' : '');
         $allowed = self::ALLOWED_REFERENCES[$relative] ?? [];
 
-        $violations = [];
-        $inUseFunction = false;
+        [$aliases, $violations] = $this->imports($tokens, $where, $allowed);
+        $inUse = false;
         foreach ($tokens as $i => $token) {
             $prev = $tokens[$i - 1] ?? null;
             $next = $tokens[$i + 1] ?? null;
 
-            if ($token->is(T_USE) && $next?->is(T_FUNCTION)) {
-                $inUseFunction = true;
+            // Pernyataan `use` (import & trait) sudah diurai imports(); `function () use ($x)` bukan import.
+            if ($token->is(T_USE) && $next?->text !== '(') {
+                $inUse = true;
             } elseif ($token->text === ';') {
-                $inUseFunction = false;
+                $inUse = false;
             }
 
             if ($token->text === '`') {
@@ -156,27 +161,30 @@ class ForbiddenScanCommand extends Command
             }
 
             if ($token->is([T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE])
-                && preg_match(self::FORBIDDEN_DSN, ltrim($token->text, '"\'')) === 1) {
+                && preg_match(self::FORBIDDEN_DSN, ltrim($token->text, "\"' \t\n\r")) === 1) {
                 $violations[] = $where($token).' — DSN transport mail terlarang (sendmail/mail/native)';
 
                 continue;
             }
 
-            if (! $token->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE])) {
+            if ($inUse || ! $token->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE])) {
                 continue;
             }
 
             $name = ltrim(strtolower($token->text), '\\');
+            $display = $token->text;
             if (str_starts_with($name, 'namespace\\')) {
                 $name = substr($name, strlen('namespace\\'));
             }
 
-            // `use function strlen, shell_exec as jalankan;` — alias menyamarkan pemanggilan berikutnya.
-            if ($inUseFunction && ! $prev?->is(T_AS)
-                && $this->isForbiddenFunction(ltrim((string) strrchr('\\'.$name, '\\'), '\\'))) {
-                $violations[] = $where($token)." — impor fungsi terlarang {$name}";
-
-                continue;
+            // `SC\Process\Process` dengan `use Symfony\Component as SC;` → diperluas ke nama lengkap dulu.
+            if ($token->is(T_NAME_QUALIFIED)) {
+                $first = strstr($name, '\\', true);
+                if ($first !== false && isset($aliases[$first])) {
+                    [$aliasLower, $aliasText] = $aliases[$first];
+                    $name = $aliasLower.substr($name, strlen($first));
+                    $display = $aliasText.substr($token->text, strlen($first));
+                }
             }
 
             if ($name === 'ffi' && ! $prev?->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_CASE, T_CONST, T_FUNCTION])) {
@@ -185,12 +193,10 @@ class ForbiddenScanCommand extends Command
                 continue;
             }
 
-            foreach (self::NAMESPACES as $namespace) {
-                if (str_starts_with($name, $namespace) && ! in_array($name, $allowed, true)) {
-                    $violations[] = $where($token)." — pustaka terlarang {$token->text}";
+            if ($this->isForbiddenNamespace($name) && ! in_array($name, $allowed, true)) {
+                $violations[] = $where($token)." — pustaka terlarang {$display}";
 
-                    continue 2;
-                }
+                continue;
             }
 
             if ($name === 'process' && $next?->is(T_DOUBLE_COLON)) {
@@ -212,6 +218,117 @@ class ForbiddenScanCommand extends Command
         }
 
         return $violations;
+    }
+
+    /**
+     * Mengurai setiap pernyataan `use` — tunggal, alias, dan group `A\{B, C as D}` — menjadi nama lengkap,
+     * sehingga import terlarang tak bisa disamarkan dan alias namespace bisa diperluas saat dipakai.
+     *
+     * @param  list<PhpToken>  $tokens
+     * @param  Closure(PhpToken): string  $where
+     * @param  list<string>  $allowed
+     * @return array{0: array<string, array{0: string, 1: string}>, 1: list<string>} [alias → [nama kecil, nama asli]], pelanggaran
+     */
+    private function imports(array $tokens, Closure $where, array $allowed): array
+    {
+        $aliases = [];
+        $violations = [];
+        $count = count($tokens);
+
+        for ($i = 0; $i < $count; $i++) {
+            if (! $tokens[$i]->is(T_USE) || ($tokens[$i + 1] ?? null)?->text === '(') {
+                continue;
+            }
+
+            $j = $i + 1;
+            $kind = 'class';
+            if (($tokens[$j] ?? null)?->is(T_FUNCTION)) {
+                $kind = 'function';
+                $j++;
+            } elseif (($tokens[$j] ?? null)?->is(T_CONST)) {
+                $kind = 'const';
+                $j++;
+            }
+
+            $prefix = '';
+            $current = null;
+            $alias = null;
+            $expectAlias = false;
+            for (; $j < $count; $j++) {
+                $token = $tokens[$j];
+                if ($token->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) {
+                    if ($expectAlias) {
+                        $alias = $token->text;
+                        $expectAlias = false;
+                    } else {
+                        $current = $token;
+                    }
+                } elseif ($token->is(T_AS)) {
+                    $expectAlias = true;
+                } elseif ($token->text === '{' && $current !== null) {
+                    $prefix = $current->text;
+                    $current = null;
+                } elseif (in_array($token->text, [',', '}', ';'], true)) {
+                    if ($current !== null) {
+                        array_push($violations, ...$this->checkImport($kind, $prefix, $current, $alias, $where, $allowed, $aliases));
+                    }
+                    $current = null;
+                    $alias = null;
+                    if ($token->text === ';') {
+                        break;
+                    }
+                }
+            }
+            $i = $j;
+        }
+
+        return [$aliases, $violations];
+    }
+
+    /**
+     * @param  Closure(PhpToken): string  $where
+     * @param  list<string>  $allowed
+     * @param  array<string, array{0: string, 1: string}>  $aliases
+     * @return list<string>
+     */
+    private function checkImport(string $kind, string $prefix, PhpToken $name, ?string $alias, Closure $where, array $allowed, array &$aliases): array
+    {
+        $fqn = ltrim(($prefix !== '' ? $prefix.'\\' : '').$name->text, '\\');
+        $lower = strtolower($fqn);
+        $last = ltrim((string) strrchr('\\'.$lower, '\\'), '\\');
+
+        if ($kind === 'function') {
+            if ($this->isForbiddenFunction($last)) {
+                return [$where($name)." — impor fungsi terlarang {$lower}"];
+            }
+            if ($alias !== null && $last === 'error_log') {
+                return [$where($name).' — impor alias error_log (argumennya tak bisa diperiksa)'];
+            }
+
+            return [];
+        }
+
+        if ($kind === 'const') {
+            return [];
+        }
+
+        $aliases[strtolower($alias ?? $last)] = [$lower, $fqn];
+        if ($lower === 'ffi' || ($this->isForbiddenNamespace($lower) && ! in_array($lower, $allowed, true))) {
+            return [$where($name)." — pustaka terlarang {$fqn}"];
+        }
+
+        return [];
+    }
+
+    private function isForbiddenNamespace(string $name): bool
+    {
+        foreach (self::NAMESPACES as $namespace) {
+            if (str_starts_with($name, $namespace)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

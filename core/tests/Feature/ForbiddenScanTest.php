@@ -133,15 +133,22 @@ class ForbiddenScanTest extends TestCase
         $this->assertSame([], $outside, 'Berkas PHP milik proyek di luar DEFAULT_PATHS (docs/09 vs docs/11).');
     }
 
-    public function test_generated_bootstrap_cache_is_excluded_from_default_scope(): void
+    public function test_default_run_scans_project_code_but_not_bootstrap_cache(): void
     {
         $generated = base_path('bootstrap/cache/zz-uji-forbidden-scan.php');
+        $project = base_path('bootstrap/zz-uji-forbidden-scan.php');
         File::put($generated, "<?php\nexec('id');\n");
 
         try {
             $this->artisan('sadmin:forbidden-scan')->assertExitCode(0);
+
+            File::put($project, "<?php\nexec('id');\n");
+            $this->artisan('sadmin:forbidden-scan')
+                ->expectsOutputToContain('bootstrap/zz-uji-forbidden-scan.php:2 — fungsi terlarang exec()')
+                ->doesntExpectOutputToContain('bootstrap/cache/zz-uji-forbidden-scan.php')
+                ->assertExitCode(1);
         } finally {
-            File::delete($generated);
+            File::delete([$generated, $project]);
         }
     }
 
@@ -200,6 +207,58 @@ class ForbiddenScanTest extends TestCase
         } finally {
             File::deleteDirectory($target);
         }
+    }
+
+    public function test_storage_link_uploads_are_not_scanned_as_project_code(): void
+    {
+        $link = base_path('public/storage');
+        $this->assertFileDoesNotExist($link, 'Prasyarat: tes berjalan tanpa `storage:link` agar symlink uji tak menimpa milik instalasi.');
+        $uploads = $this->dir.'-unggahan';
+        File::makeDirectory($uploads);
+        File::put($uploads.'/unggahan.php', "<?php\nexec('id');\n");
+        symlink($uploads, $link);
+
+        try {
+            $this->artisan('sadmin:forbidden-scan')->assertExitCode(0);
+        } finally {
+            unlink($link);
+            File::deleteDirectory($uploads);
+        }
+    }
+
+    public function test_resolves_group_use_and_namespace_aliases(): void
+    {
+        $path = $this->fixture(<<<'PHP'
+            use Symfony\Component\Process\{Process};
+            use Symfony\Component as SC;
+            use Symfony\Component\Mailer\{Transport};
+            use function error_log as catat;
+            (new SC\Process\Process(['id']))->run();
+            $dsn = <<<DSN
+                sendmail://default
+                DSN;
+            PHP);
+
+        $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])
+            ->expectsOutputToContain(':2 — pustaka terlarang Symfony\Component\Process\Process')
+            ->expectsOutputToContain(':4 — pustaka terlarang Symfony\Component\Mailer\Transport')
+            ->expectsOutputToContain(':5 — impor alias error_log')
+            ->expectsOutputToContain(':6 — pustaka terlarang Symfony\Component\Process\Process')
+            ->expectsOutputToContain('— DSN transport mail terlarang')
+            ->assertExitCode(1);
+    }
+
+    public function test_legitimate_group_imports_are_not_flagged(): void
+    {
+        $path = $this->fixture(<<<'PHP'
+            use Illuminate\{Support\Str, Http\Request};
+            use Illuminate\Support\Facades\{File, DB as Basis};
+            use Symfony\Component\Finder\Finder;
+            use function strlen as panjang;
+            $f = function () use ($path) { return $path; };
+            PHP);
+
+        $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])->assertExitCode(0);
     }
 
     public function test_ignores_methods_strings_comments_and_declarations(): void
