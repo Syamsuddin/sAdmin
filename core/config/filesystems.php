@@ -33,7 +33,8 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Tak disajikan lewat HTTP: rute storage/{path} (termasuk PUT unggah) tak dibutuhkan console (F-03).
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],
