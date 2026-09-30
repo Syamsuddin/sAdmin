@@ -6,6 +6,27 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.2] — 2026-09-30
+
+Menutup keputusan terbuka 1 dan 2 dari 0.1.0-alpha.1: cakupan larangan eksekusi OS di core.
+
+### Keamanan
+- core: `mail()`, `mb_send_mail()`, dan transport mail `sendmail` kini dilarang (docs/09), karena ketiganya menjalankan biner `sendmail` dan parameter ke-5 `mail()` bisa dipakai menyisipkan flag.
+- core: transport `sendmail` ditolak di `AppServiceProvider` apa pun sumbernya: config aplikasi, config bawaan framework yang digabung otomatis oleh Laravel, maupun `MAIL_URL`.
+- core: `sadmin:forbidden-scan` kini memindai semua kode PHP milik proyek yang berjalan di produksi, yaitu `app`, `bootstrap` (tanpa `cache`), `config`, `database`, `lang`, `public`, `resources/views`, `routes`, dan `artisan`. Blade dikompilasi lebih dulu sehingga blok `@php` dan `{{ }}` ikut terpindai.
+
+### Diubah
+- `core/docs/09_STACK.md`: daftar teknologi terlarang ditambah `mail`, `mb_send_mail`, sendmail, `pcntl_exec`, dan FFI; cakupannya kini "semua kode PHP milik proyek di `core/`".
+- `core/docs/11_COMMANDS.md`: cakupan `sadmin:forbidden-scan` diselaraskan dengan docs/09.
+- `core/config/mail.php`: mailer `sendmail` dihapus.
+
+### Catatan migrasi
+- Tidak ada migrasi database.
+- Konfigurasi `MAIL_MAILER=sendmail` atau `MAIL_URL=sendmail://…` kini menggagalkan pengiriman dengan pesan yang jelas. Gunakan SMTP.
+
+### Belum tercakup
+- `disable_functions` di PHP-FPM produksi, dan pilihan penjadwal: scheduler Laravel menjalankan tiap tugas lewat `proc_open`, sedangkan systemd timer per tugas tidak. Keduanya diputuskan di slice `install.sh` (F-01).
+
 ## [0.1.0-alpha.1] — 2026-09-30
 
 Tonggak **M1 Kerangka**, slice 1: rantai audit sisi core (F-04). Kriteria AC-03 baru terpenuhi sebagian (lihat *Belum tercakup*).

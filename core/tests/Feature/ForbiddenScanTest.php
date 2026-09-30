@@ -78,6 +78,44 @@ class ForbiddenScanTest extends TestCase
             ->assertExitCode(1);
     }
 
+    public function test_reports_mail_functions_that_spawn_sendmail(): void
+    {
+        $path = $this->fixture(<<<'PHP'
+            mail('a@contoh.test', 'subjek', 'isi', '', '-X/tmp/log');
+            \mb_send_mail('a@contoh.test', 'subjek', 'isi');
+            use Symfony\Component\Mailer\Transport\SendmailTransport;
+            PHP);
+
+        $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])
+            ->expectsOutputToContain(':2 — fungsi terlarang mail()')
+            ->expectsOutputToContain(':3 — fungsi terlarang mb_send_mail()')
+            ->expectsOutputToContain(':4 — pustaka terlarang Symfony\Component\Mailer\Transport\SendmailTransport')
+            ->assertExitCode(1);
+    }
+
+    public function test_scans_php_inside_blade_templates_but_not_their_html(): void
+    {
+        $path = $this->dir.'/halaman.blade.php';
+        File::put($path, <<<'BLADE'
+            <p>Teks biasa yang menyebut exec('id') bukan kode.</p>
+            @php shell_exec('id'); @endphp
+            <span>{{ exec('id') }}</span>
+            BLADE);
+
+        $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])
+            ->expectsOutputToContain('halaman.blade.php:2 — fungsi terlarang shell_exec()')
+            ->expectsOutputToContain('halaman.blade.php:3 — fungsi terlarang exec()')
+            ->doesntExpectOutputToContain('halaman.blade.php:1')
+            ->assertExitCode(1);
+    }
+
+    public function test_default_scope_covers_all_project_code_that_runs_in_production(): void
+    {
+        $this->artisan('sadmin:forbidden-scan')
+            ->expectsOutputToContain('app, bootstrap, config, database, public, routes, artisan')
+            ->assertExitCode(0);
+    }
+
     public function test_ignores_methods_strings_comments_and_declarations(): void
     {
         $path = $this->fixture(<<<'PHP'

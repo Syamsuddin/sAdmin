@@ -24,6 +24,16 @@
       "chars": 43245,
       "cpt": 3.5,
       "est_tokens": 12356
+    },
+    {
+      "ts": "2026-09-30T19:12:45+08:00",
+      "type": "task",
+      "task": "Keputusan 1A+2B larangan eksekusi",
+      "route": "Fitur baru (vertical slice)",
+      "files": 8,
+      "chars": 43365,
+      "cpt": 3.5,
+      "est_tokens": 12390
     }
   ],
   "measured_sessions": {}
