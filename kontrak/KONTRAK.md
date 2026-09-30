@@ -7,6 +7,7 @@ Versi kontrak: **0.2.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket 
 - SemVer: field opsional baru = minor; apa pun yang mengubah hasil kanonisasi, isi yang ditandatangani, algoritme, atau makna field = **major** + gerbang manusia (`core/docs/22_CHANGE_POLICY.md`).
 - Alur: ubah `kontrak/` dulu (bukan kode) → review → bump `VERSION` → implementasi kedua sisi → `make contract-test` (lihat `README.md` root).
 - Field `kontrak` di setiap badan pesan = versi **major**. Agen menolak major yang tak dikenalnya (`E_KONTRAK_VERSION`).
+- Selama **0.x**, versi minor berlaku sebagai major: kenaikan minor boleh memutus kompatibilitas, dan field `kontrak` berisi `major.minor` (mis. `"0.2"`), supaya pihak 0.1 dan 0.2 saling mengenali ketidakcocokan. Mulai 1.0 field itu hanya berisi major.
 
 ## 2. Transport
 | Ruas | Transport | Autentikasi |
@@ -21,14 +22,16 @@ Bingkai WebSocket: satu pesan JSON teks per bingkai: `{"type": "<NamaPesan>", "i
 ## 3. Kanonisasi & tanda tangan
 - Kanonisasi: **RFC 8785 (JCS)** terhadap `body`. Dilarang angka pecahan di badan yang ditandatangani (pakai integer atau string) — sumber selisih PHP↔Go paling umum.
 - Hash: SHA-256, dikodekan hex huruf kecil di field `*_hash`.
-- Masukan kanonisasi wajib **I-JSON** (RFC 7493, prasyarat RFC 8785) dengan batas sAdmin. Setiap pihak (core, gateway, agen) **menolak, tidak memperbaiki**, badan yang melanggar dengan `E_CANONICAL`. Aturannya:
-  - teks UTF-8 sah: tanpa byte tak sah dan tanpa surrogate tunggal (`\uD800`–`\uDFFF` yang tak berpasangan);
+- Masukan kanonisasi wajib **I-JSON** (RFC 7493, prasyarat RFC 8785) dengan batas sAdmin. Aturan ini berlaku untuk **seluruh teks bingkai** yang diterima (bukan hanya `body`), diperiksa pada byte mentah sebelum pengurai apa pun dan sebelum verifikasi `sig`. Setiap pihak (core, gateway, agen) **menolak, tidak memperbaiki**, teks yang melanggar, termasuk JSON yang sintaksnya rusak, dengan `E_CANONICAL`. Aturannya:
+  - teks UTF-8 sah tanpa BOM: tanpa byte tak sah dan tanpa surrogate tunggal (`\uD800`–`\uDFFF` yang tak berpasangan, dalam bentuk escape maupun byte mentah);
   - tanpa nama anggota ganda di satu objek, dibandingkan setelah escape diurai (`"a"` sama dengan `"\u0061"`);
+  - nama anggota tidak boleh memuat U+0000 (nilai string boleh);
   - angka hanya integer desimal tanpa titik dan eksponen, dengan |n| ≤ 2^53−1; nilai lain dikirim sebagai string;
   - sarang objek/larik paling dalam 64 tingkat.
+  - Menyimpang dari RFC 7493 §2.1: noncharacter (mis. U+FFFF, U+FDD0, U+10FFFF) **diterima** apa adanya.
 - Pengurai JSON bawaan bahasa sering diam-diam "memperbaiki" masukan: `encoding/json` Go mengganti UTF-8 tak sah dengan U+FFFD dan menerima kunci ganda, sedangkan `json_decode` PHP juga menerima kunci ganda. Karena itu setiap implementasi wajib memvalidasi aturan di atas secara eksplisit.
 - Vektor uji bersama, dipakai tes PHP dan Go:
-  - `kontrak/vectors/jcs/*.json`: `input` → `canonical` → `sha256`, wajib identik byte-per-byte;
+  - `kontrak/vectors/jcs/*.json`: `input` → `canonical` → `sha256`, wajib identik byte-per-byte; bila ada `input_base64` (teks mentah), teks itu wajib diterima dan menghasilkan `canonical` yang sama;
   - `kontrak/vectors/jcs-reject/*.json`: `input_base64` (byte mentah) wajib ditolak dengan `E_CANONICAL`; `reason` menyebut aturan yang dilanggar.
 
 | Kunci | Algoritme | Penyimpanan | Menandatangani |
@@ -73,7 +76,7 @@ ZIP sumber diunggah admin ke core, disimpan terenkripsi di brankas, lalu diambil
 | Kode | Kelas | Arti |
 |---|---|---|
 | `E_SCHEMA` | permanen | badan tak sesuai skema pesan/aksi |
-| `E_CANONICAL` | permanen | badan bukan I-JSON sesuai §3 (UTF-8 tak sah, kunci ganda, angka di luar aturan, sarang > 64) |
+| `E_CANONICAL` | permanen | teks bingkai bukan I-JSON sesuai §3 (sintaks rusak, BOM, UTF-8 tak sah, kunci ganda, NUL di nama anggota, angka di luar aturan, sarang > 64) |
 | `E_KONTRAK_VERSION` | permanen | major kontrak tak dikenal |
 | `E_POLICY_UNKNOWN_ACTION` | permanen | aksi/versi tak ada di kebijakan tersemat |
 | `E_PLATFORM` | permanen | aksi tak mendukung `platform_id` agen |

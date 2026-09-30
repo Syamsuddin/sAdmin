@@ -1,0 +1,5 @@
+{
+  "description": "Nama anggota memuat U+0000 di tengah",
+  "reason": "nul_member_name",
+  "input_base64": "eyJhXHUwMDAwYiI6MX0="
+}

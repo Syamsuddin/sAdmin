@@ -45,7 +45,10 @@ class JcsVectorsTest extends TestCase
     public function test_strict_decoder_accepts_vector_text_and_round_trips(string $path): void
     {
         $vector = json_decode((string) file_get_contents($path), false, 512, JSON_THROW_ON_ERROR);
-        $text = json_encode($vector->input, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        // Teks mentah vektor bila ada (byte yang sama dengan yang diuji Go); selain itu serialisasi input.
+        $text = isset($vector->input_base64)
+            ? (string) base64_decode($vector->input_base64, true)
+            : json_encode($vector->input, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         $this->assertSame($vector->canonical, Jcs::canonicalize(Jcs::decode($text)));
     }

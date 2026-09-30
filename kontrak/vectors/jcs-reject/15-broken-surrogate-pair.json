@@ -1,0 +1,5 @@
+{
+  "description": "Surrogate tinggi \\ud800 diikuti huruf biasa, bukan surrogate rendah",
+  "reason": "utf8",
+  "input_base64": "WyJcdWQ4MDBBIl0="
+}

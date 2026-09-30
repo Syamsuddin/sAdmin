@@ -1,0 +1,5 @@
+{
+  "description": "Teks diawali BOM UTF-8 (EF BB BF)",
+  "reason": "bom",
+  "input_base64": "77u/W10="
+}

@@ -49,9 +49,18 @@ final class Jcs
      */
     public static function decode(string $json): mixed
     {
+        if (str_starts_with($json, "\xEF\xBB\xBF")) {
+            throw new InvalidArgumentException('JCS: teks diawali BOM.');
+        }
         if (! mb_check_encoding($json, 'UTF-8')) {
             throw new InvalidArgumentException('JCS: teks bukan UTF-8 yang sah.');
         }
+        if (! json_validate($json)) {
+            throw new InvalidArgumentException('JCS: bukan JSON yang sah ('.json_last_error_msg().').');
+        }
+
+        // Sebelum json_decode ke objek: PHP menolak nama properti berawalan NUL dengan pesan yang menyesatkan.
+        self::assertValidMemberNames($json);
 
         try {
             $value = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
@@ -59,7 +68,6 @@ final class Jcs
             throw new InvalidArgumentException('JCS: bukan JSON yang sah ('.$e->getMessage().').', previous: $e);
         }
 
-        self::assertUniqueMemberNames($json);
         self::canonicalize($value);
 
         return $value;
@@ -114,6 +122,7 @@ final class Jcs
         $pairs = [];
         foreach ($members as $key => $member) {
             $key = (string) $key;
+            self::assertNoNulInName($key);
             $pairs[] = [self::utf16SortKey($key), $key, $member];
         }
 
@@ -128,10 +137,10 @@ final class Jcs
     }
 
     /**
-     * json_decode diam-diam memakai nilai terakhir untuk kunci ganda, sedangkan I-JSON mewajibkan penolakan.
-     * Dipanggil setelah json_decode berhasil, jadi teks dijamin JSON yang sah (string selalu tertutup).
+     * Nama anggota unik per objek (json_decode diam-diam memakai nilai terakhir) dan tanpa U+0000 (KONTRAK §3).
+     * Dipanggil setelah json_validate berhasil, jadi teks dijamin JSON yang sah (string selalu tertutup).
      */
-    private static function assertUniqueMemberNames(string $json): void
+    private static function assertValidMemberNames(string $json): void
     {
         /** @var list<array<array-key, true>> $scopes satu set nama per objek/larik yang sedang terbuka */
         $scopes = [];
@@ -158,12 +167,20 @@ final class Jcs
                 }
 
                 $name = (string) json_decode(substr($json, $start, $i - $start + 1), false, 512, JSON_THROW_ON_ERROR);
+                self::assertNoNulInName($name);
                 $top = array_key_last($scopes);
                 if (isset($scopes[$top][$name])) {
                     throw new InvalidArgumentException('JCS: nama anggota ganda dalam satu objek.');
                 }
                 $scopes[$top][$name] = true;
             }
+        }
+    }
+
+    private static function assertNoNulInName(string $name): void
+    {
+        if (str_contains($name, "\0")) {
+            throw new InvalidArgumentException('JCS: nama anggota memuat U+0000.');
         }
     }
 
