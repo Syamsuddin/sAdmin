@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Jcs;
 
 use InvalidArgumentException;
+use JsonException;
 use stdClass;
 
 /**
@@ -40,6 +41,28 @@ final class Jcs
             is_array($value) => array_is_list($value) ? self::list($value, $depth + 1) : self::object($value, $depth + 1),
             default => throw new InvalidArgumentException('JCS: tipe '.get_debug_type($value).' tak didukung.'),
         };
+    }
+
+    /**
+     * Pengurai ketat untuk teks JSON dari luar (KONTRAK §3, E_CANONICAL): menolak, tidak memperbaiki,
+     * masukan yang bukan I-JSON. Objek tetap stdClass agar `{}` dan `[]` terbedakan saat dikanonisasi ulang.
+     */
+    public static function decode(string $json): mixed
+    {
+        if (! mb_check_encoding($json, 'UTF-8')) {
+            throw new InvalidArgumentException('JCS: teks bukan UTF-8 yang sah.');
+        }
+
+        try {
+            $value = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new InvalidArgumentException('JCS: bukan JSON yang sah ('.$e->getMessage().').', previous: $e);
+        }
+
+        self::assertUniqueMemberNames($json);
+        self::canonicalize($value);
+
+        return $value;
     }
 
     /** SHA-256 hex huruf kecil atas bentuk kanonik. */
@@ -102,6 +125,46 @@ final class Jcs
         );
 
         return '{'.implode(',', $parts).'}';
+    }
+
+    /**
+     * json_decode diam-diam memakai nilai terakhir untuk kunci ganda, sedangkan I-JSON mewajibkan penolakan.
+     * Dipanggil setelah json_decode berhasil, jadi teks dijamin JSON yang sah (string selalu tertutup).
+     */
+    private static function assertUniqueMemberNames(string $json): void
+    {
+        /** @var list<array<array-key, true>> $scopes satu set nama per objek/larik yang sedang terbuka */
+        $scopes = [];
+        $length = strlen($json);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+
+            if ($char === '{' || $char === '[') {
+                $scopes[] = [];
+            } elseif ($char === '}' || $char === ']') {
+                array_pop($scopes);
+            } elseif ($char === '"') {
+                $start = $i;
+                for ($i++; $json[$i] !== '"'; $i++) {
+                    if ($json[$i] === '\\') {
+                        $i++;
+                    }
+                }
+
+                $after = $i + 1 + strspn($json, " \t\n\r", $i + 1);
+                if (($json[$after] ?? '') !== ':') {
+                    continue;
+                }
+
+                $name = (string) json_decode(substr($json, $start, $i - $start + 1), false, 512, JSON_THROW_ON_ERROR);
+                $top = array_key_last($scopes);
+                if (isset($scopes[$top][$name])) {
+                    throw new InvalidArgumentException('JCS: nama anggota ganda dalam satu objek.');
+                }
+                $scopes[$top][$name] = true;
+            }
+        }
     }
 
     /** RFC 8785 §3.2.3: kunci diurutkan per unit kode UTF-16; UTF-16BE membuat strcmp setara. */

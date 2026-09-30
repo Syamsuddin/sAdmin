@@ -50,15 +50,13 @@ final class AuditHasher
     }
 
     /**
-     * Bentuk ulang isi entri dari baris DB. jsonb didekode sebagai objek agar `{}` tetap `{}`.
+     * Bentuk ulang isi entri dari baris DB lewat pengurai ketat (KONTRAK §3); objek tetap objek agar `{}` tetap `{}`.
      *
      * @return array<string, mixed>
      */
     public function bodyFromRow(stdClass $row): array
     {
-        $params = $row->params_redacted === null
-            ? null
-            : json_decode($row->params_redacted, false, 512, JSON_THROW_ON_ERROR);
+        $params = $row->params_redacted === null ? null : Jcs::decode($row->params_redacted);
 
         if (! ($params === null || is_array($params) || $params instanceof stdClass)) {
             throw new InvalidArgumentException('JCS: params_redacted harus objek atau larik JSON.');

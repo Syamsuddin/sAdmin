@@ -40,4 +40,13 @@ class JcsVectorsTest extends TestCase
         $this->assertSame($vector->sha256, hash('sha256', $vector->canonical));
         $this->assertSame($vector->sha256, Jcs::hash($vector->input));
     }
+
+    #[DataProvider('vectors')]
+    public function test_strict_decoder_accepts_vector_text_and_round_trips(string $path): void
+    {
+        $vector = json_decode((string) file_get_contents($path), false, 512, JSON_THROW_ON_ERROR);
+        $text = json_encode($vector->input, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        $this->assertSame($vector->canonical, Jcs::canonicalize(Jcs::decode($text)));
+    }
 }

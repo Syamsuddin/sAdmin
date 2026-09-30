@@ -1,0 +1,5 @@
+{
+  "description": "Escape surrogate tunggal \\ud800 tanpa pasangan",
+  "reason": "utf8",
+  "input_base64": "eyJhIjoiXHVkODAwIn0="
+}

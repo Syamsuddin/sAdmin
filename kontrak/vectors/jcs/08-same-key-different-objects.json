@@ -1,0 +1,19 @@
+{
+  "description": "Kunci sama di objek berbeda dan titik dua di dalam string BUKAN kunci ganda (penjaga false positive)",
+  "input": {
+    "a": {
+      "k": 1
+    },
+    "b": [
+      {
+        "k": 2
+      },
+      {
+        "k": 3
+      }
+    ],
+    "c": "x\":y"
+  },
+  "canonical": "{\"a\":{\"k\":1},\"b\":[{\"k\":2},{\"k\":3}],\"c\":\"x\\\":y\"}",
+  "sha256": "7525fb9a80a2ff0b229d15507a9b0fefd33f7ba99bf90aa95bfbba41103a19ae"
+}

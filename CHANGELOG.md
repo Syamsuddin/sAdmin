@@ -6,6 +6,23 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.3] — 2026-09-30
+
+Menutup keputusan terbuka 3 dari 0.1.0-alpha.1: aturan masukan kanonisasi di kontrak protokol. **Kontrak naik ke 0.2.0.**
+
+### Diubah
+- kontrak 0.2.0 (`kontrak/KONTRAK.md` §3): masukan kanonisasi wajib I-JSON (RFC 7493). Artinya UTF-8 sah, tanpa nama anggota ganda, angka hanya integer desimal ≤ ±(2^53−1) tanpa titik dan eksponen, dan sarang paling dalam 64 tingkat. Setiap pihak menolak masukan yang melanggar, tidak memperbaikinya.
+- kontrak §7: kode galat baru `E_CANONICAL`.
+- kontrak: berkas `kontrak/VERSION` kini ada (sebelumnya dirujuk KONTRAK.md tetapi tidak ada).
+
+### Ditambahkan
+- kontrak: sepuluh vektor tolak di `kontrak/vectors/jcs-reject/` (byte mentah dalam base64), ditambah dua vektor terima batas: kunci sama di objek berbeda, dan tepat 64 tingkat.
+- core: `Jcs::decode()`, pengurai ketat yang menolak UTF-8 tak sah, surrogate tunggal, kunci ganda (termasuk yang disamarkan escape), angka di luar aturan, dan sarang lebih dari 64. Verifier audit kini memakainya.
+
+### Catatan migrasi
+- Tidak ada migrasi database.
+- Perubahan kontrak ini aman karena belum ada implementasi Go maupun agen terpasang. Implementasi Go di paket edge (pustaka `gowebpki/jcs`, masih `[VERIFIKASI]` di `edge/docs/09_STACK.md`) wajib lulus vektor tolak, dan bila pustaka itu tidak menolak dengan sendirinya, validasi harus ditambahkan secara eksplisit.
+
 ## [0.1.0-alpha.2] — 2026-09-30
 
 Menutup keputusan terbuka 1 dan 2 dari 0.1.0-alpha.1: cakupan larangan eksekusi OS di core.

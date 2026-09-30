@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='ForbiddenScan|MailTransportGuard'"
+    "test_satu": "php artisan test --filter='Jcs|AuditChain|AppendAuditEntry'"
   },
   "sesi": [
     {
@@ -27,9 +27,9 @@
     {
       "mulai": "2026-09-30T19:08:49+08:00",
       "selesai": null,
-      "step": 4,
-      "detik": 238,
-      "tok_est": 20158
+      "step": 7,
+      "detik": 480,
+      "tok_est": 29820
     }
   ],
   "step_berjalan": null,
@@ -343,13 +343,90 @@
         "disable_functions FPM + penjadwal systemd timer per tugas: slice install.sh (F-01)"
       ],
       "selesai": "2026-09-30T19:12:45+08:00"
+    },
+    {
+      "fitur": "Keputusan 3A kontrak I-JSON",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-09-30T19:14:06+08:00",
+      "rencana": [
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/jcs-reject",
+        "app/Infrastructure/Jcs/Jcs.php",
+        "app/Domain/Audit/Services/AuditHasher.php",
+        "tests/Unit/Infrastructure/JcsTest.php",
+        "tests/Contract/JcsVectorsTest.php",
+        "tests/Contract/JcsRejectVectorsTest.php",
+        "../CHANGELOG.md"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Kontrak: KONTRAK §3/§7 + VERSION",
+          "mulai": "2026-09-30T19:14:06+08:00",
+          "selesai": "2026-09-30T19:15:18+08:00",
+          "detik": 73,
+          "tok_est": 2778,
+          "muat": [
+            "../kontrak/KONTRAK.md",
+            "../kontrak/VERSION",
+            "../kontrak/vectors/jcs-reject/01-invalid-utf8.json"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Tes dulu (merah)",
+          "mulai": "2026-09-30T19:15:18+08:00",
+          "selesai": "2026-09-30T19:18:06+08:00",
+          "detik": 168,
+          "tok_est": 2112,
+          "muat": [
+            "tests/Contract/JcsRejectVectorsTest.php",
+            "tests/Contract/JcsVectorsTest.php",
+            "tests/Unit/Infrastructure/JcsTest.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Implementasi + gerbang",
+          "mulai": "2026-09-30T19:18:06+08:00",
+          "selesai": "2026-09-30T19:18:06+08:00",
+          "detik": 1,
+          "tok_est": 4772,
+          "muat": [
+            "app/Infrastructure/Jcs/Jcs.php",
+            "app/Domain/Audit/Services/AuditHasher.php",
+            "../CHANGELOG.md"
+          ]
+        }
+      ],
+      "detik": 242,
+      "tok_est": 9662,
+      "deviasi": [
+        "gerbang dijalankan dengan DB_DATABASE=sadmin_test_gate karena reviewer paralel memakai sadmin_test (migrate:fresh bentrok)"
+      ],
+      "asumsi": [
+        "Perubahan kontrak diklasifikasikan 0.1.0→0.2.0 (0.x: minor boleh memutus); tak ada implementasi Go/agen terpasang"
+      ],
+      "dokumen_diperbarui": [
+        "../kontrak/KONTRAK.md (§3, §7, versi)",
+        "../kontrak/VERSION (baru)"
+      ],
+      "landmine_tersentuh": [
+        "Tes paralel pada DB uji yang sama saling menghapus tabel (RefreshDatabase/migrate:fresh) — pakai DB_DATABASE terpisah per proses"
+      ],
+      "ditunda": [
+        "edge: verifikasi gowebpki/jcs terhadap vektor tolak (edge/docs/09 [VERIFIKASI])"
+      ],
+      "selesai": "2026-09-30T19:18:06+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 1053,
-    "tok_est": 61253,
+    "detik": 1295,
+    "tok_est": 70915,
     "tok_terukur": 0,
-    "step": 11,
-    "fitur": 2
+    "step": 14,
+    "fitur": 3
   }
 }

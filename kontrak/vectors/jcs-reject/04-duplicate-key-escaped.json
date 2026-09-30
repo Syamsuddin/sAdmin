@@ -1,0 +1,5 @@
+{
+  "description": "Kunci ganda setelah escape diurai: \"a\" = \"\\u0061\"",
+  "reason": "duplicate_key",
+  "input_base64": "eyJhIjoxLCJcdTAwNjEiOjJ9"
+}
