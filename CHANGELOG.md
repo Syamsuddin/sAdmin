@@ -14,13 +14,13 @@ Tonggak **M1 Kerangka**, slice 1: rantai audit sisi core (F-04). Kriteria AC-03 
 - Paket blueprint VCBD `core` (induk produk) dan `edge`, rumah bersama `kontrak/`, `catalog/`, `capsules/`, peta monorepo `README.md`, serta lisensi MIT.
 - core: kerangka Laravel 13.34 untuk PHP 8.3 dan PostgreSQL, dengan antrean dan cache memakai driver `database`. Tanpa Tailwind, CDN, Redis, maupun dependensi yang tak tercantum di docs/09.
 - core: tabel `tenants` dan `audit_entries`. `audit_entries` bersifat append-only: trigger DB menolak UPDATE, DELETE, dan TRUNCATE.
-- core: `AppendAuditEntry` membangun rantai hash `SHA-256(prev_hash ∥ JCS(entri))`. Nomor urut dijamin tanpa celah lewat kunci advisory, dan entri ikut batal bila transaksi pemanggil batal.
-- core: `php artisan sadmin:audit-verify` (exit 0 = rantai utuh; saat rusak mencatat log `critical` `audit_mismatch`), dijadwalkan harian.
-- core: `php artisan sadmin:forbidden-scan` sebagai tripwire eksekusi OS/SSH di kode core.
+- core: `AppendAuditEntry` membangun rantai hash `SHA-256(prev_hash ∥ JCS(entri))`. Nomor urut dijamin tanpa celah lewat kunci advisory, dan entri ikut batal bila transaksi pemanggil batal. Masukan berisi byte NUL atau sarang lebih dari 64 tingkat ditolak. Setiap entri juga dibaca ulang sebelum commit, sehingga entri yang berhasil tertulis selalu bisa diverifikasi.
+- core: `php artisan sadmin:audit-verify` (exit 0 = rantai utuh; saat rusak mencatat log `critical` `audit_mismatch`), dijadwalkan harian. Baris yang dimanipulasi dalam bentuk apa pun dilaporkan sebagai `audit_mismatch`, tidak pernah berakhir sebagai crash.
+- core: `php artisan sadmin:forbidden-scan` sebagai tripwire eksekusi OS/SSH di kode core, termasuk bentuk alias `use function`, `namespace\`, dan FFI.
 - core: kanonisasi RFC 8785 (JCS) internal di `app/Infrastructure/Jcs`.
-- kontrak: enam vektor uji JCS bersama PHP↔Go di `kontrak/vectors/jcs/`.
-- core: ADR 0001 tentang format hash rantai audit, berstatus *diusulkan* dan menunggu tinjauan pemilik produk.
-- core: 41 tes (Unit, Feature, Contract, grup `redaction`), termasuk vektor emas format rantai.
+- kontrak: tujuh vektor uji JCS bersama PHP↔Go di `kontrak/vectors/jcs/`, termasuk penjaga escape HTML bawaan Go.
+- core: ADR 0001 tentang format hash rantai audit beserta batas masukannya, berstatus *diusulkan* dan menunggu tinjauan pemilik produk.
+- core: 63 tes (Unit, Feature, Contract, grup `redaction`), termasuk vektor emas format rantai dan tes manipulasi per kolom. Sebelum merge, slice ini melewati review adversarial (docs/22), dan semua temuan yang mematahkan invarian audit sudah ditambal dengan tes regresi.
 
 ### Diubah
 - `core/docs/09_STACK.md`: versi Laravel 13.x, PHPUnit 12, dan Larastan (analisis statis) kini terverifikasi.
@@ -35,3 +35,4 @@ Tonggak **M1 Kerangka**, slice 1: rantai audit sisi core (F-04). Kriteria AC-03 
 - Checkpoint audit bertanda tangan dan jangkar ke agen, offsite, serta digest.
 - Pencabutan hak UPDATE/DELETE/TRUNCATE dari role aplikasi (menunggu `install.sh`).
 - Fitur M1 lain yang belum dikerjakan: `install.sh` (F-01), login passkey (F-03), inventaris, dan tema console (F-17).
+- `sadmin:forbidden-scan` belum mencakup `mail()` dan transport `sendmail` di `config/mail.php`, maupun berkas Blade. Cakupan path di docs/09 ("di `core/`") dan docs/11 (`app`, `routes`, `config`) juga belum selaras; keduanya menunggu keputusan.

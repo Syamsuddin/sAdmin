@@ -15,8 +15,20 @@ final class Jcs
 {
     public const MAX_SAFE_INTEGER = 9007199254740991;
 
+    /** Batas sarang objek/larik: apa pun yang lolos kanonisasi juga lolos json_decode saat verifikasi. */
+    public const MAX_DEPTH = 64;
+
     public static function canonicalize(mixed $value): string
     {
+        return self::value($value, 0);
+    }
+
+    private static function value(mixed $value, int $depth): string
+    {
+        if ((is_array($value) || $value instanceof stdClass) && $depth >= self::MAX_DEPTH) {
+            throw new InvalidArgumentException('JCS: struktur bersarang melebihi '.self::MAX_DEPTH.' tingkat.');
+        }
+
         return match (true) {
             $value === null => 'null',
             $value === true => 'true',
@@ -24,8 +36,8 @@ final class Jcs
             is_int($value) => self::integer($value),
             is_string($value) => self::string($value),
             is_float($value) => throw new InvalidArgumentException('JCS: angka pecahan dilarang di badan kanonik; pakai integer atau string.'),
-            $value instanceof stdClass => self::object(get_object_vars($value)),
-            is_array($value) => array_is_list($value) ? self::list($value) : self::object($value),
+            $value instanceof stdClass => self::object(get_object_vars($value), $depth + 1),
+            is_array($value) => array_is_list($value) ? self::list($value, $depth + 1) : self::object($value, $depth + 1),
             default => throw new InvalidArgumentException('JCS: tipe '.get_debug_type($value).' tak didukung.'),
         };
     }
@@ -68,13 +80,13 @@ final class Jcs
     }
 
     /** @param list<mixed> $items */
-    private static function list(array $items): string
+    private static function list(array $items, int $depth): string
     {
-        return '['.implode(',', array_map(self::canonicalize(...), $items)).']';
+        return '['.implode(',', array_map(static fn (mixed $item): string => self::value($item, $depth), $items)).']';
     }
 
     /** @param array<array-key, mixed> $members */
-    private static function object(array $members): string
+    private static function object(array $members, int $depth): string
     {
         $pairs = [];
         foreach ($members as $key => $member) {
@@ -85,7 +97,7 @@ final class Jcs
         usort($pairs, static fn (array $a, array $b): int => strcmp($a[0], $b[0]));
 
         $parts = array_map(
-            static fn (array $pair): string => self::string($pair[1]).':'.self::canonicalize($pair[2]),
+            static fn (array $pair): string => self::string($pair[1]).':'.self::value($pair[2], $depth),
             $pairs,
         );
 

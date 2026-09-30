@@ -16,9 +16,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use stdClass;
 use Tests\TestCase;
+use UnexpectedValueException;
 
 class AppendAuditEntryTest extends TestCase
 {
@@ -104,7 +106,7 @@ class AppendAuditEntryTest extends TestCase
         $this->assertSame($heads[1]->hash, $rows[2]->prev_hash);
     }
 
-    public function test_params_are_stored_canonically_and_survive_jsonb_round_trip(): void
+    public function test_params_survive_jsonb_round_trip_semantically(): void
     {
         $this->append('site.create', target: 'site:contoh', paramsRedacted: [
             'kosong' => new stdClass,
@@ -151,6 +153,74 @@ class AppendAuditEntryTest extends TestCase
             $this->append(paramsRedacted: ['cpu' => 0.5]);
             $this->fail('Angka pecahan seharusnya ditolak.');
         } catch (InvalidArgumentException) {
+            $this->assertSame(0, DB::table('audit_entries')->count());
+        }
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function nulBytes(): iterable
+    {
+        yield 'target' => [['target' => "site:a\0SISA"]];
+        yield 'actor_id' => [['actorId' => "admin\0x"]];
+        yield 'action_key' => [['actionKey' => "console.login\0"]];
+        yield 'nilai params' => [['paramsRedacted' => ['a' => ['b' => "x\0y"]]]];
+        yield 'kunci params' => [['paramsRedacted' => ["k\0" => 1]]];
+    }
+
+    /** @param array<string, mixed> $override */
+    #[DataProvider('nulBytes')]
+    public function test_rejects_nul_bytes_that_postgres_would_truncate(array $override): void
+    {
+        try {
+            app(AppendAuditEntry::class)->handle(new AuditEntryData(...[
+                'tenantId' => $this->tenant->id,
+                'actorType' => ActorType::Admin,
+                'actorId' => 'admin-1',
+                'actionKey' => 'site.create',
+                'outcome' => AuditOutcome::Rejected,
+                ...$override,
+            ]));
+            $this->fail('Byte NUL seharusnya ditolak.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('NUL', $e->getMessage());
+            $this->assertSame(0, DB::table('audit_entries')->count());
+        }
+    }
+
+    public function test_rejects_params_nested_beyond_the_verifiable_depth(): void
+    {
+        $deep = [];
+        for ($i = 0; $i < 511; $i++) {
+            $deep = ['k' => $deep];
+        }
+
+        try {
+            $this->append(paramsRedacted: $deep);
+            $this->fail('Sarang sedalam ini seharusnya ditolak saat menulis.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('bersarang', $e->getMessage());
+            $this->assertSame(0, DB::table('audit_entries')->count());
+        }
+    }
+
+    /**
+     * Jaring pengaman: divergensi round-trip yang tak terduga (disimulasikan trigger yang mengubah baris)
+     * membatalkan penulisan, sehingga tak ada entri yang tertulis namun gagal diverifikasi.
+     */
+    public function test_refuses_entry_that_does_not_read_back_identically(): void
+    {
+        DB::unprepared(<<<'SQL'
+            CREATE FUNCTION uji_ubah_target() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN NEW.target := 'diubah'; RETURN NEW; END
+            $$;
+            CREATE TRIGGER uji_ubah_target BEFORE INSERT ON audit_entries
+                FOR EACH ROW EXECUTE FUNCTION uji_ubah_target();
+            SQL);
+
+        try {
+            $this->append(target: 'asli');
+            $this->fail('Entri yang berubah saat disimpan seharusnya ditolak.');
+        } catch (UnexpectedValueException) {
             $this->assertSame(0, DB::table('audit_entries')->count());
         }
     }

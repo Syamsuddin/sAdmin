@@ -5,8 +5,8 @@ namespace App\Domain\Audit\Services;
 use App\Domain\Audit\Data\AuditHead;
 use App\Domain\Audit\Data\ChainVerification;
 use Illuminate\Support\Facades\DB;
-use InvalidArgumentException;
 use JsonException;
+use Throwable;
 
 /**
  * Menelusuri rantai dari genesis: seq berurutan tanpa celah, prev_hash menyambung, hash cocok dengan isi.
@@ -35,8 +35,9 @@ final class AuditChainVerifier
 
             try {
                 $recomputed = $this->hasher->hash($this->hasher->bodyFromRow($row));
-            } catch (InvalidArgumentException|JsonException $e) {
-                return ChainVerification::broken($checked, $head, $seq, 'isi entri tak dapat dikanonisasi: '.$e->getMessage());
+            } catch (Throwable $e) {
+                // Baris hasil manipulasi apa pun wajib berakhir sebagai audit_mismatch, bukan crash.
+                return ChainVerification::broken($checked, $head, $seq, 'isi entri tak dapat dikanonisasi: '.self::describe($e));
             }
 
             if (! hash_equals($row->hash, $recomputed)) {
@@ -48,5 +49,13 @@ final class AuditChainVerifier
         }
 
         return ChainVerification::intact($checked, $head);
+    }
+
+    /** Hanya pesan yang pasti bebas isi entri (JCS & JSON) yang diteruskan; selebihnya nama kelas saja. */
+    private static function describe(Throwable $e): string
+    {
+        return $e instanceof JsonException || str_starts_with($e->getMessage(), 'JCS:')
+            ? $e->getMessage()
+            : class_basename($e);
     }
 }

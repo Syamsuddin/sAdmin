@@ -60,6 +60,22 @@ class ForbiddenScanTest extends TestCase
             ->assertExitCode(1);
     }
 
+    public function test_catches_aliased_relative_and_ffi_bypasses(): void
+    {
+        $path = $this->fixture(<<<'PHP'
+            use function shell_exec as jalankan;
+            jalankan('id');
+            namespace\passthru('id');
+            \FFI::cdef('int system(const char *);')->system('id');
+            PHP);
+
+        $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])
+            ->expectsOutputToContain(':2 — impor fungsi terlarang shell_exec')
+            ->expectsOutputToContain(':4 — fungsi terlarang passthru()')
+            ->expectsOutputToContain(':5 — FFI')
+            ->assertExitCode(1);
+    }
+
     public function test_ignores_methods_strings_comments_and_declarations(): void
     {
         $path = $this->fixture(<<<'PHP'
@@ -71,6 +87,7 @@ class ForbiddenScanTest extends TestCase
             // exec('id');
             function passthru_label(): string { return 'passthru'; }
             enum Aktor: string { case System = 'system'; }
+            use function strlen as panjang;
             PHP);
 
         $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])

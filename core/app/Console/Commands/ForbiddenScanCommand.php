@@ -26,6 +26,7 @@ class ForbiddenScanCommand extends Command
         'symfony\\component\\process\\',
         'phpseclib',
         'spatie\\ssh\\',
+        'ffi\\',
     ];
 
     private const NOT_A_CALL_BEFORE = [T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW, T_CONST];
@@ -91,11 +92,28 @@ class ForbiddenScanCommand extends Command
                 continue;
             }
 
-            if (! $token->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])) {
+            if (! $token->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE])) {
                 continue;
             }
 
             $name = ltrim(strtolower($token->text), '\\');
+            if (str_starts_with($name, 'namespace\\')) {
+                $name = substr($name, strlen('namespace\\'));
+            }
+
+            // `use function shell_exec as jalankan;` — alias menyamarkan pemanggilan berikutnya.
+            if ($prev?->is(T_FUNCTION) && ($tokens[$i - 2] ?? null)?->is(T_USE)
+                && $this->isForbiddenFunction(ltrim((string) strrchr('\\'.$name, '\\'), '\\'))) {
+                $violations[] = $where($token)." — impor fungsi terlarang {$name}";
+
+                continue;
+            }
+
+            if ($name === 'ffi') {
+                $violations[] = $where($token).' — FFI (pemanggilan kode native)';
+
+                continue;
+            }
 
             foreach (self::NAMESPACES as $namespace) {
                 if (str_starts_with($name, $namespace)) {

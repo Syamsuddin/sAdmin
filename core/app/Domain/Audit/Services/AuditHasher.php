@@ -4,6 +4,7 @@ namespace App\Domain\Audit\Services;
 
 use App\Infrastructure\Jcs\Jcs;
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 use stdClass;
 
 /**
@@ -58,6 +59,10 @@ final class AuditHasher
         $params = $row->params_redacted === null
             ? null
             : json_decode($row->params_redacted, false, 512, JSON_THROW_ON_ERROR);
+
+        if (! ($params === null || is_array($params) || $params instanceof stdClass)) {
+            throw new InvalidArgumentException('JCS: params_redacted harus objek atau larik JSON.');
+        }
 
         return $this->body(
             seq: (int) $row->seq,

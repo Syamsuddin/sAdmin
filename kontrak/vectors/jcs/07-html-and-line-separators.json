@@ -1,0 +1,11 @@
+{
+  "description": "Penjaga divergensi Go: '<', '>', '&', U+2028, dan U+2029 tetap literal (encoding/json Go bawaan meng-escape-nya; SetEscapeHTML(false) wajib)",
+  "input": {
+    "<b>": "x & y > z",
+    "html": "<script>alert(1)</script>&amp;",
+    "ps": "a b",
+    "ls": "a b"
+  },
+  "canonical": "{\"<b>\":\"x & y > z\",\"html\":\"<script>alert(1)</script>&amp;\",\"ls\":\"a b\",\"ps\":\"a b\"}",
+  "sha256": "26f9fc781fa558c5e69712bd0ff3eb6b5926dda9d3027bac7f7b8ba7627d99ea"
+}

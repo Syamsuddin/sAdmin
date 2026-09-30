@@ -8,6 +8,7 @@ use App\Domain\Audit\Services\AuditHasher;
 use App\Infrastructure\Jcs\Jcs;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use UnexpectedValueException;
 
 /**
  * Menambah satu entri ke rantai audit. Panggil di dalam transaksi Action pemilik perubahan state
@@ -49,6 +50,13 @@ final class AppendAuditEntry
                 'hash' => $hash,
                 'params_redacted' => $body['params_redacted'] === null ? null : Jcs::canonicalize($body['params_redacted']),
             ]);
+
+            // Invarian "tertulis ⇒ terverifikasi": entri yang tak terbaca ulang identik akan membutakan
+            // verifikasi semua entri sesudahnya, dan karena append-only tak bisa diperbaiki. Batalkan di sini.
+            $stored = DB::table('audit_entries')->where('seq', $body['seq'])->first();
+            if ($stored === null || ! hash_equals($hash, $this->hasher->hash($this->hasher->bodyFromRow($stored)))) {
+                throw new UnexpectedValueException('Entri audit tak terbaca ulang identik; penulisan dibatalkan.');
+            }
 
             return new AuditHead($body['seq'], $hash);
         });

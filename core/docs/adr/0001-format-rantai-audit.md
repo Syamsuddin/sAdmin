@@ -12,8 +12,13 @@ docs/07_DATA_MODEL.md menetapkan `hash = SHA-256(prev_hash ∥ JCS(entri tanpa h
 3. **Hash** adalah SHA-256 heksadesimal huruf kecil atas byte UTF-8 dari `prev_hash` (64 karakter hex) yang langsung disambung dengan bentuk kanonik, tanpa pemisah.
 4. **Tipe JSON**: `seq` integer, `emergency_local` boolean, `params_redacted` objek/larik/null, sisanya string atau null.
 5. **`occurred_at`** ditulis dalam RFC 3339 UTC berakhiran `Z` dengan tepat 6 digit mikrodetik (`2026-09-30T02:11:12.345678Z`). Kolomnya `timestamptz(6)`, sehingga nilai yang dibaca ulang identik.
-6. **`params_redacted`** disimpan dalam bentuk kanoniknya. Saat verifikasi, jsonb didekode sebagai objek, jadi `{}` dan `[]` tetap dibedakan.
+6. **`params_redacted`** dikirim ke DB sebagai teks kanonik, tetapi jsonb **menormalkan ulang** penyimpanannya: urutan kunci diubah dan spasi disisipkan. Karena itu nilainya hanya setara secara semantik, bukan identik per byte. Verifikator mana pun (core, tool offsite, Go) **wajib** mendekode nilai itu sebagai objek, lalu mengkanonisasi ulang, sehingga `{}` dan `[]` tetap dibedakan. Teks `params_redacted::text` tidak boleh di-hash apa adanya.
 7. **Genesis**: `prev_hash` entri pertama berisi 64 nol, dan `seq` dimulai dari 1 tanpa celah. Penulisan berlangsung di bawah `pg_advisory_xact_lock` bersama, di dalam transaksi Action pemilik perubahan state.
+8. **Batas masukan**:
+   - Byte NUL dilarang di semua field teks dan di `params_redacted`, karena PostgreSQL memotong text di NUL dan menolak `\u0000` di jsonb.
+   - Sarang objek/larik dibatasi 64 tingkat (`Jcs::MAX_DEPTH`).
+9. **Invarian "tertulis ⇒ terverifikasi"**: sebelum commit, `AppendAuditEntry` membaca ulang baris yang baru ditulis dan menghitung ulang hash-nya. Bila hasilnya tidak identik, penulisan dibatalkan. Alasannya: rantai bersifat append-only dan verifikasi berhenti di kerusakan pertama, sehingga satu entri yang tak terverifikasi akan membutakan pemeriksaan semua entri sesudahnya.
+10. **Verifikasi tidak pernah crash** karena isi baris. Baris yang tak dapat dibentuk ulang (tipe salah, JSON rusak) dilaporkan sebagai `audit_mismatch` pada seq tersebut, dengan alasan yang tidak menggemakan isi entri.
 
 ## Konsekuensi
 - `sadmin:audit-verify` mendeteksi perubahan isi kolom mana pun, penghapusan entri di tengah (sebagai celah), dan penggantian satu entri beserta hash hasil hitung ulang (karena tautan ke entri berikutnya putus).

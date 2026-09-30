@@ -37,6 +37,18 @@ class JcsTest extends TestCase
         $this->assertSame('[9007199254740991,-9007199254740991]', Jcs::canonicalize([Jcs::MAX_SAFE_INTEGER, -Jcs::MAX_SAFE_INTEGER]));
     }
 
+    public function test_enforces_maximum_nesting_depth(): void
+    {
+        $nested = [];
+        for ($i = 1; $i < Jcs::MAX_DEPTH; $i++) {
+            $nested = [$nested];
+        }
+        $this->assertSame(str_repeat('[', Jcs::MAX_DEPTH).str_repeat(']', Jcs::MAX_DEPTH), Jcs::canonicalize($nested));
+
+        $this->expectException(InvalidArgumentException::class);
+        Jcs::canonicalize([$nested]);
+    }
+
     public function test_empty_php_array_is_array_and_empty_stdclass_is_object(): void
     {
         $this->assertSame('[]', Jcs::canonicalize([]));

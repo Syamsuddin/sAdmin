@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
@@ -98,11 +99,51 @@ class AuditChainTamperTest extends TestCase
         $this->assertStringNotContainsString('9007199254740993', (string) json_encode($logged));
     }
 
-    public function test_editing_any_other_column_fails_verification(): void
+    /** @return iterable<string, array{string}> */
+    public static function columnTampers(): iterable
     {
-        $this->tamper("UPDATE audit_entries SET outcome = 'ok', occurred_at = occurred_at + interval '1 microsecond' WHERE seq = 42");
+        yield 'tenant_id' => ['tenant_id = (SELECT id FROM tenants WHERE id <> audit_entries.tenant_id LIMIT 1)'];
+        yield 'prev_hash' => ["prev_hash = repeat('b', 64)"];
+        yield 'occurred_at +1µs' => ["occurred_at = occurred_at + interval '1 microsecond'"];
+        yield 'actor_type' => ["actor_type = CASE WHEN actor_type = 'system' THEN 'admin' ELSE 'system' END"];
+        yield 'actor_id NULL↔kosong' => ["actor_id = CASE WHEN actor_id IS NULL THEN '' ELSE NULL END"];
+        yield 'action_key' => ["action_key = action_key || '.x'"];
+        yield 'target' => ["target = COALESCE(target, '') || 'x'"];
+        yield 'outcome' => ["outcome = CASE WHEN outcome = 'ok' THEN 'failed' ELSE 'ok' END"];
+        yield 'envelope_ref' => ["envelope_ref = CASE WHEN envelope_ref IS NULL THEN '01k6d4v8m2q9x7c3b5n1r0t6yz' ELSE NULL END"];
+        yield 'emergency_local' => ['emergency_local = NOT emergency_local'];
+    }
 
-        $this->artisan('sadmin:audit-verify')->expectsOutputToContain('seq 42')->assertExitCode(1);
+    #[DataProvider('columnTampers')]
+    public function test_editing_any_single_column_fails_verification(string $set): void
+    {
+        Tenant::factory()->create();
+
+        $this->tamper("UPDATE audit_entries SET {$set} WHERE seq = 42");
+
+        $this->artisan('sadmin:audit-verify')->expectsOutputToContain('gagal pada seq 42')->assertExitCode(1);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function scalarParams(): iterable
+    {
+        yield 'string' => ['"x"'];
+        yield 'angka' => ['5'];
+        yield 'boolean' => ['true'];
+    }
+
+    #[DataProvider('scalarParams')]
+    public function test_scalar_params_end_as_audit_mismatch_not_a_crash(string $json): void
+    {
+        Log::shouldReceive('critical')->once()->withArgs(
+            fn (string $message, array $context): bool => $message === 'audit_mismatch' && $context['broken_at_seq'] === 5,
+        );
+
+        $this->tamper("UPDATE audit_entries SET params_redacted = '{$json}' WHERE seq = 5");
+
+        $this->artisan('sadmin:audit-verify')
+            ->expectsOutputToContain('gagal pada seq 5: isi entri tak dapat dikanonisasi')
+            ->assertExitCode(1);
     }
 
     public function test_deleting_a_middle_entry_is_detected_as_a_gap(): void
