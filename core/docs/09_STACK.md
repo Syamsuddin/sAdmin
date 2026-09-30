@@ -24,7 +24,7 @@ Pemilik daftar teknologi & versi paket core. Stack agen/gateway: `../edge/docs/0
 ## Teknologi terlarang
 | Larangan | Alasan |
 |---|---|
-| `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `pcntl_exec`, backtick, `mail`, `mb_send_mail`, transport mail `sendmail`, FFI, `Process` facade/Symfony Process, pustaka SSH (phpseclib, dsb.) di semua kode PHP milik proyek di `core/` (termasuk Blade; tanpa `vendor/`, `tests/`, `storage/`, `node_modules/`) | P1 — semua eksekusi lewat agen. Satu-satunya pengecualian: tidak ada. `mail()`/sendmail menjalankan biner `sendmail` (dan parameter ke-5 `mail()` = injeksi flag); notifikasi cukup SMTP via soket jaringan |
+| `exec`, `shell_exec`, `system`, `passthru`, `proc_open`, `popen`, `pcntl_exec`, backtick, `mail`, `mb_send_mail`, `imap_mail`, `error_log` bertujuan (tipe 1 = email), FFI, `Process` facade/Symfony Process, pustaka SSH (phpseclib, dsb.); transport mail yang berujung sendmail (`sendmail`, `mail`, `native`, apa pun huruf dan jalurnya — ditolak `SendmailRefusingMailManager`), akses langsung transport Symfony Mailer, Monolog `NativeMailerHandler` — di semua kode PHP milik proyek di `core/` (termasuk Blade, berkas tersembunyi, direktori symlink; tanpa `vendor/`, `tests/`, `storage/`, `node_modules/`, `bootstrap/cache/`) | P1 — semua eksekusi lewat agen. Satu-satunya pengecualian: tidak ada. `mail()`/sendmail menjalankan biner `sendmail` (dan parameter ke-5 `mail()` = injeksi flag); notifikasi cukup SMTP via soket jaringan |
 | React, Vue, Inertia, SPA terpisah | Livewire cukup; menghindari paket UI terpisah |
 | Redis, Horizon, Memcached | A7: driver database cukup untuk skala target |
 | CDN untuk aset console | console di zona privat + SRI; aset dibundel |

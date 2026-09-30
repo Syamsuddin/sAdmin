@@ -27,9 +27,9 @@
     {
       "mulai": "2026-09-30T19:08:49+08:00",
       "selesai": null,
-      "step": 4,
-      "detik": 238,
-      "tok_est": 20158
+      "step": 7,
+      "detik": 533,
+      "tok_est": 38621
     }
   ],
   "step_berjalan": null,
@@ -343,13 +343,87 @@
         "disable_functions FPM + penjadwal systemd timer per tugas: slice install.sh (F-01)"
       ],
       "selesai": "2026-09-30T19:12:45+08:00"
+    },
+    {
+      "fitur": "Perbaikan review 1A+2B (penjaga sendmail)",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-09-30T19:24:42+08:00",
+      "rencana": [
+        "app/Infrastructure/Notify/SendmailRefusingMailManager.php",
+        "app/Providers/AppServiceProvider.php",
+        "app/Console/Commands/ForbiddenScanCommand.php",
+        "tests/Feature/MailTransportGuardTest.php",
+        "tests/Feature/ForbiddenScanTest.php",
+        "docs/09_STACK.md",
+        "docs/11_COMMANDS.md",
+        "../CHANGELOG.md"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Tes dulu (merah)",
+          "mulai": "2026-09-30T19:24:42+08:00",
+          "selesai": "2026-09-30T19:25:47+08:00",
+          "detik": 65,
+          "tok_est": 9310,
+          "muat": [
+            "tests/Feature/MailTransportGuardTest.php",
+            "tests/Feature/ForbiddenScanTest.php",
+            "vendor/laravel/framework/src/Illuminate/Mail/MailManager.php"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Implementasi penjaga + pemindai",
+          "mulai": "2026-09-30T19:25:47+08:00",
+          "selesai": "2026-09-30T19:28:26+08:00",
+          "detik": 159,
+          "tok_est": 6822,
+          "muat": [
+            "app/Infrastructure/Notify/SendmailRefusingMailManager.php",
+            "app/Providers/AppServiceProvider.php",
+            "app/Console/Commands/ForbiddenScanCommand.php",
+            "docs/09_STACK.md",
+            "docs/11_COMMANDS.md",
+            "../CHANGELOG.md"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-09-30T19:28:26+08:00",
+          "selesai": "2026-09-30T19:29:37+08:00",
+          "detik": 71,
+          "tok_est": 2331,
+          "muat": [
+            "/Users/syams/.claude/skills/coding-vcbd/scripts/gerbang.sh"
+          ]
+        }
+      ],
+      "detik": 295,
+      "tok_est": 18463,
+      "deviasi": [
+        "Satu pengecualian tercatat di forbidden-scan: SendmailRefusingMailManager boleh menyebut SendmailTransport untuk menolaknya"
+      ],
+      "asumsi": [
+        "Tag v0.1.0-alpha.2 lokal (belum pernah di-push) dihapus dan dibuat ulang setelah perbaikan"
+      ],
+      "dokumen_diperbarui": [
+        "docs/09_STACK.md",
+        "docs/11_COMMANDS.md"
+      ],
+      "landmine_tersentuh": [
+        "MailManager memeriksa customCreators peka huruf tetapi method create*Transport tidak peka huruf; transport 'mail' Laravel = SendmailTransport — periksa objek, bukan nama"
+      ],
+      "selesai": "2026-09-30T19:29:37+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 1053,
-    "tok_est": 61253,
+    "detik": 1348,
+    "tok_est": 79716,
     "tok_terukur": 0,
-    "step": 11,
-    "fitur": 2
+    "step": 14,
+    "fitur": 3
   }
 }
