@@ -82,9 +82,16 @@ class ForbiddenScanCommand extends Command
         $where = static fn (PhpToken $token): string => str_replace(base_path().'/', '', $file).':'.$token->line;
 
         $violations = [];
+        $inUseFunction = false;
         foreach ($tokens as $i => $token) {
             $prev = $tokens[$i - 1] ?? null;
             $next = $tokens[$i + 1] ?? null;
+
+            if ($token->is(T_USE) && $next?->is(T_FUNCTION)) {
+                $inUseFunction = true;
+            } elseif ($token->text === ';') {
+                $inUseFunction = false;
+            }
 
             if ($token->text === '`') {
                 $violations[] = $where($token).' — operator backtick (eksekusi shell)';
@@ -101,15 +108,15 @@ class ForbiddenScanCommand extends Command
                 $name = substr($name, strlen('namespace\\'));
             }
 
-            // `use function shell_exec as jalankan;` — alias menyamarkan pemanggilan berikutnya.
-            if ($prev?->is(T_FUNCTION) && ($tokens[$i - 2] ?? null)?->is(T_USE)
+            // `use function strlen, shell_exec as jalankan;` — alias menyamarkan pemanggilan berikutnya.
+            if ($inUseFunction && ! $prev?->is(T_AS)
                 && $this->isForbiddenFunction(ltrim((string) strrchr('\\'.$name, '\\'), '\\'))) {
                 $violations[] = $where($token)." — impor fungsi terlarang {$name}";
 
                 continue;
             }
 
-            if ($name === 'ffi') {
+            if ($name === 'ffi' && ! $prev?->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR, T_DOUBLE_COLON, T_CASE, T_CONST, T_FUNCTION])) {
                 $violations[] = $where($token).' — FFI (pemanggilan kode native)';
 
                 continue;

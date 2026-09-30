@@ -54,7 +54,9 @@ final class AppendAuditEntry
             // Invarian "tertulis ⇒ terverifikasi": entri yang tak terbaca ulang identik akan membutakan
             // verifikasi semua entri sesudahnya, dan karena append-only tak bisa diperbaiki. Batalkan di sini.
             $stored = DB::table('audit_entries')->where('seq', $body['seq'])->first();
-            if ($stored === null || ! hash_equals($hash, $this->hasher->hash($this->hasher->bodyFromRow($stored)))) {
+            if ($stored === null
+                || ! hash_equals($hash, $stored->hash)
+                || ! hash_equals($hash, $this->hasher->hash($this->hasher->bodyFromRow($stored)))) {
                 throw new UnexpectedValueException('Entri audit tak terbaca ulang identik; penulisan dibatalkan.');
             }
 

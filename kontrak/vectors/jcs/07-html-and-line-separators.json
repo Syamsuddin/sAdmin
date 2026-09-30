@@ -1,5 +1,5 @@
 {
-  "description": "Penjaga divergensi Go: '<', '>', '&', U+2028, dan U+2029 tetap literal (encoding/json Go bawaan meng-escape-nya; SetEscapeHTML(false) wajib)",
+  "description": "Penjaga divergensi Go: '<', '>', '&', U+2028, dan U+2029 tetap literal. encoding/json Go meng-escape <>& (bisa dimatikan SetEscapeHTML(false)) tetapi SELALU meng-escape U+2028/U+2029 — butuh serializer string sendiri",
   "input": {
     "<b>": "x & y > z",
     "html": "<script>alert(1)</script>&amp;",

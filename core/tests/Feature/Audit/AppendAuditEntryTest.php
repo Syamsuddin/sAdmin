@@ -203,18 +203,26 @@ class AppendAuditEntryTest extends TestCase
         }
     }
 
-    /**
-     * Jaring pengaman: divergensi round-trip yang tak terduga (disimulasikan trigger yang mengubah baris)
-     * membatalkan penulisan, sehingga tak ada entri yang tertulis namun gagal diverifikasi.
-     */
-    public function test_refuses_entry_that_does_not_read_back_identically(): void
+    /** @return iterable<string, array{string}> */
+    public static function storageDivergences(): iterable
     {
-        DB::unprepared(<<<'SQL'
-            CREATE FUNCTION uji_ubah_target() RETURNS trigger LANGUAGE plpgsql AS $$
-            BEGIN NEW.target := 'diubah'; RETURN NEW; END
-            $$;
-            CREATE TRIGGER uji_ubah_target BEFORE INSERT ON audit_entries
-                FOR EACH ROW EXECUTE FUNCTION uji_ubah_target();
+        yield 'isi berubah' => ["NEW.target := 'diubah';"];
+        yield 'kolom hash berubah' => ['NEW.hash := upper(NEW.hash);'];
+    }
+
+    /**
+     * Jaring pengaman: divergensi saat disimpan (disimulasikan trigger yang mengubah baris) membatalkan
+     * penulisan, sehingga tak ada entri yang tertulis namun gagal diverifikasi.
+     */
+    #[DataProvider('storageDivergences')]
+    public function test_refuses_entry_that_does_not_read_back_identically(string $mutation): void
+    {
+        DB::unprepared(<<<SQL
+            CREATE FUNCTION uji_ubah_baris() RETURNS trigger LANGUAGE plpgsql AS \$\$
+            BEGIN {$mutation} RETURN NEW; END
+            \$\$;
+            CREATE TRIGGER uji_ubah_baris BEFORE INSERT ON audit_entries
+                FOR EACH ROW EXECUTE FUNCTION uji_ubah_baris();
             SQL);
 
         try {

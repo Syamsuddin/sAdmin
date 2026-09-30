@@ -20,7 +20,7 @@ Tonggak **M1 Kerangka**, slice 1: rantai audit sisi core (F-04). Kriteria AC-03 
 - core: kanonisasi RFC 8785 (JCS) internal di `app/Infrastructure/Jcs`.
 - kontrak: tujuh vektor uji JCS bersama PHP↔Go di `kontrak/vectors/jcs/`, termasuk penjaga escape HTML bawaan Go.
 - core: ADR 0001 tentang format hash rantai audit beserta batas masukannya, berstatus *diusulkan* dan menunggu tinjauan pemilik produk.
-- core: 63 tes (Unit, Feature, Contract, grup `redaction`), termasuk vektor emas format rantai dan tes manipulasi per kolom. Sebelum merge, slice ini melewati review adversarial (docs/22), dan semua temuan yang mematahkan invarian audit sudah ditambal dengan tes regresi.
+- core: 64 tes (Unit, Feature, Contract, grup `redaction`), termasuk vektor emas format rantai dan tes manipulasi per kolom. Sebelum merge, slice ini melewati review adversarial (docs/22), dan semua temuan yang mematahkan invarian audit sudah ditambal dengan tes regresi.
 
 ### Diubah
 - `core/docs/09_STACK.md`: versi Laravel 13.x, PHPUnit 12, dan Larastan (analisis statis) kini terverifikasi.
@@ -36,3 +36,4 @@ Tonggak **M1 Kerangka**, slice 1: rantai audit sisi core (F-04). Kriteria AC-03 
 - Pencabutan hak UPDATE/DELETE/TRUNCATE dari role aplikasi (menunggu `install.sh`).
 - Fitur M1 lain yang belum dikerjakan: `install.sh` (F-01), login passkey (F-03), inventaris, dan tema console (F-17).
 - `sadmin:forbidden-scan` belum mencakup `mail()` dan transport `sendmail` di `config/mail.php`, maupun berkas Blade. Cakupan path di docs/09 ("di `core/`") dan docs/11 (`app`, `routes`, `config`) juga belum selaras; keduanya menunggu keputusan.
+- Batas sarang JCS 64 tingkat (`Jcs::MAX_DEPTH`) berlaku untuk semua pemakaian JCS di core, tetapi belum tercatat di `kontrak/KONTRAK.md` §3, begitu pula aturan penolakan UTF-8 tak sah. Perubahan kontrak memerlukan gerbang manusia.

@@ -67,12 +67,14 @@ class ForbiddenScanTest extends TestCase
             jalankan('id');
             namespace\passthru('id');
             \FFI::cdef('int system(const char *);')->system('id');
+            use function strlen, proc_open as buka;
             PHP);
 
         $this->artisan('sadmin:forbidden-scan', ['paths' => [$path]])
             ->expectsOutputToContain(':2 — impor fungsi terlarang shell_exec')
             ->expectsOutputToContain(':4 — fungsi terlarang passthru()')
             ->expectsOutputToContain(':5 — FFI')
+            ->expectsOutputToContain(':6 — impor fungsi terlarang proc_open')
             ->assertExitCode(1);
     }
 
@@ -86,7 +88,8 @@ class ForbiddenScanTest extends TestCase
             $s = 'exec("id") `id`';
             // exec('id');
             function passthru_label(): string { return 'passthru'; }
-            enum Aktor: string { case System = 'system'; }
+            enum Aktor: string { case System = 'system'; case Ffi = 'ffi'; }
+            $klien->ffi();
             use function strlen as panjang;
             PHP);
 
