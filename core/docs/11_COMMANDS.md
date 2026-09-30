@@ -10,7 +10,7 @@ Pemilik perintah paket core. Jalankan dari `core/`. Perintah lintas-paket (`make
 | Tes terfokus | `php artisan test --filter=<NamaTes>` | |
 | Tes kontrak sisi PHP | `php artisan test --testsuite=Contract` | vektor dari `../kontrak/vectors/` |
 | Lint & analisis statis | `vendor/bin/pint --test && vendor/bin/phpstan analyse` | |
-| Pindai larangan eksekusi | `php artisan sadmin:forbidden-scan` | gagal bila ada fungsi terlarang (docs/09_STACK.md) di `app/`, `bootstrap/` (tanpa `cache/`), `config/`, `database/`, `lang/`, `public/`, `resources/views/` (Blade dikompilasi dulu), `routes/`, `artisan` |
+| Pindai larangan eksekusi | `php artisan sadmin:forbidden-scan` | gagal bila ada fungsi terlarang (docs/09_STACK.md) di `app/`, `bootstrap/` (tanpa `cache/`), `config/`, `database/`, `lang/`, `public/`, `resources/views/` (Blade dikompilasi dulu; nomor baris = hasil kompilasi), `routes/`, `artisan` — termasuk berkas tersembunyi dan direktori symlink (kecuali `public/storage`); import group & alias diurai ke nama lengkap; tes invarian menjaga tak ada berkas PHP proyek di luar daftar ini |
 | Migrasi ⚠️ | `php artisan migrate` | produksi: hanya lewat langkah rilis (docs/25_RELEASE_CHECKLIST.md) |
 | Migrasi segar (dev saja) | `php artisan migrate:fresh --seed` | dilarang di produksi |
 | Sinkron katalog & kapsul | `php artisan sadmin:catalog-sync` | memuat `../catalog`, `../capsules` ke tabel cermin |
