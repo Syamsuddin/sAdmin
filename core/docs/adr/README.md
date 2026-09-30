@@ -5,7 +5,7 @@ Keputusan arsitektural atau keamanan baru dicatat di sini **sebelum** diimplemen
 ## Indeks
 | No | Judul | Status |
 |---|---|---|
-| [0001](0001-format-rantai-audit.md) | Format hash rantai audit | Diusulkan |
+| [0001](0001-format-rantai-audit.md) | Format hash rantai audit | Diterima |
 | [0002](0002-pustaka-webauthn.md) | Pustaka WebAuthn: web-auth/webauthn-lib | Diterima |
 
 ## Templat

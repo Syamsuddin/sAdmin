@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk |
+| Status | **Diterima** — disetujui pemilik produk, 2026-09-30 |
 | Tanggal | 2026-09-30 (disusun ulang 2026-09-30) |
 | Pemutus | Pemilik produk. Mengubah format setelah ada data produksi = gerbang manusia (docs/22_CHANGE_POLICY.md, "perubahan format rantai audit atau checkpoint") |
 | Lingkup | Rantai `audit_entries` di core: cara entri di-hash, disimpan, ditulis, dan diverifikasi |
@@ -131,3 +131,4 @@ Tes-tes ini merah bila format berubah. Tes yang merah karena itu berarti gerbang
 - 2026-09-30: diusulkan bersama slice M1/S1.
 - 2026-09-30: diperketat setelah review adversarial. §2.5 dikoreksi (jsonb menormalkan ulang), ditambah batas NUL dan kedalaman, invarian "tertulis ⇒ terverifikasi", serta verifikasi yang tidak pernah crash.
 - 2026-09-30: disusun ulang ke format ADR lengkap atas permintaan pemilik produk. Isi normatif tidak berubah; vektor §2.8 tetap sama.
+- 2026-09-30: **diterima** pemilik produk. Mulai saat ini, setiap perubahan pada bagian 2 wajib lewat gerbang manusia (docs/22).
