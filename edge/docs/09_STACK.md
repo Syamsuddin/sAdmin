@@ -9,7 +9,7 @@ Pemilik teknologi paket edge. Stack core: `../core/docs/09_STACK.md`.
 | WebAuthn (verifikasi assertion) | `github.com/go-webauthn/webauthn` (paket `protocol`) | `[VERIFIKASI]` |
 | Penyimpanan lokal | `go.etcd.io/bbolt` | `[VERIFIKASI]` |
 | JSON Schema | `github.com/santhosh-tekuri/jsonschema` v6 | `[VERIFIKASI]` |
-| JCS | `github.com/gowebpki/jcs` + vektor bersama `../kontrak/vectors/` | `[VERIFIKASI]` |
+| JCS | `github.com/gowebpki/jcs` + vektor bersama `../kontrak/vectors/` | v1.0.2 diuji 2026-09-30 terhadap `jcs-reject`: menolak UTF-8 tak sah, surrogate, kunci ganda; **menerima** angka di luar aturan (`1.0`→`1`, `1e2`→`100`, ±2^53), sarang > 64, dan nama anggota ber-U+0000 → leksem angka, kedalaman, dan nama anggota wajib divalidasi sendiri sebelum `Transform` (KONTRAK §3) |
 | YAML (katalog) | `go.yaml.in/yaml/v3` | `[VERIFIKASI]` |
 | Kripto | stdlib `crypto/ed25519`, `crypto/ecdsa`, `crypto/tls`, `crypto/x509` | stdlib |
 | Log | stdlib `log/slog` (JSON) | stdlib |

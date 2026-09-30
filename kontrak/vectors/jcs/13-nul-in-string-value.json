@@ -1,0 +1,9 @@
+{
+  "description": "U+0000 di NILAI string diterima (hanya nama anggota yang dilarang)",
+  "input": {
+    "a": "x\u0000y"
+  },
+  "input_base64": "eyJhIjoieFx1MDAwMHkifQ==",
+  "canonical": "{\"a\":\"x\\u0000y\"}",
+  "sha256": "2535d3551d8ae821e2f53df23f636e22c48839e94d359eeb47195053102aaa4b"
+}

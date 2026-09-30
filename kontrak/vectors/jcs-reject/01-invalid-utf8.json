@@ -1,0 +1,5 @@
+{
+  "description": "Byte 0xFF bukan UTF-8 sah",
+  "reason": "utf8",
+  "input_base64": "eyJhIjoi/yJ9"
+}

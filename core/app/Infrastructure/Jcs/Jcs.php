@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Jcs;
 
 use InvalidArgumentException;
+use JsonException;
 use stdClass;
 
 /**
@@ -40,6 +41,36 @@ final class Jcs
             is_array($value) => array_is_list($value) ? self::list($value, $depth + 1) : self::object($value, $depth + 1),
             default => throw new InvalidArgumentException('JCS: tipe '.get_debug_type($value).' tak didukung.'),
         };
+    }
+
+    /**
+     * Pengurai ketat untuk teks JSON dari luar (KONTRAK §3, E_CANONICAL): menolak, tidak memperbaiki,
+     * masukan yang bukan I-JSON. Objek tetap stdClass agar `{}` dan `[]` terbedakan saat dikanonisasi ulang.
+     */
+    public static function decode(string $json): mixed
+    {
+        if (str_starts_with($json, "\xEF\xBB\xBF")) {
+            throw new InvalidArgumentException('JCS: teks diawali BOM.');
+        }
+        if (! mb_check_encoding($json, 'UTF-8')) {
+            throw new InvalidArgumentException('JCS: teks bukan UTF-8 yang sah.');
+        }
+        if (! json_validate($json)) {
+            throw new InvalidArgumentException('JCS: bukan JSON yang sah ('.json_last_error_msg().').');
+        }
+
+        // Sebelum json_decode ke objek: PHP menolak nama properti berawalan NUL dengan pesan yang menyesatkan.
+        self::assertValidMemberNames($json);
+
+        try {
+            $value = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new InvalidArgumentException('JCS: bukan JSON yang sah ('.$e->getMessage().').', previous: $e);
+        }
+
+        self::canonicalize($value);
+
+        return $value;
     }
 
     /** SHA-256 hex huruf kecil atas bentuk kanonik. */
@@ -91,6 +122,7 @@ final class Jcs
         $pairs = [];
         foreach ($members as $key => $member) {
             $key = (string) $key;
+            self::assertNoNulInName($key);
             $pairs[] = [self::utf16SortKey($key), $key, $member];
         }
 
@@ -102,6 +134,54 @@ final class Jcs
         );
 
         return '{'.implode(',', $parts).'}';
+    }
+
+    /**
+     * Nama anggota unik per objek (json_decode diam-diam memakai nilai terakhir) dan tanpa U+0000 (KONTRAK §3).
+     * Dipanggil setelah json_validate berhasil, jadi teks dijamin JSON yang sah (string selalu tertutup).
+     */
+    private static function assertValidMemberNames(string $json): void
+    {
+        /** @var list<array<array-key, true>> $scopes satu set nama per objek/larik yang sedang terbuka */
+        $scopes = [];
+        $length = strlen($json);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $json[$i];
+
+            if ($char === '{' || $char === '[') {
+                $scopes[] = [];
+            } elseif ($char === '}' || $char === ']') {
+                array_pop($scopes);
+            } elseif ($char === '"') {
+                $start = $i;
+                for ($i++; $json[$i] !== '"'; $i++) {
+                    if ($json[$i] === '\\') {
+                        $i++;
+                    }
+                }
+
+                $after = $i + 1 + strspn($json, " \t\n\r", $i + 1);
+                if (($json[$after] ?? '') !== ':') {
+                    continue;
+                }
+
+                $name = (string) json_decode(substr($json, $start, $i - $start + 1), false, 512, JSON_THROW_ON_ERROR);
+                self::assertNoNulInName($name);
+                $top = array_key_last($scopes);
+                if (isset($scopes[$top][$name])) {
+                    throw new InvalidArgumentException('JCS: nama anggota ganda dalam satu objek.');
+                }
+                $scopes[$top][$name] = true;
+            }
+        }
+    }
+
+    private static function assertNoNulInName(string $name): void
+    {
+        if (str_contains($name, "\0")) {
+            throw new InvalidArgumentException('JCS: nama anggota memuat U+0000.');
+        }
     }
 
     /** RFC 8785 §3.2.3: kunci diurutkan per unit kode UTF-16; UTF-16BE membuat strcmp setara. */

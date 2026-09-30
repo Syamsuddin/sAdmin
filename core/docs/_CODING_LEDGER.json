@@ -417,13 +417,90 @@
         "MailManager memeriksa customCreators peka huruf tetapi method create*Transport tidak peka huruf; transport 'mail' Laravel = SendmailTransport — periksa objek, bukan nama"
       ],
       "selesai": "2026-09-30T19:29:37+08:00"
+    },
+    {
+      "fitur": "Keputusan 3A kontrak I-JSON",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-09-30T19:14:06+08:00",
+      "rencana": [
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/jcs-reject",
+        "app/Infrastructure/Jcs/Jcs.php",
+        "app/Domain/Audit/Services/AuditHasher.php",
+        "tests/Unit/Infrastructure/JcsTest.php",
+        "tests/Contract/JcsVectorsTest.php",
+        "tests/Contract/JcsRejectVectorsTest.php",
+        "../CHANGELOG.md"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Kontrak: KONTRAK §3/§7 + VERSION",
+          "mulai": "2026-09-30T19:14:06+08:00",
+          "selesai": "2026-09-30T19:15:18+08:00",
+          "detik": 73,
+          "tok_est": 2778,
+          "muat": [
+            "../kontrak/KONTRAK.md",
+            "../kontrak/VERSION",
+            "../kontrak/vectors/jcs-reject/01-invalid-utf8.json"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Tes dulu (merah)",
+          "mulai": "2026-09-30T19:15:18+08:00",
+          "selesai": "2026-09-30T19:18:06+08:00",
+          "detik": 168,
+          "tok_est": 2112,
+          "muat": [
+            "tests/Contract/JcsRejectVectorsTest.php",
+            "tests/Contract/JcsVectorsTest.php",
+            "tests/Unit/Infrastructure/JcsTest.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Implementasi + gerbang",
+          "mulai": "2026-09-30T19:18:06+08:00",
+          "selesai": "2026-09-30T19:18:06+08:00",
+          "detik": 1,
+          "tok_est": 4772,
+          "muat": [
+            "app/Infrastructure/Jcs/Jcs.php",
+            "app/Domain/Audit/Services/AuditHasher.php",
+            "../CHANGELOG.md"
+          ]
+        }
+      ],
+      "detik": 242,
+      "tok_est": 9662,
+      "deviasi": [
+        "gerbang dijalankan dengan DB_DATABASE=sadmin_test_gate karena reviewer paralel memakai sadmin_test (migrate:fresh bentrok)"
+      ],
+      "asumsi": [
+        "Perubahan kontrak diklasifikasikan 0.1.0→0.2.0 (0.x: minor boleh memutus); tak ada implementasi Go/agen terpasang"
+      ],
+      "dokumen_diperbarui": [
+        "../kontrak/KONTRAK.md (§3, §7, versi)",
+        "../kontrak/VERSION (baru)"
+      ],
+      "landmine_tersentuh": [
+        "Tes paralel pada DB uji yang sama saling menghapus tabel (RefreshDatabase/migrate:fresh) — pakai DB_DATABASE terpisah per proses"
+      ],
+      "ditunda": [
+        "edge: verifikasi gowebpki/jcs terhadap vektor tolak (edge/docs/09 [VERIFIKASI])"
+      ],
+      "selesai": "2026-09-30T19:18:06+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 1348,
-    "tok_est": 79716,
+    "detik": 1590,
+    "tok_est": 89378,
     "tok_terukur": 0,
-    "step": 14,
-    "fitur": 3
+    "step": 17,
+    "fitur": 4
   }
 }

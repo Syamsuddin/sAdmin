@@ -6,6 +6,26 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.3] — 2026-09-30
+
+Menutup keputusan terbuka 3 dari 0.1.0-alpha.1: aturan masukan kanonisasi di kontrak protokol. **Kontrak naik ke 0.2.0.**
+
+### Diubah
+- kontrak 0.2.0 (`kontrak/KONTRAK.md` §3): seluruh teks bingkai yang diterima wajib I-JSON (RFC 7493) dan diperiksa pada byte mentah sebelum pengurai apa pun dan sebelum verifikasi `sig`. Artinya UTF-8 sah tanpa BOM, tanpa nama anggota ganda, nama anggota tanpa U+0000, angka hanya integer desimal ≤ ±(2^53−1) tanpa titik dan eksponen, dan sarang paling dalam 64 tingkat. Noncharacter sengaja diterima, menyimpang dari RFC 7493 §2.1. Setiap pihak menolak masukan yang melanggar, termasuk JSON yang sintaksnya rusak, dan tidak memperbaikinya.
+- kontrak §1: selama 0.x, minor berlaku sebagai major dan field `kontrak` berisi `major.minor`, supaya pihak 0.1 dan 0.2 saling mengenali ketidakcocokan.
+- kontrak §7: kode galat baru `E_CANONICAL`.
+- kontrak: berkas `kontrak/VERSION` kini ada (sebelumnya dirujuk KONTRAK.md tetapi tidak ada).
+
+### Ditambahkan
+- kontrak: 20 vektor tolak di `kontrak/vectors/jcs-reject/` (byte mentah dalam base64, masing-masing dengan `reason` yang diuji) dan enam vektor terima baru. Vektor terima boleh membawa `input_base64` agar PHP dan Go menguji byte yang sama; kasusnya antara lain `-0`, noncharacter, sarang objek 64 tingkat, dan U+0000 di nilai string.
+- edge: langkah 1 pipa verifikasi E1 kini memeriksa I-JSON pada byte mentah (`E_CANONICAL`). `edge/docs/09_STACK.md` mencatat hasil uji `gowebpki/jcs` v1.0.2: pustaka itu menolak UTF-8 tak sah, surrogate, dan kunci ganda, tetapi menerima angka di luar aturan, sarang lebih dari 64, dan nama anggota ber-U+0000, sehingga ketiganya wajib divalidasi sendiri.
+- core: `Jcs::decode()`, pengurai ketat yang menolak BOM, UTF-8 tak sah, surrogate tunggal, JSON rusak, kunci ganda (termasuk yang disamarkan escape), U+0000 di nama anggota, angka di luar aturan, dan sarang lebih dari 64. Verifier audit kini memakainya. `Jcs::canonicalize()` juga menolak U+0000 di nama anggota, sehingga core tidak menghasilkan teks yang akan ditolaknya sendiri.
+- Sebelum merge, slice ini melewati review adversarial (docs/22) dengan vonis "layak merge dengan catatan"; semua catatan sudah ditambal.
+
+### Catatan migrasi
+- Tidak ada migrasi database.
+- Perubahan kontrak ini aman karena belum ada implementasi Go maupun agen terpasang. Implementasi Go di paket edge (pustaka `gowebpki/jcs`, masih `[VERIFIKASI]` di `edge/docs/09_STACK.md`) wajib lulus vektor tolak, dan bila pustaka itu tidak menolak dengan sendirinya, validasi harus ditambahkan secara eksplisit.
+
 ## [0.1.0-alpha.2] — 2026-09-30
 
 Menutup keputusan terbuka 1 dan 2 dari 0.1.0-alpha.1: cakupan larangan eksekusi OS di core.

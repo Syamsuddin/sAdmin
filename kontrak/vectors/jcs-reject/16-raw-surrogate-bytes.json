@@ -1,0 +1,5 @@
+{
+  "description": "Byte mentah ED A0 80 (surrogate dalam UTF-8, tak sah)",
+  "reason": "utf8",
+  "input_base64": "WyLtoIAiXQ=="
+}

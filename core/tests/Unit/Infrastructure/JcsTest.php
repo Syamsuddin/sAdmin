@@ -49,6 +49,76 @@ class JcsTest extends TestCase
         Jcs::canonicalize([$nested]);
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function duplicateKeys(): iterable
+    {
+        yield 'langsung' => ['{"a":1,"a":2}'];
+        yield 'dengan spasi' => ['{ "a" : 1 , "a" : 2 }'];
+        yield 'setelah escape' => ['{"a":1,"\u0061":2}'];
+        yield 'bersarang di larik' => ['[{"k":{"x":1,"x":2}}]'];
+    }
+
+    #[DataProvider('duplicateKeys')]
+    public function test_strict_decoder_rejects_duplicate_member_names(string $json): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('JCS: nama anggota ganda');
+
+        Jcs::decode($json);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function lookalikesOfDuplicates(): iterable
+    {
+        yield 'kunci sama di objek berbeda' => ['[{"a":1},{"a":2}]'];
+        yield 'titik dua di dalam string' => ['{"a":"x\":y","b":"a"}'];
+        yield 'string berakhir backslash' => ['{"a":"\\\\","b":1}'];
+        yield 'kunci beda kapital' => ['{"a":1,"A":2}'];
+    }
+
+    #[DataProvider('lookalikesOfDuplicates')]
+    public function test_strict_decoder_accepts_lookalikes_of_duplicates(string $json): void
+    {
+        $this->assertSame(Jcs::canonicalize(json_decode($json)), Jcs::canonicalize(Jcs::decode($json)));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function nulMemberNames(): iterable
+    {
+        yield 'di awal' => ['{"\u0000a":1}'];
+        yield 'di tengah' => ['{"a\u0000b":1}'];
+    }
+
+    #[DataProvider('nulMemberNames')]
+    public function test_strict_decoder_rejects_nul_in_member_names(string $json): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('JCS: nama anggota memuat U+0000');
+
+        Jcs::decode($json);
+    }
+
+    public function test_canonicalize_refuses_nul_in_member_names_it_would_itself_reject(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('JCS: nama anggota memuat U+0000');
+
+        Jcs::canonicalize(["\0a" => 1]);
+    }
+
+    public function test_strict_decoder_rejects_bom_with_a_clear_reason(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('JCS: teks diawali BOM');
+
+        Jcs::decode("\xEF\xBB\xBF[]");
+    }
+
+    public function test_strict_decoder_keeps_objects_as_objects(): void
+    {
+        $this->assertSame('{"a":{},"b":[]}', Jcs::canonicalize(Jcs::decode('{"b":[],"a":{}}')));
+    }
+
     public function test_empty_php_array_is_array_and_empty_stdclass_is_object(): void
     {
         $this->assertSame('[]', Jcs::canonicalize([]));

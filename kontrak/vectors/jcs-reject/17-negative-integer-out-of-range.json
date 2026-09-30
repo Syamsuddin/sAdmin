@@ -1,0 +1,5 @@
+{
+  "description": "Integer -2^53 di luar ±(2^53-1)",
+  "reason": "number",
+  "input_base64": "Wy05MDA3MTk5MjU0NzQwOTkyXQ=="
+}

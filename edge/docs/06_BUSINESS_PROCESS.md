@@ -3,7 +3,7 @@
 Pemilik alur internal agen dan gateway. Alur produk & mesin kapsul (sisi core): `../core/docs/06_BUSINESS_PROCESS.md`. Pesan & kode galat: `../kontrak/KONTRAK.md`. State: `docs/07_DATA_MODEL.md`. Aturan kepercayaan: `docs/21_SECURITY_RULES.md`.
 
 ## E1 Pipa verifikasi amplop (urutan wajib, berhenti di pemeriksaan pertama yang gagal)
-1. Parse & validasi skema pesan (`E_SCHEMA`); major kontrak dikenal (`E_KONTRAK_VERSION`).
+1. Teks bingkai lolos aturan I-JSON `../kontrak/KONTRAK.md` §3 pada byte mentah, sebelum pengurai apa pun (`E_CANONICAL`); parse & validasi skema pesan (`E_SCHEMA`); versi kontrak dikenal (`E_KONTRAK_VERSION`).
 2. `sig` layanan sah terhadap `service_pubkey` tersemat (`E_SIG_SERVICE`).
 3. `target_server_id` = server ini; `platform_id` = platform agen dan tercantum di `platforms` aksi (`E_PLATFORM`).
 4. Aksi + versi dikenal kebijakan tersemat; risiko diambil **dari kebijakan**, bukan dari amplop (`E_POLICY_UNKNOWN_ACTION`).

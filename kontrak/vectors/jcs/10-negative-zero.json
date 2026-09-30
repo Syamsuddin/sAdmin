@@ -1,0 +1,9 @@
+{
+  "description": "Teks mentah [-0] diterima sebagai integer 0",
+  "input": [
+    0
+  ],
+  "input_base64": "Wy0wXQ==",
+  "canonical": "[0]",
+  "sha256": "d0bca111f8628137adc4c16f123496dcdd1d590d06cb5d9acd68b39fe656fb97"
+}

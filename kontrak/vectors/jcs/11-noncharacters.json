@@ -1,0 +1,9 @@
+{
+  "description": "Noncharacter U+FFFF, U+FDD0, U+10FFFF diterima apa adanya (menyimpang dari RFC 7493 §2.1, KONTRAK §3)",
+  "input": [
+    "￿﷐􏿿"
+  ],
+  "input_base64": "WyLvv7/vt5D0j7+/Il0=",
+  "canonical": "[\"￿﷐􏿿\"]",
+  "sha256": "cd20849ce147c5716b8446b21d7a01a8329142180db7f49112d856cacf2b33ed"
+}
