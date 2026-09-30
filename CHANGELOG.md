@@ -7,7 +7,7 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 ## [Belum dirilis]
 
 ### Diubah
-- core: ADR 0001 (format hash rantai audit) disusun ulang menjadi spesifikasi normatif yang lengkap: tabel dua belas anggota badan entri, kanonisasi, rumus hash, penyimpanan, penulisan, algoritme verifikasi, vektor emas, alternatif yang ditolak, konsekuensi, dan tes penegak. Spesifikasinya diuji dengan implementasi independen yang ditulis hanya dari teks ADR, dan hasilnya sama persis dengan vektor emas. Isi normatif tidak berubah; statusnya masih *diusulkan*.
+- core: ADR 0001 (format hash rantai audit) disusun ulang menjadi spesifikasi normatif yang lengkap: tabel dua belas anggota badan entri, kanonisasi, rumus hash, penyimpanan, penulisan, algoritme verifikasi, vektor emas, alternatif yang ditolak, konsekuensi, dan tes penegak. Spesifikasinya diuji dengan implementasi independen yang ditulis hanya dari teks ADR, dan hasilnya sama persis dengan vektor emas. Isi normatif tidak berubah. ADR ini kemudian **diterima** pemilik produk, sehingga format rantai audit kini mengikat: mengubahnya wajib lewat gerbang manusia (docs/22).
 - core: `docs/adr/README.md` berisi indeks dan templat ADR; ADR 0002 diselaraskan dengan templat itu.
 - Roadmap M1: Subresource Integrity aset console dijadwalkan di slice `install.sh` (F-01), sesuai keputusan pemilik produk.
 
