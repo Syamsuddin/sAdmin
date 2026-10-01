@@ -37,20 +37,17 @@ final class RegisterServer
     {
         $name = trim($name);
         $hostname = strtolower(trim($hostname));
-        $ip = trim($ip);
+        $address = self::serverAddress(trim($ip));
 
-        if (preg_match('/^'.self::LABEL.'\z/', $name) !== 1) {
-            throw new ServerRegistrationRejected('invalid_name');
+        $invalid = array_keys(array_filter([
+            'invalid_name' => preg_match('/^'.self::LABEL.'\z/', $name) !== 1,
+            'invalid_hostname' => ! self::isHostname($hostname),
+            'invalid_ip' => $address === null,
+        ]));
+        if ($invalid !== []) {
+            throw ServerRegistrationRejected::fields(...$invalid);
         }
-        if (! self::isHostname($hostname)) {
-            throw new ServerRegistrationRejected('invalid_hostname');
-        }
-        // Alamat yang tak bisa menjadi server: loopback, tak spesifik, link-local, dan rentang cadangan lain.
-        $packed = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE) === false ? false : inet_pton($ip);
-        if ($packed === false) {
-            throw new ServerRegistrationRejected('invalid_ip');
-        }
-        $ip = (string) inet_ntop($packed);
+        $ip = (string) $address;
 
         // Prasyarat diperiksa sebelum menulis apa pun: server tak pernah dibuat tanpa perintah enrolment yang sah.
         $target = $this->instructions->target($admin->tenant_id);
@@ -58,12 +55,11 @@ final class RegisterServer
         return DB::transaction(function () use ($admin, $name, $hostname, $ip, $target): EnrollmentToken {
             DB::select('SELECT pg_advisory_xact_lock(?)', [self::LOCK_KEY]);
 
-            $servers = Server::query()->where('tenant_id', $admin->tenant_id);
-            if ((clone $servers)->where('status', '<>', ServerStatus::Retired->value)->count() >= self::MAX_SERVERS) {
+            if (! $this->hasCapacity($admin->tenant_id)) {
                 throw new ServerRegistrationRejected('server_limit');
             }
             // Nama server yang sudah dipensiunkan pun tetap terpakai: UNIQUE(tenant_id, name) di docs/07.
-            if ((clone $servers)->where('name', $name)->exists()) {
+            if (Server::query()->where('tenant_id', $admin->tenant_id)->where('name', $name)->exists()) {
                 throw new ServerRegistrationRejected('name_taken');
             }
 
@@ -89,11 +85,39 @@ final class RegisterServer
         });
     }
 
-    /** Nama host DNS huruf kecil (RFC 1123), label teratas bukan angka semua agar alamat IP tak lolos sebagai nama. */
+    /** Mode Tunggal masih menerima server baru untuk tenant ini (docs/02_SCOPE.md). */
+    public function hasCapacity(string $tenantId): bool
+    {
+        return Server::query()->where('tenant_id', $tenantId)->where('status', '<>', ServerStatus::Retired->value)->count()
+            < self::MAX_SERVERS;
+    }
+
+    /**
+     * Nama host DNS huruf kecil (RFC 1123). Label teratas tak boleh angka semua atau heksadesimal `0x…`, karena
+     * pengurai URL dan inet_aton membaca nama seperti itu sebagai alamat IPv4.
+     */
     public static function isHostname(string $host): bool
     {
         return strlen($host) <= 253
             && preg_match('/^'.self::LABEL.'(?:\.'.self::LABEL.')*\z/', $host) === 1
-            && preg_match('/(?:^|\.)[0-9]+\z/', $host) !== 1;
+            && preg_match('/(?:^|\.)(?:[0-9]+|0x[0-9a-f]*)\z/', $host) !== 1;
+    }
+
+    /**
+     * Bentuk kanonik alamat IP yang bisa dimiliki satu mesin, atau null. Ditolak: rentang cadangan (loopback, tak
+     * spesifik, link-local, siaran, IPv4-mapped) dan multicast (224.0.0.0/4, ff00::/8) yang tak dicakup filter PHP.
+     */
+    public static function serverAddress(string $ip): ?string
+    {
+        $packed = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_RES_RANGE) === false ? false : inet_pton($ip);
+        if ($packed === false) {
+            return null;
+        }
+        $first = ord($packed[0]);
+        if (strlen($packed) === 4 ? ($first & 0xF0) === 0xE0 : $first === 0xFF) {
+            return null;
+        }
+
+        return inet_ntop($packed) ?: null;
     }
 }

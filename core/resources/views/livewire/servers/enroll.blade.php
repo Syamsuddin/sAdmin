@@ -5,8 +5,10 @@
         </div>
         <div class="card-body">
             @if ($command !== null)
-                <p>Jalankan perintah ini sebagai root di server <strong>{{ $issuedFor }}</strong> setelah biner sadmin-agent terpasang:</p>
-                <pre class="ui-command" aria-label="Perintah enrolment"><code>{{ $command }}</code></pre>
+                <figure>
+                    <figcaption class="mb-2">Jalankan perintah ini sebagai root di server <strong>{{ $issuedFor }}</strong> setelah biner sadmin-agent terpasang:</figcaption>
+                    <pre class="ui-command mb-0"><code>{{ $command }}</code></pre>
+                </figure>
                 <p class="mb-1">Token berlaku sampai <strong>{{ $expiresAt }}</strong> dan hanya bisa dipakai sekali.</p>
                 <p class="text-secondary">
                     Perintah ini hanya tampil sekali. Bila token kedaluwarsa, terbitkan token baru dari daftar server.
@@ -14,7 +16,7 @@
                 <a href="{{ route('servers.index') }}">Kembali ke daftar server</a>
                 <x-ui.toast :message="'Token enrolment untuk '.$issuedFor.' diterbitkan.'" />
             @elseif ($failure !== null)
-                @include('livewire.partials.error-state', ['message' => $failure, 'correlationId' => $failureId, 'retry' => 'refresh'])
+                @include('livewire.partials.error-state', ['message' => $failure, 'correlationId' => $failureId, 'retry' => 'method'])
                 <a href="{{ route('servers.index') }}">Kembali ke daftar server</a>
             @elseif ($server !== null)
                 <dl class="row">

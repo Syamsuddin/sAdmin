@@ -137,6 +137,26 @@ class RegisterServerTest extends TestCase
         $this->assertStringNotContainsString($token->token(), var_export(Server::query()->sole()->toArray(), true));
     }
 
+    /** Review F-02c R-1: penolakan masukan membawa semua field yang salah. */
+    public function test_rejection_lists_every_invalid_field(): void
+    {
+        try {
+            $this->register('Web 1', '10.0.0.1', '127.0.0.1');
+            $this->fail('Seharusnya ditolak.');
+        } catch (ServerRegistrationRejected $e) {
+            $this->assertSame(['name' => 'invalid_name', 'hostname' => 'invalid_hostname', 'ip' => 'invalid_ip'], $e->fieldReasons());
+        }
+    }
+
+    /** Review F-02c R-6: token tak bisa ikut terserialisasi (antrean, cache, sesi). */
+    public function test_token_refuses_serialization(): void
+    {
+        $token = $this->register();
+
+        $this->expectException(\LogicException::class);
+        serialize($token);
+    }
+
     public function test_hostname_is_lowercased_and_ip_is_stored_in_canonical_form(): void
     {
         $this->register('db1', ' DB1.Instansi.Go.Id ', ' 2001:DB8:0:0::0:1 ');
@@ -199,6 +219,8 @@ class RegisterServerTest extends TestCase
             'garis bawah' => ['web_1.instansi.go.id'],
             'skema URL' => ['https://web1.instansi.go.id'],
             'LF di tengah' => ["web1\n.go.id"],
+            'label teratas heksadesimal' => ['1.2.3.0x4'],
+            'IPv4 heksadesimal' => ['0x7f000001'],
         ];
     }
 
@@ -233,6 +255,9 @@ class RegisterServerTest extends TestCase
             'nol di depan' => ['010.0.0.1'],
             'nama host' => ['web1.instansi.go.id'],
             'zona IPv6' => ['fe80::1%eth0'],
+            'multicast IPv4' => ['224.0.0.1'],
+            'multicast SSDP' => ['239.255.255.250'],
+            'multicast IPv6' => ['ff02::1'],
         ];
     }
 
@@ -293,6 +318,11 @@ class RegisterServerTest extends TestCase
             'skema URL' => ['https://gw.instansi.go.id'],
             'IPv6' => ['2001:db8::1'],
             'LF di akhir' => ["gw.instansi.go.id\n"],
+            'loopback' => ['127.0.0.1'],
+            'tak spesifik' => ['0.0.0.0'],
+            'siaran' => ['255.255.255.255'],
+            'multicast' => ['224.0.0.1'],
+            'IPv4 heksadesimal' => ['1.2.3.0x4'],
         ];
     }
 

@@ -33,7 +33,7 @@ class Index extends Component
         try {
             /** @var Admin $admin */
             $admin = Auth::user();
-            $servers = Server::query()->with('agent')->where('tenant_id', $admin->tenant_id)->orderBy('created_at')->get()
+            $servers = Server::query()->with('agent')->where('tenant_id', $admin->tenant_id)->orderBy('created_at')->orderBy('id')->get()
                 ->map(fn (Server $server): array => [
                     'id' => $server->id,
                     'name' => $server->name,

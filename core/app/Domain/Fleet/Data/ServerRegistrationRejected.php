@@ -22,14 +22,33 @@ final class ServerRegistrationRejected extends RuntimeException
 
     public readonly string $correlationId;
 
+    /** @var array<string, string> field => alasan, bila beberapa field ditolak sekaligus */
+    private array $fieldReasons = [];
+
     public function __construct(public readonly string $reason, ?Throwable $previous = null)
     {
         $this->correlationId = (string) Str::ulid();
         parent::__construct("Tambah server ditolak: {$reason}", 0, $previous);
     }
 
-    public function field(): ?string
+    /** Penolakan masukan yang membawa semua field salah sekaligus, agar admin tak mengirim formulir berkali-kali. */
+    public static function fields(string $reason, string ...$more): self
     {
-        return self::FIELDS[$this->reason] ?? null;
+        $rejected = new self($reason);
+        foreach ([$reason, ...$more] as $each) {
+            $rejected->fieldReasons[self::FIELDS[$each]] = $each;
+        }
+
+        return $rejected;
+    }
+
+    /** @return array<string, string> field => alasan; kosong bila penolakan bukan soal masukan */
+    public function fieldReasons(): array
+    {
+        if ($this->fieldReasons !== []) {
+            return $this->fieldReasons;
+        }
+
+        return isset(self::FIELDS[$this->reason]) ? [self::FIELDS[$this->reason] => $this->reason] : [];
     }
 }

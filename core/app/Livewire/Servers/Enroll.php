@@ -62,6 +62,10 @@ class Enroll extends Component
 
     public function save(RegisterServer $register): void
     {
+        // Halaman terbit ulang token tak pernah mendaftarkan server baru, walau klien memanggil save().
+        if ($this->serverId !== null) {
+            return;
+        }
         $this->start();
         try {
             $token = $register->handle($this->admin(), $this->name, $this->hostname, $this->ip);
@@ -90,6 +94,12 @@ class Enroll extends Component
         $this->show($token);
     }
 
+    /** Tombol Coba lagi: hapus kegagalan sebelumnya, lalu render memeriksa ulang prasyarat. */
+    public function retry(): void
+    {
+        $this->start();
+    }
+
     private function start(): void
     {
         $this->resetErrorBag();
@@ -106,22 +116,29 @@ class Enroll extends Component
     /** Masukan yang salah tampil per field; prasyarat dan batas tampil sebagai state Gagal ber-ID korelasi (docs/14). */
     private function reject(ServerRegistrationRejected $e): void
     {
-        $field = $e->field();
-        if ($field !== null) {
-            $this->addError($field, $this->message($e->reason));
-
+        $fields = $e->fieldReasons();
+        foreach ($fields as $field => $reason) {
+            $this->addError($field, $this->message($reason));
+        }
+        if ($fields !== []) {
             return;
         }
         $this->errorReason = $e->reason;
         $this->correlationId = $e->correlationId;
-        Log::warning('server_registration_rejected', [
+        $this->log('server_registration_rejected', $e);
+    }
+
+    private function log(string $event, ServerRegistrationRejected $e): void
+    {
+        Log::warning($event, [
             'reason' => $e->reason,
             'correlation_id' => $e->correlationId,
+            'admin_id' => $this->admin()->id,
             'detail' => $e->getPrevious()?->getMessage(),
         ]);
     }
 
-    public function message(string $reason): string
+    private function message(string $reason): string
     {
         $parts = __("errors.server.{$reason}");
 
@@ -136,7 +153,7 @@ class Enroll extends Component
         return $admin;
     }
 
-    public function render(EnrollmentInstructions $instructions): View
+    public function render(EnrollmentInstructions $instructions, RegisterServer $register): View
     {
         $server = $this->serverId === null ? null
             : Server::query()->where('tenant_id', $this->admin()->tenant_id)->find($this->serverId);
@@ -149,13 +166,12 @@ class Enroll extends Component
                 if ($this->serverId !== null && $server?->status !== ServerStatus::Enrolling) {
                     throw new ServerRegistrationRejected('not_enrolling');
                 }
+                if ($this->serverId === null && ! $register->hasCapacity($this->admin()->tenant_id)) {
+                    throw new ServerRegistrationRejected('server_limit');
+                }
             } catch (ServerRegistrationRejected $e) {
                 $blocked = $e;
-                Log::warning('server_registration_unavailable', [
-                    'reason' => $e->reason,
-                    'correlation_id' => $e->correlationId,
-                    'detail' => $e->getPrevious()?->getMessage(),
-                ]);
+                $this->log('server_registration_unavailable', $e);
             }
         }
 

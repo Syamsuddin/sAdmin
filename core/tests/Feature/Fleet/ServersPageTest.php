@@ -11,6 +11,7 @@ use App\Models\Agent;
 use App\Models\Server;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\Support\InteractsWithPasskeys;
 use Tests\TestCase;
@@ -104,6 +105,23 @@ class ServersPageTest extends TestCase
             ->assertSeeInOrder(['web3', 'Tidak ada token aktif.'])
             ->assertSee('href="'.route('servers.reenroll', $valid->id).'"', false)
             ->assertSee('Terbitkan token baru');
+    }
+
+    /** Review F-02c R-5: server yang dibuat pada detik yang sama tetap berurutan menurut ULID-nya. */
+    public function test_servers_created_in_the_same_second_keep_a_stable_order(): void
+    {
+        $this->freezeSecond();
+        $later = strtolower((string) Str::ulid());
+        usleep(2000);
+        $latest = strtolower((string) Str::ulid());
+        $first = strtolower((string) Str::ulid(now()->subSecond()));
+        // Urutan ULID (mike, zulu, alfa) sengaja berbeda dari urutan sisip maupun urutan nama (indeks tenant_id, name):
+        // tanpa pemecah seri, basis data bebas mengembalikan salah satunya.
+        foreach ([[$latest, 'alfa'], [$later, 'zulu'], [$first, 'mike']] as [$id, $name]) {
+            $this->server(['id' => $id, 'name' => $name]);
+        }
+
+        Livewire::withoutLazyLoading()->test(Index::class)->assertSeeInOrder(['mike', 'zulu', 'alfa']);
     }
 
     public function test_add_button_disappears_at_the_single_mode_limit(): void
