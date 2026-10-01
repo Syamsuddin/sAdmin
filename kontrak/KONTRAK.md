@@ -1,6 +1,6 @@
 # KONTRAK — Protokol core ↔ gateway ↔ agen
 
-Versi kontrak: **0.2.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket untuk nama pesan, field, kanonisasi, algoritme tanda tangan, dan kode galat. Paket `core` dan `edge` **merujuk**, tidak menyalin. Begitu `kontrak/schemas/*.json` ada (M1), skema JSON menang atas tabel di berkas ini; berkas ini lalu hanya memuat aturan yang tak bisa diekspresikan JSON Schema.
+Versi kontrak: **0.3.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket untuk nama pesan, field, kanonisasi, algoritme tanda tangan, dan kode galat. Paket `core` dan `edge` **merujuk**, tidak menyalin. Begitu `kontrak/schemas/*.json` ada (M1), skema JSON menang atas tabel di berkas ini; berkas ini lalu hanya memuat aturan yang tak bisa diekspresikan JSON Schema.
 
 ## 1. Presedensi & perubahan
 - Kontrak menang. Kode yang tak sesuai kontrak = bug paket itu. Selisih → berhenti, laporkan, gerbang manusia.
@@ -41,6 +41,12 @@ Bingkai WebSocket: satu pesan JSON teks per bingkai: `{"type": "<NamaPesan>", "i
 | Passkey admin | WebAuthn ES256 atau EdDSA | kunci privat hanya di autentikator | `Plan`, `RosterUpdate`, `PolicyBundle` |
 | CA internal | ECDSA P-256 | brankas | sertifikat agen & gateway |
 | Kunci rilis | Ed25519, offline di pemelihara | di luar server | biner agen/gateway & aset console |
+
+Tanda tangan kunci audit (`CheckpointAnchor.signature`), normatif:
+- Algoritme Ed25519 murni (RFC 8032, bukan Ed25519ph/ctx). Satu kunci audit per tenant, sehingga kunci itu sendiri yang mengikat checkpoint ke tenant.
+- Pesan yang ditandatangani = byte ASCII `sadmin-audit-checkpoint/1`, satu byte LF (`0x0A`), lalu byte UTF-8 hasil JCS objek **tepat tiga** anggota: `seq` (integer ≥ 1), `hash` (`hash` entri audit ber-`seq` itu, 64 hex huruf kecil), dan `created_at` (RFC 3339 UTC berakhiran `Z`, tepat 6 digit mikrodetik: `YYYY-MM-DDTHH:MM:SS.ffffffZ`). `signature` tidak ikut.
+- `signature` = 64 byte tanda tangan, dikodekan base64 standar berpadding (RFC 4648 §4, 88 karakter). Kunci publik audit (mis. `audit_pubkey` di `EnrollAccept`) = 32 byte mentah, base64 standar berpadding (44 karakter). Base64 yang tak sah atau panjang byte yang salah = tanda tangan tidak sah.
+- Vektor bersama `kontrak/vectors/checkpoint/*.json`: `seed_hex` → `public_key`; `checkpoint` → `message` → `signature`; `valid` = hasil verifikasi yang wajib. Alasan dan aturan penyimpanan di core: `core/docs/adr/0004-checkpoint-audit.md`.
 
 ## 4. Rencana (yang ditandatangani passkey)
 Semua aksi **L2/L3** hanya berjalan di bawah sebuah `Plan`; aksi L2/L3 tunggal dari console = rencana satu langkah. Aksi L0/L1 cukup tanda tangan layanan (`plan_hash` = null).

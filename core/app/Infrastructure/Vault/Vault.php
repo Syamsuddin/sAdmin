@@ -98,6 +98,21 @@ final class Vault
         });
     }
 
+    /**
+     * Menandatangani pesan dengan kunci Ed25519 yang seed-nya ada di brankas (ADR 0004 §2.1). Seed tak pernah keluar
+     * dari Infrastructure/Vault; pemanggil hanya menerima tanda tangan 64 byte.
+     */
+    public function signEd25519(string $secretId, SecretPurpose $expectedPurpose, string $tenantId, string $message): string
+    {
+        return Ed25519::sign($this->reveal($secretId, self::signingPurpose($expectedPurpose), $tenantId), $message);
+    }
+
+    /** Kunci publik 32 byte dari seed Ed25519 di brankas (ADR 0004 §2.1). */
+    public function ed25519PublicKey(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): string
+    {
+        return Ed25519::publicKey($this->reveal($secretId, self::signingPurpose($expectedPurpose), $tenantId));
+    }
+
     /** Membuktikan satu kunci data terbuka dengan kunci induk yang termuat, tanpa membuka nilai rahasianya (§2.6). */
     public function checkKeyWrap(KeyWrap $wrap, MasterKey $kek): void
     {
@@ -147,6 +162,16 @@ final class Vault
         }
 
         return $dek;
+    }
+
+    /** Hanya kunci yang di ../kontrak/KONTRAK.md §3 berjenis Ed25519; rahasia lain tak boleh dipakai menandatangani. */
+    private static function signingPurpose(SecretPurpose $purpose): SecretPurpose
+    {
+        if (! in_array($purpose, [SecretPurpose::AuditKey, SecretPurpose::ServiceKey], true)) {
+            throw new InvalidArgumentException("Rahasia ber-purpose {$purpose->value} bukan kunci Ed25519.");
+        }
+
+        return $purpose;
     }
 
     private static function wrapAad(string $tenantId, string $keyWrapId, int $masterKeyVersion): string

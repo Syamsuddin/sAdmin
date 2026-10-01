@@ -1,0 +1,13 @@
+{
+  "description": "Checkpoint pertama: ujung rantai = entri vektor emas ADR 0001 (seq 1)",
+  "seed_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+  "public_key": "zRSzf5VulTGU/3+3Oz2B3MVh1hp1OAlLfD4aZD7l86o=",
+  "checkpoint": {
+    "seq": 1,
+    "hash": "0676afeb6ed67d29dd0b57eebf2b6c5d3817cb7a8cf0f8d21685d7f45da60695",
+    "created_at": "2026-09-30T02:26:12.345678Z"
+  },
+  "message": "sadmin-audit-checkpoint/1\n{\"created_at\":\"2026-09-30T02:26:12.345678Z\",\"hash\":\"0676afeb6ed67d29dd0b57eebf2b6c5d3817cb7a8cf0f8d21685d7f45da60695\",\"seq\":1}",
+  "signature": "E8UsI62tlekIwKDK8ZZ4Jz4s3xIdR+yUif5e0qoS40VHzFumJsl9xowLvK4DNPbuk+/Fy6alzfE7D3pGR9NkAg==",
+  "valid": true
+}

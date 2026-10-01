@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Finder\Finder;
 
-/** ADR 0003 §2.7: satu pintu kriptografi brankas; enkripsi Laravel (APP_KEY) terlarang untuk rahasia (docs/09). */
+/**
+ * ADR 0003 §2.7 & ADR 0004 §2.1: satu pintu kriptografi brankas (AEAD dan tanda tangan Ed25519 dari seed brankas);
+ * enkripsi Laravel (APP_KEY) terlarang untuk rahasia (docs/09).
+ */
 class VaultBoundaryTest extends TestCase
 {
     private const VAULT = 'Infrastructure/Vault/';
@@ -21,19 +24,19 @@ class VaultBoundaryTest extends TestCase
         return $sources;
     }
 
-    public function test_only_the_vault_uses_the_aead_and_reads_the_master_key(): void
+    public function test_only_the_vault_uses_the_aead_signing_and_reads_the_master_key(): void
     {
         $offenders = [];
         foreach ($this->appSources() as $path => $source) {
             if (str_starts_with($path, self::VAULT)) {
                 continue;
             }
-            if (preg_match('/sodium_crypto_aead_|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
+            if (preg_match('/sodium_crypto_aead_|sodium_crypto_sign_|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
                 $offenders[] = $path;
             }
         }
 
-        $this->assertSame([], $offenders, 'Pakai App\Infrastructure\Vault\Vault, bukan AEAD atau kunci induk langsung.');
+        $this->assertSame([], $offenders, 'Pakai App\Infrastructure\Vault (Vault, Ed25519), bukan AEAD, tanda tangan, atau kunci induk langsung.');
     }
 
     public function test_laravel_encryption_is_not_used_anywhere_in_app(): void

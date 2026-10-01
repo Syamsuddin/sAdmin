@@ -1,0 +1,13 @@
+{
+  "description": "seq = 2^53-1 (batas integer I-JSON) dan mikrodetik nol tetap 6 digit",
+  "seed_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+  "public_key": "zRSzf5VulTGU/3+3Oz2B3MVh1hp1OAlLfD4aZD7l86o=",
+  "checkpoint": {
+    "seq": 9007199254740991,
+    "hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "created_at": "2026-10-01T00:00:00.000000Z"
+  },
+  "message": "sadmin-audit-checkpoint/1\n{\"created_at\":\"2026-10-01T00:00:00.000000Z\",\"hash\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"seq\":9007199254740991}",
+  "signature": "cOYNYUxlZOHftQED1IgsoAOi0OSTE3FuwVWeKqyEhwxpbGJP2JSX0nos+T6ZP+S9/hMs4TEYUrT2S8Jn7a3LCA==",
+  "valid": true
+}
