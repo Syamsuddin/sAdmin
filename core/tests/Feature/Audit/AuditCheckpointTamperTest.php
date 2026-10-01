@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\InteractsWithAuditChain;
+use Tests\Support\InteractsWithNotify;
 use Tests\Support\InteractsWithVault;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ use Tests\TestCase;
  */
 class AuditCheckpointTamperTest extends TestCase
 {
-    use InteractsWithAuditChain, InteractsWithVault, RefreshDatabase;
+    use InteractsWithAuditChain, InteractsWithNotify, InteractsWithVault, RefreshDatabase;
 
     /** @var list<int> */
     private array $checkpointSeqs = [];
@@ -43,6 +44,7 @@ class AuditCheckpointTamperTest extends TestCase
 
     private function expectCheckpointMismatch(int $checkpointSeq, string $reason, int $lastIntactSeq): void
     {
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $message === 'audit_mismatch'
                 && $context['checkpoint_seq'] === $checkpointSeq
@@ -92,6 +94,7 @@ class AuditCheckpointTamperTest extends TestCase
     {
         [$first] = $this->checkpointSeqs;
         $this->rewriteChainFrom(3, 'target', 'site:palsu');
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $context['checkpoint_seq'] === $first && $context['last_intact_seq'] === 0,
         );
@@ -286,6 +289,7 @@ class AuditCheckpointTamperTest extends TestCase
     public function test_broken_chain_is_reported_before_checkpoints(): void
     {
         $this->tamperEntries(fn () => DB::table('audit_entries')->where('seq', 42)->update(['outcome' => 'failed']));
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $context['broken_at_seq'] === 42 && ! array_key_exists('checkpoint_seq', $context),
         );

@@ -7,11 +7,14 @@ use Symfony\Component\Finder\Finder;
 
 /**
  * ADR 0003 §2.7 & ADR 0004 §2.1: satu pintu kriptografi brankas (AEAD dan tanda tangan Ed25519 dari seed brankas);
- * enkripsi Laravel (APP_KEY) terlarang untuk rahasia (docs/09).
+ * enkripsi Laravel (APP_KEY) terlarang untuk rahasia (docs/09). ADR 0005 §2.6: nilai rahasia dibuka (`expose()`)
+ * hanya di brankas dan adaptor pengirim Notify.
  */
 class VaultBoundaryTest extends TestCase
 {
     private const VAULT = 'Infrastructure/Vault/';
+
+    private const NOTIFY = 'Infrastructure/Notify/';
 
     /** @return array<string, string> path relatif => isi */
     private function appSources(): array
@@ -31,13 +34,49 @@ class VaultBoundaryTest extends TestCase
             if (str_starts_with($path, self::VAULT)) {
                 continue;
             }
-            // Ed25519::sign/publicKey dan expose() membuka nilai/seed: hanya brankas yang boleh (ADR 0004 §2.1, docs/12).
-            if (preg_match('/sodium_crypto_aead_|sodium_crypto_sign_|Ed25519::(?:sign|publicKey)\s*\(|->expose\s*\(|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
+            // Ed25519::sign/publicKey membuka seed: hanya brankas yang boleh (ADR 0004 §2.1, docs/12).
+            if (preg_match('/sodium_crypto_aead_|sodium_crypto_sign_|Ed25519::(?:sign|publicKey)\s*\(|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
                 $offenders[] = $path;
             }
         }
 
         $this->assertSame([], $offenders, 'Pakai App\Infrastructure\Vault (Vault, Ed25519), bukan AEAD, tanda tangan, atau kunci induk langsung.');
+    }
+
+    public function test_secret_values_are_exposed_only_in_the_vault_and_notify_adapters(): void
+    {
+        $offenders = [];
+        foreach ($this->appSources() as $path => $source) {
+            if (str_starts_with($path, self::VAULT) || str_starts_with($path, self::NOTIFY)) {
+                continue;
+            }
+            if (preg_match('/->expose\s*\(/i', $source) === 1) {
+                $offenders[] = $path;
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Nilai rahasia hanya dibuka di titik pakai: brankas atau adaptor Notify (ADR 0005 §2.6).');
+    }
+
+    public function test_notify_adapters_reveal_only_channel_secrets_and_never_touch_signing_keys(): void
+    {
+        $purposes = [];
+        $offenders = [];
+        foreach ($this->appSources() as $path => $source) {
+            if (! str_starts_with($path, self::NOTIFY)) {
+                continue;
+            }
+            preg_match_all('/->reveal\s*\([^;]*?SecretPurpose::(\w+)/s', $source, $found);
+            array_push($purposes, ...$found[1]);
+            // Notify membuka rahasia hanya lewat reveal(); tak pernah seed Ed25519 atau jalur brankas lain.
+            if (preg_match('/Ed25519|signEd25519|ed25519PublicKey|AuditKey|ServiceKey|->open\s*\(|->matches\s*\(/', $source) === 1) {
+                $offenders[] = $path;
+            }
+        }
+
+        $this->assertSame([], $offenders);
+        $this->assertNotSame([], $purposes, 'Adaptor Notify seharusnya membuka rahasianya lewat Vault::reveal().');
+        $this->assertSame([], array_values(array_diff(array_unique($purposes), ['TelegramToken', 'Smtp'])));
     }
 
     public function test_laravel_encryption_is_not_used_anywhere_in_app(): void

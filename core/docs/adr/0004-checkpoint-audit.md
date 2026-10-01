@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-01 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Format checkpoint dan isi yang ditandatangani termasuk gerbang manusia (docs/22_CHANGE_POLICY.md, "perubahan format rantai audit atau checkpoint"; `../kontrak/KONTRAK.md` §1). Setelah checkpoint produksi pertama dijangkarkan ke agen, mengubah format memutus verifikasi riwayat |
 | Lingkup | Kunci audit (pembuatan, penyimpanan, kunci publik), format tanda tangan checkpoint, penyimpanan `audit_checkpoints`, kapan checkpoint dibuat, dan cara `sadmin:audit-verify` memakainya |
@@ -32,7 +32,7 @@ Begitu checkpoint pertama dijangkarkan ke agen (`CheckpointAnchor`), rincian ini
   3. dalam satu transaksi: seed dibuat dengan CSPRNG lalu disimpan lewat brankas (entri audit `secret.store`), kemudian entri audit `audit.key_initialize` ditulis (aktor `local_root`, target `secret:<id>`, `params_redacted` = `{"public_key": "<base64>"}`);
   4. perintah mencetak kunci publik (base64 standar, 44 karakter). Admin mencatatnya di kit pemulihan dan menyerahkannya kepada auditor.
 - Core **tidak pernah** membuat kunci audit secara implisit, misalnya saat checkpoint pertama. Dengan begitu, kunci yang hilang atau dihancurkan tidak diam-diam terganti kunci baru.
-- Seed hanya dibuka di dalam `App\Infrastructure\Vault` (`Vault::signEd25519()` dan `Vault::ed25519PublicKey()`). `Vault::reveal()` menolak purpose `audit_key` dan `service_key` (ADR 0003 §2.5), sehingga kode domain tidak pernah memegang byte seed; seed baru dibuat `Ed25519::generateSeed()` sebagai objek `SecretValue` yang tak bisa dibaca di luar brankas. Fungsi `sodium_crypto_sign_*`, `Ed25519::sign()`/`publicKey()`, dan `SecretValue::expose()` hanya dipanggil di `app/Infrastructure/Vault`.
+- Seed hanya dibuka di dalam `App\Infrastructure\Vault` (`Vault::signEd25519()` dan `Vault::ed25519PublicKey()`). `Vault::reveal()` menolak purpose `audit_key` dan `service_key` (ADR 0003 §2.5), sehingga kode domain tidak pernah memegang byte seed; seed baru dibuat `Ed25519::generateSeed()` sebagai objek `SecretValue` yang tak bisa dibaca di luar brankas. Fungsi `sodium_crypto_sign_*` dan `Ed25519::sign()`/`publicKey()` hanya dipanggil di `app/Infrastructure/Vault`. `SecretValue::expose()` hanya dipanggil di `app/Infrastructure/Vault` dan, sejak ADR 0005 §2.6, di adaptor pengirim `app/Infrastructure/Notify`, yang hanya menerima nilai dari `reveal()` sehingga tak pernah memegang seed.
 - Di dalam core, akar kepercayaan verifikasi adalah kunci publik yang **diturunkan dari seed di brankas**, bukan kunci publik yang tercatat di DB. Memalsukan checkpoint menuntut kunci induk brankas, bukan sekadar akses tulis ke DB. Di luar core, akar kepercayaannya adalah salinan kunci publik di kit pemulihan dan di agen (`audit_pubkey`).
 
 ### 2.2 Format tanda tangan
@@ -131,3 +131,5 @@ Bila brankas tidak tersedia (`VaultUnavailable`) saat langkah 1, langkah 1–2 d
 ## 6. Riwayat
 - 2026-10-01: diusulkan bersama slice F-04b Checkpoint audit (M1).
 - 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi, 2 sedang, 7 rendah). Perubahannya: verify memakai batas checkpoint yang dibaca sebelum rantai ditelusuri; pemeriksaan struktural tetap berjalan saat brankas tak tersedia; baris checkpoint tak lengkap jadi galat integritas; `audit-key-init` menolak bila kunci pernah ada atau checkpoint sudah ada; `reveal()` menolak seed Ed25519; kegagalan baca-ulang checkpoint dicatat `critical`; KONTRAK §3 mewajibkan base64 kanonik (vektor 04). Format pesan yang ditandatangani dan vektor 01–03 tidak berubah.
+- 2026-10-01: klausul titik pakai `SecretValue::expose()` di §2.1 diperluas ke `app/Infrastructure/Notify` oleh ADR 0005 §2.6 (dipilih pemilik produk). Kunci audit, format, dan verifikasi tidak berubah.
+- 2026-10-01: **diterima** pemilik produk bersama kontrak 0.3.0 (`../kontrak/KONTRAK.md` §3). Mulai saat ini, setiap perubahan pada bagian 2 wajib lewat gerbang manusia (docs/22, "perubahan format rantai audit atau checkpoint").

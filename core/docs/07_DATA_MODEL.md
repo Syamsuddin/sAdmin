@@ -396,9 +396,9 @@ Indeks unik parsial `secrets_one_active_audit_key (tenant_id) WHERE purpose='aud
 ## Notifikasi
 | Tabel | Kolom kunci | Catatan |
 |---|---|---|
-| notification_channels | id, tenant_id, kind CHECK IN ('telegram','smtp'), config jsonb (tanpa rahasia), secret_id FK→secrets, status | dikirim juga ke agen sebagai bagian kebijakan |
-| alert_rules | id, tenant_id, kind (disk_low, mem_high, service_down, cert_expiring, backup_failed, agent_disconnected, audit_mismatch), threshold jsonb, enabled bool | |
-| alerts | id, tenant_id, rule_id FK NULL, server_id FK NULL, severity CHECK IN ('info','warning','critical'), title, detail jsonb, status CHECK IN ('open','acknowledged','resolved'), opened_at, resolved_at | |
+| notification_channels | id, tenant_id, kind CHECK IN ('telegram','smtp'), config jsonb objek (tanpa rahasia; isi per jenis: docs/adr/0005 §2.5), secret_id FK→secrets (purpose `telegram_token`/`smtp`), status CHECK IN ('active','inactive'), timestamps | dikirim juga ke agen sebagai bagian kebijakan (M2) |
+| alert_rules | id, tenant_id, kind CHECK IN (disk_low, mem_high, service_down, cert_expiring, backup_failed, agent_disconnected, audit_mismatch), threshold jsonb objek, enabled bool, timestamps; UNIQUE(tenant_id,kind); CHECK `kind <> 'audit_mismatch' OR enabled` | integritas tak bisa dinonaktifkan |
+| alerts | id, tenant_id, rule_id FK NULL, server_id NULL (FK→servers ditambahkan bersama tabel `servers`), severity CHECK IN ('info','warning','critical'), title, detail jsonb objek, status CHECK IN ('open','acknowledged','resolved'), dedup_key text NULL, opened_at, notified_at NULL, resolved_at NULL (terisi ⇔ `resolved`), timestamps | indeks unik parsial `alerts_unresolved_dedup` (tenant_id, dedup_key) selama belum `resolved`; `notified_at` = kanal pertama yang berhasil (docs/adr/0005 §2.2–2.3) |
 
 ## Memori
 ### memories

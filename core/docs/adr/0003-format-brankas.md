@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-01 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Ini perubahan keamanan (gerbang manusia, docs/22_CHANGE_POLICY.md). Setelah rahasia produksi pertama tertulis, mengubah format berarti mengenkripsi ulang seluruh brankas |
 | Lingkup | Cara core menyimpan, membuka, dan menghancurkan baris `secrets`/`key_wraps`, serta cara core membaca kunci induk |
@@ -133,3 +133,4 @@ Vektor ini dihitung oleh skrip independen yang hanya memakai fungsi sodium dan t
 - 2026-10-01: diusulkan bersama slice F-01a Brankas (M1).
 - 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi). Perubahannya: lingkungan dev memakai daftar izin `local`/`testing`; di luar dev `CREDENTIALS_DIRECTORY` wajib di bawah `/run/credentials/`; kunci dev ditolak bila ikut ada kredensial systemd; regex nama kredensial memakai `\z`; berkas kunci dibaca lewat satu handle; `reveal()` mewajibkan purpose dan tenant yang diharapkan dan membaca ulang baris dengan `FOR SHARE`; `SecretValue` menimpa nilainya dengan nol saat dihancurkan. Format byte (§2.2–2.3) dan vektor emas tidak berubah.
 - 2026-10-01: §2.5 ditambah pengecualian seed kunci Ed25519 bersama ADR 0004 (review adversarial F-04b): `reveal()` menolak `audit_key`/`service_key`, baca ulang saat simpan memakai `matches()`. Format byte dan vektor emas tidak berubah.
+- 2026-10-01: **diterima** pemilik produk. Mulai saat ini, setiap perubahan pada bagian 2 (format brankas, AAD, pembacaan, satu pintu) wajib lewat gerbang manusia (docs/22); setelah rahasia produksi pertama tertulis, mengubah format berarti mengenkripsi ulang seluruh brankas.

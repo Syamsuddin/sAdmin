@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\RaisesIntegrityAlerts;
+use App\Domain\Alerts\Actions\RaiseIntegrityAlert;
+use App\Domain\Alerts\Data\IntegrityAlert;
 use App\Domain\Audit\Data\ChainVerification;
 use App\Domain\Audit\Services\AuditChainVerifier;
 use App\Domain\Audit\Services\AuditCheckpointVerifier;
@@ -10,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class AuditVerifyCommand extends Command
 {
+    use RaisesIntegrityAlerts;
+
     /** Rantai utuh tetapi checkpoint tak dapat diperiksa karena brankas tak tersedia (ADR 0004 §2.5). */
     public const INCOMPLETE = 2;
 
@@ -17,7 +22,7 @@ class AuditVerifyCommand extends Command
 
     protected $description = 'Verifikasi rantai hash audit_entries dan checkpoint bertanda tangan (exit 0 = utuh)';
 
-    public function handle(AuditChainVerifier $verifier, AuditCheckpointVerifier $checkpoints): int
+    public function handle(AuditChainVerifier $verifier, AuditCheckpointVerifier $checkpoints, RaiseIntegrityAlert $alerts): int
     {
         // Batas checkpoint dibaca sebelum rantai ditelusuri (ADR 0004 §2.5): checkpoint yang lahir di tengah
         // verifikasi tak boleh terbaca sebagai rantai terpotong.
@@ -25,7 +30,7 @@ class AuditVerifyCommand extends Command
         $chain = $verifier->verify();
 
         if (! $chain->intact) {
-            return $this->chainBroken($chain);
+            return $this->chainBroken($chain, $alerts);
         }
 
         $this->info("Rantai audit utuh: {$chain->checked} entri, head seq {$chain->head->seq} hash {$chain->head->hash}.");
@@ -61,11 +66,12 @@ class AuditVerifyCommand extends Command
         $this->error("Verifikasi checkpoint gagal pada seq {$result->brokenAtSeq}: {$result->reason}.");
         $this->line('Checkpoint sah terakhir: '.($result->lastValidSeq === null ? 'tidak ada' : "seq {$result->lastValidSeq}")." ({$result->checked} checkpoint lolos).");
         $this->line('Tindakan: jangan ubah data apa pun; perlakukan sebagai insiden keamanan dan bandingkan dengan jangkar audit di agen/offsite.');
+        $this->raiseIntegrityAlert($alerts, IntegrityAlert::checkpointBroken((int) $result->brokenAtSeq, (string) $result->reason));
 
         return self::FAILURE;
     }
 
-    private function chainBroken(ChainVerification $result): int
+    private function chainBroken(ChainVerification $result, RaiseIntegrityAlert $alerts): int
     {
         Log::critical('audit_mismatch', [
             'broken_at_seq' => $result->brokenAtSeq,
@@ -76,6 +82,7 @@ class AuditVerifyCommand extends Command
         $this->error("Verifikasi audit gagal pada seq {$result->brokenAtSeq}: {$result->reason}.");
         $this->line("Entri utuh terakhir: seq {$result->head->seq} ({$result->checked} entri lolos).");
         $this->line('Tindakan: jangan ubah data apa pun; perlakukan sebagai insiden keamanan dan bandingkan dengan jangkar audit di agen/offsite.');
+        $this->raiseIntegrityAlert($alerts, IntegrityAlert::chainBroken((int) $result->brokenAtSeq, (string) $result->reason));
 
         return self::FAILURE;
     }
