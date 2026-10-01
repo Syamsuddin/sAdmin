@@ -16,6 +16,10 @@ return [
 
     'login_attempts_per_minute' => 10,
 
+    // Nama host DNS (huruf kecil) atau IPv4 publik gateway di host sAdmin, untuk `--gateway <host>:8443` perintah
+    // enrolment; wajib sama dengan SAN sertifikat server gateway (KONTRAK §2). Kosong = tambah server ditolak.
+    'gateway_host' => env('SADMIN_GATEWAY_HOST'),
+
     // Brankas (ADR 0003 §2.1). Produksi: kunci induk dari $CREDENTIALS_DIRECTORY/<credential>, dibaca saat runtime.
     'vault' => [
         'credential' => env('SADMIN_VAULT_CRED', 'sadmin-vault-master'),

@@ -10,6 +10,59 @@ return [
             'penyebab' => 'data tidak dapat dibaca dari basis data.',
             'tindakan' => 'klik Coba lagi. Bila berulang, laporkan ID berikut.',
         ],
+        'servers' => [
+            'langkah' => 'Memuat daftar server',
+            'penyebab' => 'data tidak dapat dibaca dari basis data.',
+            'tindakan' => 'klik Coba lagi. Bila berulang, laporkan ID berikut.',
+        ],
+    ],
+
+    'server' => [
+        'invalid_name' => [
+            'langkah' => 'Tambah server',
+            'penyebab' => 'nama server wajib 1–63 karakter berupa huruf kecil, angka, atau tanda hubung, dan tidak diawali atau diakhiri tanda hubung.',
+            'tindakan' => 'isi nama seperti web1, lalu Simpan.',
+        ],
+        'name_taken' => [
+            'langkah' => 'Tambah server',
+            'penyebab' => 'nama server ini sudah dipakai, termasuk oleh server yang sudah dipensiunkan.',
+            'tindakan' => 'pilih nama lain, lalu Simpan.',
+        ],
+        'invalid_hostname' => [
+            'langkah' => 'Tambah server',
+            'penyebab' => 'hostname bukan nama host DNS yang sah.',
+            'tindakan' => 'isi nama host seperti web1.instansi.go.id (huruf, angka, tanda hubung, dan titik), lalu Simpan.',
+        ],
+        'invalid_ip' => [
+            'langkah' => 'Tambah server',
+            'penyebab' => 'alamat IP tidak sah, atau termasuk rentang yang tak bisa menjadi alamat server (mis. 127.0.0.1).',
+            'tindakan' => 'isi alamat IPv4 atau IPv6 server, lalu Simpan.',
+        ],
+        'server_limit' => [
+            'langkah' => 'Tambah server',
+            'penyebab' => 'Mode Tunggal hanya mengelola paling banyak tiga server.',
+            'tindakan' => 'pensiunkan server yang tidak dipakai lebih dulu.',
+        ],
+        'not_enrolling' => [
+            'langkah' => 'Terbitkan token enrolment',
+            'penyebab' => 'server ini tidak lagi menunggu enrolment.',
+            'tindakan' => 'kembali ke daftar server untuk melihat statusnya.',
+        ],
+        'gateway_unset' => [
+            'langkah' => 'Siapkan perintah enrolment',
+            'penyebab' => 'alamat gateway (SADMIN_GATEWAY_HOST) belum diatur atau tidak sah.',
+            'tindakan' => 'minta pemegang root host sAdmin mengisinya dengan nama host DNS atau IPv4 publik host sAdmin, lalu klik Coba lagi.',
+        ],
+        'ca_missing' => [
+            'langkah' => 'Siapkan perintah enrolment',
+            'penyebab' => 'CA internal belum dibuat.',
+            'tindakan' => 'minta pemegang root host sAdmin menjalankan sadmin:ca-init, lalu klik Coba lagi.',
+        ],
+        'vault_unavailable' => [
+            'langkah' => 'Siapkan perintah enrolment',
+            'penyebab' => 'brankas tidak dapat dibuka karena kunci induk tidak termuat.',
+            'tindakan' => 'minta pemegang root host sAdmin memeriksa sadmin:vault-check, lalu klik Coba lagi.',
+        ],
     ],
 
     'theme' => [

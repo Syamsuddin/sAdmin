@@ -23,6 +23,15 @@
         <header class="navbar navbar-expand-md d-print-none">
             <div class="container-xl">
                 <span class="navbar-brand">sAdmin</span>
+                {{-- Navigasi sementara di topbar: sidebar docs/26 menunggu keputusan pemilik soal lebar sidebar ringkas. --}}
+                <nav class="navbar-nav flex-row gap-3 me-auto" aria-label="Navigasi utama">
+                    @foreach ([['servers.*', 'servers.index', 'server', 'Server'], ['settings.passkeys', 'settings.passkeys', 'key', 'Passkey']] as [$pattern, $route, $icon, $label])
+                        @php($current = request()->routeIs($pattern))
+                        <a href="{{ route($route) }}" @class(['nav-link', 'active' => $current]) aria-label="{{ $label }}" @if ($current) aria-current="page" @endif>
+                            <x-ui.icon :name="$icon" /><span class="d-none d-md-inline ms-1">{{ $label }}</span>
+                        </a>
+                    @endforeach
+                </nav>
                 <div class="navbar-nav flex-row order-md-last align-items-center gap-3">
                     <x-ui.theme-switch :current="$theme" />
                     <span class="text-secondary d-none d-sm-inline">{{ auth()->user()?->display_name }}</span>
