@@ -1,6 +1,6 @@
 # KONTRAK — Protokol core ↔ gateway ↔ agen
 
-Versi kontrak: **0.4.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket untuk nama pesan, field, kanonisasi, algoritme tanda tangan, dan kode galat. Paket `core` dan `edge` **merujuk**, tidak menyalin. Begitu `kontrak/schemas/*.json` ada (M1), skema JSON menang atas tabel di berkas ini; berkas ini lalu hanya memuat aturan yang tak bisa diekspresikan JSON Schema.
+Versi kontrak: **0.5.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket untuk nama pesan, field, kanonisasi, algoritme tanda tangan, dan kode galat. Paket `core` dan `edge` **merujuk**, tidak menyalin. Begitu `kontrak/schemas/*.json` ada (M1), skema JSON menang atas tabel di berkas ini; berkas ini lalu hanya memuat aturan yang tak bisa diekspresikan JSON Schema.
 
 ## 1. Presedensi & perubahan
 - Kontrak menang. Kode yang tak sesuai kontrak = bug paket itu. Selisih → berhenti, laporkan, gerbang manusia.
@@ -18,6 +18,45 @@ Versi kontrak: **0.4.0** (berkas `kontrak/VERSION`). Rumah tunggal lintas-paket 
 Gateway **tidak** punya kredensial DB, tidak menyimpan pesan secara tahan lama, dan tidak menandatangani apa pun. Bila core tidak tersedia, gateway menolak dengan `E_CORE_UNAVAILABLE`; agen menyangga lalu mengulang.
 
 Bingkai WebSocket: satu pesan JSON teks per bingkai: `{"type": "<NamaPesan>", "id": "<ULID>", "body": {…}, "sig": "<base64>"?}`. `sig` wajib di setiap bingkai core→agen dan tidak ada di bingkai agen→core (§3, tanda tangan kunci layanan). Batas ukuran bingkai 1 MiB (unggahan ZIP tidak lewat kanal ini — lihat §6).
+
+Sertifikat & pin CA, normatif:
+- **CA internal**: satu per tenant, kunci ECDSA P-256 di brankas core. Sertifikatnya X.509 v3 swa-tanda-tangan, subjek = penerbit = `CN=sAdmin internal CA`, masa berlaku 3650 hari (boleh lebih 1 detik, dengan alasan yang sama seperti sertifikat klien di bawah), `basicConstraints` kritis `CA:TRUE, pathlen:0`, `keyUsage` kritis `keyCertSign, cRLSign`, tanda tangan `ecdsa-with-SHA256`. Mengganti CA adalah rotasi dan butuh gerbang manusia (`core/docs/22_CHANGE_POLICY.md`).
+- **Pin CA** (`--ca-sha256` saat enrolment) = SHA-256 atas byte DER sertifikat CA, ditulis 64 hex huruf kecil. Agen hanya menerima server TLS gateway yang rantainya berakhir pada sertifikat CA dengan sidik jari persis sama dengan pin. Profil sertifikat server gateway ditetapkan bersama slice gateway.
+- **CSR agen** (`Enroll.csr`, `CertRenew`) diperiksa berurutan, dan alasan penolakannya adalah aturan pertama yang dilanggar. Semua pelanggaran ditolak `E_CSR`.
+  1. `size`: teks paling banyak 4096 byte.
+  2. `pem`: tepat satu blok `-----BEGIN CERTIFICATE REQUEST-----` … `-----END CERTIFICATE REQUEST-----` berisi baris base64 standar yang diakhiri LF. Teks boleh diakhiri satu LF, tanpa teks lain, CRLF, atau header PEM.
+  3. `structure`: isinya DER CSR (PKCS#10) yang sah.
+  4. `key`: kunci publiknya ECDSA P-256.
+  5. `subject`: subjeknya kosong, karena subjek CSR akan tersalin ke sertifikat.
+  6. `signature`: tanda tangan `ecdsa-with-SHA256` sah atas `CertificationRequestInfo`, sebagai bukti kepemilikan kunci privat.
+
+  Atribut CSR, misalnya permintaan ekstensi, diabaikan dan tak pernah disalin ke sertifikat.
+- **Sertifikat klien agen** diterbitkan core dari CSR yang lolos aturan di atas. Profilnya X.509 v3 dengan rincian berikut:
+  - serial berupa bilangan bulat positif acak, paling besar 2^63−1;
+  - penerbit = subjek CA, dan subjeknya kosong;
+  - `notAfter` − `notBefore` = 604800 detik (7 hari). Penerbit yang mengisi kedua waktu dari dua pembacaan jam boleh menghasilkan 604801 detik bila detik berganti di antaranya. Gateway tidak memeriksa durasi ini;
+  - kunci publiknya kunci CSR, dan tanda tangannya `ecdsa-with-SHA256`;
+  - ekstensinya tepat lima: `subjectAltName` kritis berisi tepat satu URI `sadmin://server/<server_id>`, `basicConstraints` kritis `CA:FALSE`, `keyUsage` kritis `digitalSignature`, `extendedKeyUsage` `clientAuth`, dan `authorityKeyIdentifier` (keyid CA).
+
+  Core mencatat serial sebagai hex huruf kecil tanpa nol di depan (`agents.cert_serial`).
+- **Penerimaan sertifikat klien di gateway** diperiksa berurutan, dan alasannya adalah aturan pertama yang dilanggar.
+  1. `pem`: berlaku untuk vektor, dengan aturan blok yang sama seperti CSR tetapi berlabel `CERTIFICATE`. Di TLS, sertifikat datang sebagai DER.
+  2. `structure`: isinya DER sertifikat X.509 yang sah.
+  3. `issuer`: penerbit = subjek CA, dengan byte DER identik.
+  4. `signature`: tanda tangannya sah dengan kunci CA.
+  5. `validity`: `notBefore` ≤ sekarang ≤ `notAfter`, kedua batas inklusif, untuk sertifikat klien **dan** sertifikat CA.
+  6. `key`: kunci publiknya ECDSA P-256.
+  7. `basic_constraints`: ada dan `CA:FALSE`.
+  8. `eku`: `extendedKeyUsage` ada dan memuat `clientAuth`.
+  9. `san`: `subjectAltName` berisi tepat satu nama, yaitu URI yang seluruhnya cocok dengan `sadmin://server/<ULID>` (ULID huruf kecil, §8).
+  10. Sertifikat belum dicabut. Mekanisme pencabutan ditetapkan bersama enrolment.
+
+  Identitas koneksi = `server_id` dari URI itu, bukan subjek atau nama lain. Gateway memakai identitas ini untuk meneruskan pesan.
+- Vektor bersama dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (pustaka Python `cryptography`, ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang). Aturan pencabutan di luar vektor.
+  - `kontrak/vectors/agent-csr/*.json` berisi `csr_pem` → `valid` dan `reason`.
+  - `kontrak/vectors/agent-cert/*.json` berisi `ca_pem`, `ca_sha256`, `cert_pem`, dan `now` → `valid`, `server_id`, dan `reason`.
+
+  Alasan dan aturan penyimpanan di core ada di `core/docs/adr/0007-ca-internal.md`.
 
 ## 3. Kanonisasi & tanda tangan
 - Kanonisasi: **RFC 8785 (JCS)** terhadap `body`, kecuali tanda tangan kunci layanan yang mengkanonisasi objek `{type, id, body}` (lihat di bawah). Dilarang angka pecahan di badan yang ditandatangani (pakai integer atau string) — sumber selisih PHP↔Go paling umum.
@@ -108,6 +147,7 @@ ZIP sumber diunggah admin ke core, disimpan terenkripsi di brankas, lalu diambil
 | `E_TRANSIENT` | sementara | galat sementara aksi (jaringan, apt lock) |
 | `E_PERMANENT` | permanen | galat aksi yang tak akan sembuh dengan mengulang |
 | `E_ENROLL_TOKEN` | permanen | token enrolment salah, kedaluwarsa, atau sudah dipakai |
+| `E_CSR` | permanen | CSR `Enroll`/`CertRenew` melanggar aturan CSR di §2 |
 | `E_CORE_UNAVAILABLE` | sementara | gateway tak bisa meneruskan ke core |
 
 ## 8. Konvensi

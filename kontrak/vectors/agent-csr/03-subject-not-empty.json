@@ -1,0 +1,6 @@
+{
+  "description": "Subjek tak kosong ditolak: subjek CSR akan tersalin ke sertifikat",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIHJMHECAQAwDzENMAsGA1UEAwwEYWdlbjBZMBMGByqGSM49AgEGCCqGSM49AwEH\nA0IABCyB9hWCcGE/IbvgCp0xweq/YmJKkPQmpsqe9FQtZCNUMsND/yTbwcggp261\ntZla7lxzRRoDSwltPYgDKNfyisKgADAKBggqhkjOPQQDAgNIADBFAiBImjAcxNOl\nU/zgWKE6cRnGEs0KIey/3KjQ62nJrrH0GgIhALpY1yubuqcXnHUYINEXbFw0DyC9\n3oeiEH5y4l34TwfG\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "subject"
+}

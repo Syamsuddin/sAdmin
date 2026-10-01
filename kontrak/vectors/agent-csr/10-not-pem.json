@@ -1,0 +1,6 @@
+{
+  "description": "DER base64 tanpa pembungkus PEM ditolak",
+  "csr_pem": "MIG6MGICAQAwADBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABCyB9hWCcGE/IbvgCp0xweq/YmJKkPQmpsqe9FQtZCNUMsND/yTbwcggp261tZla7lxzRRoDSwltPYgDKNfyisKgADAKBggqhkjOPQQDAgNIADBFAiAKrDLeqlqmBX4P8oOyB2Xqgg1WrEK7cfsui8KCymtU3QIhALlpbf7OijivwXBxMyquKU7gvpITQFINQn91p/bMdf6x\n",
+  "valid": false,
+  "reason": "pem"
+}

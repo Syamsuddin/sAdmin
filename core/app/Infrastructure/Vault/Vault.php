@@ -29,8 +29,11 @@ final class Vault
 
     public const WRAPPED_DEK_BYTES = self::NONCE_BYTES + self::DEK_BYTES + self::TAG_BYTES;
 
-    /** Seed kunci penanda tangan: dipakai di dalam brankas saja, tak pernah dikembalikan reveal() (ADR 0004 §2.1). */
+    /** Seed kunci penanda tangan Ed25519 (ADR 0004 §2.1). */
     private const ED25519_PURPOSES = [SecretPurpose::AuditKey, SecretPurpose::ServiceKey];
+
+    /** Kunci yang dipakai di dalam brankas saja, tak pernah dikembalikan reveal() (ADR 0004 §2.1, ADR 0007 §2.1). */
+    private const INTERNAL_PURPOSES = [SecretPurpose::AuditKey, SecretPurpose::ServiceKey, SecretPurpose::CaKey];
 
     public function __construct(private readonly MasterKeyLoader $loader) {}
 
@@ -66,12 +69,12 @@ final class Vault
      * Membuka nilai satu rahasia (ADR 0003 §2.5). Pemanggil menyebut purpose & tenant yang ia harapkan, sehingga
      * penunjuk yang ditukar di tabel perujuk tak membuka rahasia lain. Baris dibaca ulang di bawah FOR SHARE agar
      * tak hancur di tengah jalan. Gagal tertutup: tak pernah mengembalikan nilai yang tak terverifikasi. Seed kunci
-     * Ed25519 ditolak: brankas memakainya di dalam saja (ADR 0004 §2.1).
+     * Ed25519 dan kunci CA ditolak: brankas memakainya di dalam saja (ADR 0004 §2.1, ADR 0007 §2.1).
      */
     public function reveal(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): SecretValue
     {
-        if (in_array($expectedPurpose, self::ED25519_PURPOSES, true)) {
-            throw new InvalidArgumentException("Seed {$expectedPurpose->value} tak pernah dibuka keluar brankas; pakai signEd25519() atau ed25519PublicKey() (ADR 0004 §2.1).");
+        if (in_array($expectedPurpose, self::INTERNAL_PURPOSES, true)) {
+            throw new InvalidArgumentException("Kunci {$expectedPurpose->value} tak pernah dibuka keluar brankas; pakai signEd25519()/ed25519PublicKey() atau caCertificate()/signCertificateRequest() (ADR 0004 §2.1, ADR 0007 §2.1).");
         }
 
         return $this->open($secretId, $expectedPurpose, $tenantId);
@@ -130,6 +133,23 @@ final class Vault
     public function ed25519PublicKey(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): string
     {
         return Ed25519::publicKey($this->open($secretId, self::signingPurpose($expectedPurpose), $tenantId));
+    }
+
+    /** Sertifikat CA (PEM) dari rahasia `ca_key`; kunci privatnya tetap di brankas (ADR 0007 §2.1). */
+    public function caCertificate(string $secretId, string $tenantId): string
+    {
+        return X509Authority::certificate($this->open($secretId, SecretPurpose::CaKey, $tenantId));
+    }
+
+    /**
+     * Menandatangani CSR dengan kunci CA di brankas (ADR 0007 §2.3). Kunci privat tak pernah keluar dari
+     * Infrastructure/Vault; pemanggil menyusun profil ekstensinya dan hanya menerima sertifikat PEM.
+     *
+     * @param  array<string, string>  $extensions
+     */
+    public function signCertificateRequest(string $secretId, string $tenantId, string $csrPem, array $extensions, int $days, int $serial): string
+    {
+        return X509Authority::sign($this->open($secretId, SecretPurpose::CaKey, $tenantId), $csrPem, $extensions, $days, $serial);
     }
 
     /** Membuktikan satu kunci data terbuka dengan kunci induk yang termuat, tanpa membuka nilai rahasianya (§2.6). */

@@ -11,6 +11,7 @@ Keputusan arsitektural atau keamanan baru dicatat di sini **sebelum** diimplemen
 | [0004](0004-checkpoint-audit.md) | Checkpoint audit bertanda tangan | Diterima |
 | [0005](0005-peringatan-integritas.md) | Peringatan integritas dan kanal notifikasi core | Diterima |
 | [0006](0006-tanda-tangan-layanan.md) | Tanda tangan kunci layanan pada bingkai core→agen | Diusulkan |
+| [0007](0007-ca-internal.md) | CA internal: kunci, pin, dan sertifikat klien agen | Diusulkan |
 
 ## Templat
 ```markdown

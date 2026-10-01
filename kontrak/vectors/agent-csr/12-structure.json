@@ -1,0 +1,6 @@
+{
+  "description": "PEM sah berisi DER yang bukan CSR ditolak",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMAMCAQA=\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "structure"
+}

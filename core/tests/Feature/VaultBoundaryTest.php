@@ -16,6 +16,9 @@ class VaultBoundaryTest extends TestCase
 
     private const NOTIFY = 'Infrastructure/Notify/';
 
+    /** Fungsi OpenSSL yang memegang kunci privat, dan pintu X509Authority yang membuka isi rahasia CA. */
+    private const OPENSSL_PRIVATE = '/\bopenssl_(?:pkey_new|pkey_export|pkey_export_to_file|pkey_get_private|get_privatekey|csr_new|csr_sign|sign|private_encrypt|private_decrypt|open|seal|pkcs12_export|pkcs12_export_to_file|pkcs7_sign|cms_sign)\s*\(|X509Authority::(?:sign|certificate)\s*\(/i';
+
     /** @return array<string, string> path relatif => isi */
     private function appSources(): array
     {
@@ -41,6 +44,22 @@ class VaultBoundaryTest extends TestCase
         }
 
         $this->assertSame([], $offenders, 'Pakai App\Infrastructure\Vault (Vault, Ed25519), bukan AEAD, tanda tangan, atau kunci induk langsung.');
+    }
+
+    /** ADR 0007 §2.1: kunci privat CA hanya dipakai di Infrastructure/Vault; domain cukup kunci publik dan sertifikat. */
+    public function test_only_the_vault_uses_openssl_private_keys_and_the_ca_key(): void
+    {
+        $offenders = [];
+        foreach ($this->appSources() as $path => $source) {
+            if (str_starts_with($path, self::VAULT)) {
+                continue;
+            }
+            if (preg_match(self::OPENSSL_PRIVATE, $source) === 1) {
+                $offenders[] = $path;
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Pakai Vault::caCertificate()/signCertificateRequest(), bukan fungsi OpenSSL kunci privat atau X509Authority langsung.');
     }
 
     public function test_secret_values_are_exposed_only_in_the_vault_and_notify_adapters(): void
@@ -69,7 +88,7 @@ class VaultBoundaryTest extends TestCase
             preg_match_all('/->reveal\s*\([^;]*?SecretPurpose::(\w+)/s', $source, $found);
             array_push($purposes, ...$found[1]);
             // Notify membuka rahasia hanya lewat reveal(); tak pernah seed Ed25519 atau jalur brankas lain.
-            if (preg_match('/Ed25519|signEd25519|ed25519PublicKey|AuditKey|ServiceKey|->open\s*\(|->matches\s*\(/', $source) === 1) {
+            if (preg_match('/Ed25519|signEd25519|ed25519PublicKey|AuditKey|ServiceKey|CaKey|X509Authority|caCertificate|signCertificateRequest|->open\s*\(|->matches\s*\(/', $source) === 1) {
                 $offenders[] = $path;
             }
         }
@@ -109,5 +128,10 @@ class VaultBoundaryTest extends TestCase
         $this->assertSame(1, preg_match('/[\'"]encrypted(?::[\w\\\\]+)?[\'"]/', "'token' => 'encrypted:array',"));
         $this->assertSame(1, preg_match('/\bCrypt::|Facades\\\\Crypt\b/', 'use Illuminate\Support\Facades\Crypt;'));
         $this->assertSame(1, preg_match('/[\'"]encrypter[\'"]/', 'app(\'encrypter\')->encrypt($v);'));
+        $this->assertSame(1, preg_match(self::OPENSSL_PRIVATE, '$cert = openssl_csr_sign($csr, $ca, $key, 7);'));
+        $this->assertSame(1, preg_match(self::OPENSSL_PRIVATE, '$k = \\openssl_pkey_get_private($pem);'));
+        $this->assertSame(1, preg_match(self::OPENSSL_PRIVATE, 'X509Authority::sign($bundle, $csr, [], 7, 1);'));
+        $this->assertSame(0, preg_match(self::OPENSSL_PRIVATE, '$ok = openssl_verify($data, $sig, $pub, OPENSSL_ALGO_SHA256);'));
+        $this->assertSame(0, preg_match(self::OPENSSL_PRIVATE, 'X509Authority::generate($cn, $ext, 3650, $serial);'));
     }
 }

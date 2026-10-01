@@ -149,8 +149,8 @@ class StoreSecretTest extends TestCase
             $secret = $this->store('nilai-'.$purpose->value, $purpose);
             $this->assertTrue(app(Vault::class)->matches($secret->id, $purpose, $this->tenant->id, new SecretValue('nilai-'.$purpose->value)));
 
-            if (in_array($purpose, [SecretPurpose::AuditKey, SecretPurpose::ServiceKey], true)) {
-                // Seed Ed25519 hanya dipakai di dalam brankas (ADR 0004 §2.1).
+            if (in_array($purpose, [SecretPurpose::AuditKey, SecretPurpose::ServiceKey, SecretPurpose::CaKey], true)) {
+                // Seed Ed25519 dan kunci CA hanya dipakai di dalam brankas (ADR 0004 §2.1, ADR 0007 §2.1).
                 try {
                     app(Vault::class)->reveal($secret->id, $purpose, $this->tenant->id);
                     $this->fail("reveal() seharusnya menolak {$purpose->value}.");
