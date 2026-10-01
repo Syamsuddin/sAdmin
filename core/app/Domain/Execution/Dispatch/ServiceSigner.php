@@ -43,8 +43,11 @@ final class ServiceSigner
             throw new InvalidArgumentException('Badan bingkai wajib objek JSON; pakai stdClass untuk objek kosong.');
         }
 
+        // json_encode mengodekan larik non-list sebagai objek; badan tetap objek walau sisanya ber-kunci 0..n-1 atau
+        // kosong setelah secret_values dikeluarkan.
+        $body = is_array($body) ? (object) $body : clone $body;
         if ($type === 'Envelope') {
-            $body = self::withoutSecretValues($body);
+            unset($body->secret_values);
         }
 
         return self::MESSAGE_PREFIX.Jcs::canonicalize(['type' => $type, 'id' => $id, 'body' => $body]);
@@ -76,9 +79,11 @@ final class ServiceSigner
      */
     public function frame(string $tenantId, string $type, string $id, array|stdClass $body): string
     {
-        if ($type === '' || ! Str::isUlid($id)) {
-            throw new InvalidArgumentException('Bingkai butuh type tak kosong dan id berupa ULID (KONTRAK §2, §8).');
+        if ($type === '' || ! self::isUlid($id)) {
+            throw new InvalidArgumentException('Bingkai butuh type tak kosong dan id berupa ULID huruf kecil (KONTRAK §2, §8).');
         }
+        // Seluruh badan wajib I-JSON, termasuk secret_values yang tak ikut ditandatangani (KONTRAK §3).
+        Jcs::canonicalize($body);
         $message = self::message($type, $id, $body);
 
         $keyId = $this->activeKeyId($tenantId)
@@ -119,7 +124,7 @@ final class ServiceSigner
         sort($members);
         if ($members !== self::FRAME_MEMBERS
             || ! is_string($decoded->type) || $decoded->type === ''
-            || ! is_string($decoded->id) || ! Str::isUlid($decoded->id)
+            || ! is_string($decoded->id) || ! self::isUlid($decoded->id)
             || ! $decoded->body instanceof stdClass
             || ! is_string($decoded->sig)) {
             return false;
@@ -131,22 +136,9 @@ final class ServiceSigner
             && Ed25519::verify($publicKey, self::message($decoded->type, $decoded->id, $decoded->body), $signature);
     }
 
-    /**
-     * @param  array<array-key, mixed>|stdClass  $body
-     * @return array<array-key, mixed>|stdClass
-     */
-    private static function withoutSecretValues(array|stdClass $body): array|stdClass
+    /** ULID huruf kecil, dibandingkan apa adanya (KONTRAK §8): ID core selalu huruf kecil (ADR 0003 §2.2). */
+    private static function isUlid(string $id): bool
     {
-        if ($body instanceof stdClass) {
-            $body = clone $body;
-            unset($body->secret_values);
-
-            return $body;
-        }
-
-        unset($body['secret_values']);
-
-        // Badan yang tersisa kosong tetap objek {}, bukan larik [] (cara PHP mengodekan array kosong).
-        return $body === [] ? new stdClass : $body;
+        return Str::isUlid($id) && $id === strtolower($id);
     }
 }

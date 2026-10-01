@@ -4,14 +4,14 @@
   "public_key": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
   "frame": {
     "type": "Envelope",
-    "id": "01M3TQKQR08B1QXWA347REQ3DA",
+    "id": "01m3tqkqr08b1qxwa347req3da",
     "body": {
       "kontrak": "0.4",
-      "envelope_id": "01M3TQKQR07Y0JTWQT9T5ZEVQ5",
+      "envelope_id": "01m3tqkqr07y0jtwqt9t5zevq5",
       "phase": "apply",
       "action_key": "log.tail_redacted",
       "action_version": 1,
-      "target_server_id": "01M1D7NTM0PFNCTCT37CRVA993",
+      "target_server_id": "01m1d7ntm0pfnctct37crva993",
       "platform_id": "ubuntu-24.04",
       "params": {
         "unit": "aplikasi-contoh.service",
@@ -28,12 +28,12 @@
       "nonce": "f40H5dTk3hTfMSrFOKbIOMTW5JEwUq5mJoiLG11MPmE",
       "issued_at": "2026-10-01T03:20:00Z",
       "expires_at": "2026-10-01T03:30:00Z",
-      "idempotency_key": "01M3TQKQR0BFZ58Y06Z9CFB30E",
+      "idempotency_key": "01m3tqkqr0bfz58y06z9cfb30e",
       "plan_hash": null,
       "step_index": null
     },
-    "sig": "xKtIXo9jC04rhGy0cv5i7O5vAqJBTkmZS294LIL7A9Zlngw+VMwpLQjyRbz5jIZEuWm+0Xv3U6Ia9LyN7B3cBg=="
+    "sig": "luq0pcRT5G0Iu4uuWHzy/P7sxawOWxP2Adan8JON/oh1QDr8KFI7JPEVYqT9s8yQipYQL2rzHfAYenjjLKXnAw=="
   },
-  "message": "sadmin-service/1\n{\"body\":{\"action_key\":\"log.tail_redacted\",\"action_version\":1,\"envelope_id\":\"01M3TQKQR07Y0JTWQT9T5ZEVQ5\",\"expires_at\":\"2026-10-01T03:30:00Z\",\"idempotency_key\":\"01M3TQKQR0BFZ58Y06Z9CFB30E\",\"issued_at\":\"2026-10-01T03:20:00Z\",\"kontrak\":\"0.4\",\"nonce\":\"f40H5dTk3hTfMSrFOKbIOMTW5JEwUq5mJoiLG11MPmE\",\"params\":{\"grep\":\"aksen: café naïve Ålborg ñ ü | CJK: 日本語 中文 | emoji: 😀 𝄞 | ls[ ] del[] soh[\\u0001] tab[\\t] lf[\\n] | kutip[\\\"] miring[\\\\] garis[/]\",\"lines\":200,\"penanda\":{\"z\":4,\"é\":3,\"😀\":2,\"ﬁ\":1},\"unit\":\"aplikasi-contoh.service\"},\"phase\":\"apply\",\"plan_hash\":null,\"platform_id\":\"ubuntu-24.04\",\"risk\":\"L0\",\"step_index\":null,\"target_server_id\":\"01M1D7NTM0PFNCTCT37CRVA993\"},\"id\":\"01M3TQKQR08B1QXWA347REQ3DA\",\"type\":\"Envelope\"}",
+  "message": "sadmin-service/1\n{\"body\":{\"action_key\":\"log.tail_redacted\",\"action_version\":1,\"envelope_id\":\"01m3tqkqr07y0jtwqt9t5zevq5\",\"expires_at\":\"2026-10-01T03:30:00Z\",\"idempotency_key\":\"01m3tqkqr0bfz58y06z9cfb30e\",\"issued_at\":\"2026-10-01T03:20:00Z\",\"kontrak\":\"0.4\",\"nonce\":\"f40H5dTk3hTfMSrFOKbIOMTW5JEwUq5mJoiLG11MPmE\",\"params\":{\"grep\":\"aksen: café naïve Ålborg ñ ü | CJK: 日本語 中文 | emoji: 😀 𝄞 | ls[ ] del[] soh[\\u0001] tab[\\t] lf[\\n] | kutip[\\\"] miring[\\\\] garis[/]\",\"lines\":200,\"penanda\":{\"z\":4,\"é\":3,\"😀\":2,\"ﬁ\":1},\"unit\":\"aplikasi-contoh.service\"},\"phase\":\"apply\",\"plan_hash\":null,\"platform_id\":\"ubuntu-24.04\",\"risk\":\"L0\",\"step_index\":null,\"target_server_id\":\"01m1d7ntm0pfnctct37crva993\"},\"id\":\"01m3tqkqr08b1qxwa347req3da\",\"type\":\"Envelope\"}",
   "valid": true
 }

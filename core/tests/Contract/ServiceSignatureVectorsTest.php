@@ -67,4 +67,38 @@ class ServiceSignatureVectorsTest extends TestCase
             $this->assertSame($vector->valid, ServiceSigner::verifyFrame($publicKey, $text));
         }
     }
+
+    /**
+     * Dispatch kelak menyusun badan sebagai larik PHP. Larik asosiatif menghasilkan pesan yang sama dengan vektor,
+     * kecuali objek kosong bersarang: PHP menjadikannya [] (ADR 0006 §2.3 langkah 1), sehingga pesannya berbeda dan
+     * skema pesan yang menolaknya. Tes ini menjaga agar ranjau itu tetap terlihat, bukan diam-diam dianggap setara.
+     */
+    #[DataProvider('vectors')]
+    public function test_associative_arrays_sign_the_vector_message_unless_an_empty_object_is_nested(string $path): void
+    {
+        $raw = (string) file_get_contents($path);
+        $vector = json_decode($raw, false, 512, JSON_THROW_ON_ERROR);
+        $frame = json_decode($raw, true, 512, JSON_THROW_ON_ERROR)['frame'];
+
+        $message = ServiceSigner::message($frame['type'], $frame['id'], $frame['body']);
+
+        if (self::hasEmptyObject($vector->frame->body)) {
+            $this->assertNotSame($vector->message, $message);
+            $this->assertStringContainsString('[]', $message);
+        } else {
+            $this->assertSame($vector->message, $message);
+        }
+    }
+
+    private static function hasEmptyObject(mixed $value): bool
+    {
+        if ($value instanceof \stdClass) {
+            $value = get_object_vars($value);
+            if ($value === []) {
+                return true;
+            }
+        }
+
+        return is_array($value) && array_filter($value, self::hasEmptyObject(...)) !== [];
+    }
 }

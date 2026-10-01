@@ -178,6 +178,43 @@ class ServiceSignerTest extends TestCase
         $this->assertStringEndsWith('{"body":{},"id":"01m3tpf3w0q6dk22dsdr1mxdn7","type":"Ack"}', ServiceSigner::message('Ack', '01m3tpf3w0q6dk22dsdr1mxdn7', new stdClass));
     }
 
+    public function test_envelope_secret_values_must_be_i_json_although_they_are_not_signed(): void
+    {
+        $this->initServiceKey();
+
+        foreach (['pecahan' => 1.5, 'integer besar' => PHP_INT_MAX, 'UTF-8 rusak' => "\xC3\x28"] as $what => $value) {
+            try {
+                $this->signer()->frame($this->tenantId, 'Envelope', self::ulid(), ['params' => new stdClass, 'secret_values' => ['k' => $value]]);
+                $this->fail("secret_values dengan {$what} seharusnya ditolak sebagai masukan, bukan lolos ke verifikasi sendiri.");
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringStartsWith('JCS:', $e->getMessage());
+            }
+        }
+    }
+
+    public function test_secret_values_of_a_stdclass_body_still_travel_in_the_frame_and_the_caller_object_is_untouched(): void
+    {
+        $publicKey = $this->initServiceKey();
+        $body = (object) ['params' => new stdClass, 'secret_values' => (object) ['k' => 'nilai-uji']];
+
+        $frame = $this->signer()->frame($this->tenantId, 'Envelope', self::ulid(), $body);
+
+        $this->assertSame('nilai-uji', json_decode($frame)->body->secret_values->k, 'Pesan tanpa secret_values tak boleh mengosongkan bingkai.');
+        $this->assertSame('nilai-uji', $body->secret_values->k, 'Objek badan milik pemanggil tak boleh diubah.');
+        $this->assertTrue(ServiceSigner::verifyFrame($publicKey, $frame));
+    }
+
+    public function test_envelope_body_with_integer_keys_stays_an_object_after_secret_values_are_removed(): void
+    {
+        $publicKey = $this->initServiceKey();
+        $id = self::ulid();
+
+        $frame = $this->signer()->frame($this->tenantId, 'Envelope', $id, [0 => 'x', 'secret_values' => ['k' => 'v']]);
+
+        $this->assertTrue(ServiceSigner::verifyFrame($publicKey, $frame));
+        $this->assertStringContainsString('"body":{"0":"x"}', ServiceSigner::message('Envelope', $id, [0 => 'x', 'secret_values' => ['k' => 'v']]));
+    }
+
     public function test_rejects_bodies_that_are_not_i_json(): void
     {
         $this->initServiceKey();
@@ -196,7 +233,7 @@ class ServiceSignerTest extends TestCase
     {
         $this->initServiceKey();
 
-        foreach ([['', self::ulid()], ['Ack', 'bukan-ulid'], ['Ack', '81jabcdefghjkmnpqrstvwxyz0']] as [$type, $id]) {
+        foreach ([['', self::ulid()], ['Ack', 'bukan-ulid'], ['Ack', '81jabcdefghjkmnpqrstvwxyz0'], ['Ack', strtoupper(self::ulid())], ['Ack', '01M3tpf3w09z7bmqzenzrs6wn3']] as [$type, $id]) {
             try {
                 $this->signer()->frame($this->tenantId, $type, $id, new stdClass);
                 $this->fail("Bingkai type='{$type}' id='{$id}' seharusnya ditolak.");
@@ -292,6 +329,12 @@ class ServiceSignerTest extends TestCase
         $frame = $this->signer()->frame($this->tenantId, 'Ack', self::ulid(), ['id' => self::ulid()]);
         $f = json_decode($frame, true, 512, JSON_THROW_ON_ERROR);
         $encode = fn (mixed $v): string => json_encode($v, JSON_THROW_ON_ERROR);
+        // Karakter data terakhir sig 64 byte hanya membawa 2 bit; menyalakan bit terendah indeks alfabetnya mengubah teks
+        // tanpa mengubah byte hasil dekode longgar (RFC 4648 §3.5).
+        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        $nonCanonical = substr($f['sig'], 0, 85).$alphabet[strpos($alphabet, $f['sig'][85]) | 1].'==';
+        $this->assertNotSame($f['sig'], $nonCanonical);
+        $this->assertSame(base64_decode($f['sig'], true), base64_decode($nonCanonical));
 
         $rejected = [
             'bukan JSON' => 'bukan json',
@@ -304,7 +347,7 @@ class ServiceSignerTest extends TestCase
             'type kosong' => $encode(['type' => ''] + $f),
             'kunci ganda' => substr($frame, 0, -1).',"sig":'.$encode($f['sig']).'}',
             'BOM' => "\xEF\xBB\xBF".$frame,
-            'base64 tak kanonik' => $encode(['sig' => substr($f['sig'], 0, 85).chr(ord($f['sig'][85]) ^ 1).'=='] + $f),
+            'base64 tak kanonik' => $encode(['sig' => $nonCanonical] + $f),
             'sig base64url' => $encode(['sig' => strtr($f['sig'], '+/', '-_')] + $f),
         ];
         foreach ($rejected as $what => $text) {
@@ -319,6 +362,7 @@ class ServiceSignerTest extends TestCase
         $testKey = Ed25519::publicKey(new SecretValue($seed));
         $this->assertTrue(ServiceSigner::verifyFrame($testKey, self::selfSigned($seed, ['type' => 'Ack', 'id' => self::ulid(), 'body' => new stdClass])));
         $this->assertFalse(ServiceSigner::verifyFrame($testKey, self::selfSigned($seed, ['type' => 'Ack', 'id' => 'bukan-ulid', 'body' => new stdClass])));
+        $this->assertFalse(ServiceSigner::verifyFrame($testKey, self::selfSigned($seed, ['type' => 'Ack', 'id' => strtoupper(self::ulid()), 'body' => new stdClass])), 'ULID huruf besar ditolak (KONTRAK §8).');
         $this->assertFalse(ServiceSigner::verifyFrame($testKey, self::selfSigned($seed, ['type' => '', 'id' => self::ulid(), 'body' => new stdClass])));
     }
 }

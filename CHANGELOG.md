@@ -9,11 +9,21 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai core→agen (F-02 sisi core, bagian pertama). ADR 0006 dan kontrak 0.4.0 berstatus **diusulkan** dan menunggu penerimaan pemilik produk sebelum digabung.
 
 ### Diubah
-- kontrak 0.4.0: KONTRAK §3 kini merinci tanda tangan kunci layanan (`sig`) pada setiap bingkai core→agen. Algoritmenya Ed25519 murni atas awalan `sadmin-service/1` dan JCS objek `{type, id, body}`, sehingga jenis dan ID bingkai ikut terikat. Pada `Envelope`, `secret_values` tingkat atas dikeluarkan dari cakupan, dan agen wajib menolak `secret_values` yang kuncinya tidak sama persis dengan placeholder `$secret` di `params` (`E_SECRET_COMMIT`). Bingkai core→agen terdiri dari tepat empat anggota. `sig` membuktikan asal, bukan kesegaran, sehingga pesan selain `Envelope` wajib idempoten. `EnrollAccept` diverifikasi dengan `service_pubkey` di badannya sendiri. Vektor bersama beserta oracle independennya ada di `kontrak/vectors/service-sig/`. Oracle itu ditulis hanya dari teks KONTRAK, dan JCS-nya diuji terhadap vektor `jcs`/`jcs-reject`. Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
+- kontrak 0.4.0: KONTRAK §3 kini merinci tanda tangan kunci layanan (`sig`) pada setiap bingkai core→agen. Algoritmenya Ed25519 murni atas awalan `sadmin-service/1` dan JCS objek `{type, id, body}`, sehingga jenis dan ID bingkai ikut terikat. Pada `Envelope`, `secret_values` tingkat atas dikeluarkan dari cakupan, dan agen wajib menolak `secret_values` yang kuncinya tidak sama persis dengan placeholder `$secret` di `params` (`E_SECRET_COMMIT`). Bingkai core→agen terdiri dari tepat empat anggota. `sig` membuktikan asal, bukan kesegaran. Karena itu dokumen kepercayaan hanya diterima bila versinya naik, pesan lain wajib idempoten, dan pesan untuk satu agen diperiksa terhadap identitas penerimanya. `EnrollAccept` diverifikasi dengan `service_pubkey` di badannya sendiri, dan sidik jari yang dicocokkan admin saat enrolment wajib mencakup roster, `service_pubkey`, dan `audit_pubkey`. KONTRAK §8 kini menetapkan ID sebagai ULID huruf kecil yang dibandingkan apa adanya, sesuai ID yang dibuat core. Vektor bersama beserta oracle independennya ada di `kontrak/vectors/service-sig/`. Oracle itu ditulis hanya dari teks KONTRAK, dan JCS-nya diuji terhadap vektor `jcs`/`jcs-reject`. Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
 
 ### Ditambahkan
 - core: `php artisan sadmin:service-key-init` membuat kunci layanan Ed25519 instansi sekali. *Seed*-nya hanya disimpan di brankas, sedangkan kunci publiknya dicetak dan dicatat di audit (`service.key_initialize`). Perintah menolak bila kunci pernah ada, termasuk yang sudah dihancurkan, karena kunci baru berarti rotasi dan semua agen yang sudah tersemat akan menolak bingkai. Format ini dikunci di ADR 0006 (diusulkan).
 - core: `ServiceSigner` di `Execution/Dispatch` menyusun bingkai core→agen bertanda tangan kunci layanan aktif tenant. Badan bingkai wajib objek JSON, dan objek kosong tetap `{}`. Tanpa kunci aktif, penyusunan gagal tertutup dan kunci tidak pernah dibuat diam-diam. Bingkai lebih dari 1 MiB ditolak. Sebelum dikembalikan, setiap bingkai diurai ulang dengan pengurai I-JSON ketat dan diverifikasi dengan kunci publik turunan brankas, sama seperti pemeriksaan agen. Pengiriman lewat socket gateway menyusul di slice berikutnya.
+
+### Keamanan
+- core: sebelum digabung, slice ini melewati review adversarial (docs/22) dengan hasil 0 kritis dan 0 tinggi. Temuan yang ditambal, masing-masing dengan tes regresi yang terbukti merah tanpa tambalannya:
+  - `secret_values` yang bukan I-JSON, dan badan yang menjadi larik setelah `secret_values` dikeluarkan, kini ditolak sebagai masukan, tidak lagi lolos sampai verifikasi sendiri;
+  - huruf ULID kini ditetapkan;
+  - teks kontrak tentang putar ulang dan enrolment diperketat;
+  - kasus tes base64 tak kanonik diperbaiki;
+  - jalur larik asosiatif kini diuji terhadap vektor.
+
+  Komitmen placeholder rahasia, penolakan tanda tangan oleh kunci yang di-*rotate* di brankas, galat tak tertangkap pada perintah init kunci, dan pipa verifikasi pesan non-`Envelope` di agen ditunda ke slice pemiliknya.
 
 ### Catatan migrasi
 - Migrasi baru, non-destruktif: indeks unik parsial `secrets_one_active_service_key` (satu kunci layanan aktif per tenant).
