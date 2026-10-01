@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\InteractsWithAuditChain;
+use Tests\Support\InteractsWithNotify;
 use Tests\Support\InteractsWithVault;
 use Tests\TestCase;
 use UnexpectedValueException;
@@ -23,7 +24,7 @@ use UnexpectedValueException;
 /** ADR 0004 §2.3–2.4: checkpoint menandatangani ujung rantai yang sudah dibuktikan, tak pernah rantai yang diubah. */
 class CreateAuditCheckpointTest extends TestCase
 {
-    use InteractsWithAuditChain, InteractsWithVault, RefreshDatabase;
+    use InteractsWithAuditChain, InteractsWithNotify, InteractsWithVault, RefreshDatabase;
 
     private string $publicKey;
 
@@ -41,6 +42,7 @@ class CreateAuditCheckpointTest extends TestCase
 
     private function expectAuditMismatch(int $brokenAtSeq, string $reason): void
     {
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $message === 'audit_mismatch'
                 && $context['broken_at_seq'] === $brokenAtSeq
@@ -315,6 +317,7 @@ class CreateAuditCheckpointTest extends TestCase
     {
         $this->appendEntries(2);
         $this->corruptCheckpointsOnInsert();
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $message === 'audit_checkpoint_failed' && str_contains($context['reason'], 'pembuatan dibatalkan'),
         );

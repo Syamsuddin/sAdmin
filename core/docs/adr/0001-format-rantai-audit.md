@@ -7,7 +7,7 @@
 | Pemutus | Pemilik produk. Mengubah format setelah ada data produksi = gerbang manusia (docs/22_CHANGE_POLICY.md, "perubahan format rantai audit atau checkpoint") |
 | Lingkup | Rantai `audit_entries` di core: cara entri di-hash, disimpan, ditulis, dan diverifikasi |
 | Di luar lingkup | Checkpoint bertanda tangan dan jangkar (slice F-04 berikutnya); rantai audit lokal agen (`../edge/docs/07_DATA_MODEL.md`) |
-| Rujukan | docs/07_DATA_MODEL.md §Audit · docs/21_SECURITY_RULES.md §Audit & integritas · `../kontrak/KONTRAK.md` §3 · docs/23_ACCEPTANCE_CRITERIA.md AC-03 |
+| Rujukan | docs/07_DATA_MODEL.md §Audit · docs/21_SECURITY_RULES.md §Audit & integritas · `../kontrak/KONTRAK.md` §3 · docs/_archive/23-audit.md (AC-03, diterima) |
 
 ## 1. Konteks
 docs/07 menetapkan rumus `hash = SHA-256(prev_hash ∥ JCS(entri tanpa hash))`, tetapi tidak merinci bentuk tiap field di dalam JCS. Rincian itu menentukan setiap byte yang di-hash, sehingga:

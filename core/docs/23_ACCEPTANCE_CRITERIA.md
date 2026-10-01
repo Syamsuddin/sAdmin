@@ -16,16 +16,6 @@ php artisan test --filter='Vault|SecretValue'   # Tests: … passed
 php artisan sadmin:vault-check                  # exit 0
 ```
 
-## AC-03 Audit (F-04)
-- Given rantai audit berisi ≥ 200 entri, When `sadmin audit verify`, Then exit 0.
-- Given satu `audit_entries.params_redacted` diubah via SQL superuser, When verify, Then exit ≠ 0 dan alert `audit_mismatch` critical terkirim ≤ 60 detik.
-- Given checkpoint bertanda tangan kunci audit sudah ada (F-04b Checkpoint audit), When ujung rantai dipotong atau rantai ditulis ulang dari suatu titik dengan hash dihitung ulang lewat SQL superuser, Then verify exit ≠ 0 dengan `audit_mismatch` yang menyebut checkpoint yang dilanggar, dan checkpoint baru tak pernah ditandatangani di atas rantai yang rusak (ADR 0004).
-```bash
-php artisan test --filter=AuditChainTamperTest   # Tests: … passed
-php artisan test --filter='AuditCheckpointTamperTest|CreateAuditCheckpointTest|InitializeAuditKeyTest'   # Tests: … passed
-php artisan test --testsuite=Contract            # termasuk vektor ../kontrak/vectors/checkpoint
-```
-
 ## AC-08 `site.create` (F-10)
 - Given VM hasil `server.onboard` dan repo Laravel contoh, When kapsul disetujui dengan satu passkey, Then `curl -sI https://<domain>` → `HTTP/2 200` dan median waktu `approved_at→succeeded_at` ≤ 5 menit atas 5 run (tanpa tunggu DNS).
 - Given ZIP berisi `../../etc/passwd`, When diunggah, Then ditolak di preflight, tidak ada rencana, tidak ada perubahan server.

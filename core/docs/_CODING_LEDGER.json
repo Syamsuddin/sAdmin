@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='Checkpoint|AuditKey|Ed25519|AuditChain'",
+    "test_satu": "php artisan test --filter='Alert|Notif|AuditChain|Checkpoint|VaultBoundary'",
     "vault_check": "php artisan sadmin:vault-check"
   },
   "sesi": [
@@ -59,14 +59,25 @@
       "step": 7,
       "detik": 2121,
       "tok_est": 102248
+    },
+    {
+      "mulai": "2026-10-01T18:47:28+08:00",
+      "selesai": null,
+      "step": 7,
+      "detik": 1369,
+      "tok_est": 90325
     }
   ],
-  "step_berjalan": null,
+  "step_berjalan": {
+    "no": 8,
+    "nama": "Gerbang fitur + arsip + dokumen",
+    "mulai": "2026-10-01T19:49:58+08:00"
+  },
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "7d97a138fb69e9e8",
+    "sidik": "8879c3cda53ac53b",
     "dokumen": 27,
-    "disegel": "2026-10-01T09:13:37+08:00",
+    "disegel": "2026-10-01T18:47:28+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -87,9 +98,14 @@
         "dari": "0f594247e1b863eb",
         "ke": "7d97a138fb69e9e8",
         "pada": "2026-10-01T09:13:37+08:00"
+      },
+      {
+        "dari": "7d97a138fb69e9e8",
+        "ke": "8879c3cda53ac53b",
+        "pada": "2026-10-01T18:47:28+08:00"
       }
     ],
-    "sidik_sebelumnya": "0f594247e1b863eb"
+    "sidik_sebelumnya": "7d97a138fb69e9e8"
   },
   "riwayat_fitur": [
     {
@@ -1360,10 +1376,206 @@
     }
   ],
   "akumulasi": {
-    "detik": 7171,
-    "tok_est": 328471,
+    "detik": 8540,
+    "tok_est": 418796,
     "tok_terukur": 0,
-    "step": 46,
+    "step": 53,
     "fitur": 8
+  },
+  "fitur_aktif": {
+    "fitur": "F-04c Alert audit_mismatch",
+    "rute": "Fitur baru (vertical slice)",
+    "mulai": "2026-10-01T18:55:23+08:00",
+    "rencana": [
+      "database/migrations/2026_10_01_000500_create_notification_channels_table.php",
+      "database/migrations/2026_10_01_000600_create_alert_rules_table.php",
+      "database/migrations/2026_10_01_000700_create_alerts_table.php",
+      "app/Models/NotificationChannel.php",
+      "app/Models/AlertRule.php",
+      "app/Models/Alert.php",
+      "app/Domain/Alerts/Data/AlertKind.php",
+      "app/Domain/Alerts/Data/AlertSeverity.php",
+      "app/Domain/Alerts/Data/AlertStatus.php",
+      "app/Domain/Alerts/Data/ChannelKind.php",
+      "app/Domain/Alerts/Data/ChannelStatus.php",
+      "app/Domain/Alerts/Data/IntegrityAlert.php",
+      "app/Domain/Alerts/Data/DeliveryReport.php",
+      "app/Domain/Alerts/Actions/RaiseIntegrityAlert.php",
+      "app/Domain/Alerts/Actions/AddNotificationChannel.php",
+      "app/Domain/Alerts/Services/AlertDispatcher.php",
+      "app/Infrastructure/Notify/Notifier.php",
+      "app/Infrastructure/Notify/NotificationMessage.php",
+      "app/Infrastructure/Notify/NotifyFailed.php",
+      "app/Infrastructure/Notify/TelegramNotifier.php",
+      "app/Infrastructure/Notify/SmtpNotifier.php",
+      "app/Infrastructure/Notify/SmtpTransportFactory.php",
+      "app/Console/Commands/NotifyChannelAddCommand.php",
+      "app/Console/Commands/NotifyTestCommand.php",
+      "app/Console/Commands/AuditVerifyCommand.php",
+      "app/Console/Commands/AuditCheckpointCommand.php",
+      "lang/id/alerts.php",
+      "database/factories/NotificationChannelFactory.php",
+      "tests/Support/InteractsWithNotify.php",
+      "tests/Feature/Alerts/AuditMismatchAlertTest.php",
+      "tests/Feature/Alerts/RaiseIntegrityAlertTest.php",
+      "tests/Feature/Alerts/AlertSchemaTest.php",
+      "tests/Feature/Alerts/NotificationChannelCommandsTest.php",
+      "tests/Feature/Alerts/NotifierTest.php",
+      "tests/Feature/Alerts/NotifyRedactionTest.php",
+      "tests/Feature/VaultBoundaryTest.php",
+      "docs/adr/0005-peringatan-integritas.md",
+      "docs/adr/README.md",
+      "docs/07_DATA_MODEL.md",
+      "docs/11_COMMANDS.md",
+      "docs/23_ACCEPTANCE_CRITERIA.md",
+      "docs/_archive/23-audit.md",
+      "../CHANGELOG.md",
+      "docs/_CODING_LEDGER.json",
+      "docs/_TOKEN_LEDGER.json",
+      "docs/adr/0004-checkpoint-audit.md"
+    ],
+    "total_step": 8,
+    "step": [
+      {
+        "no": 1,
+        "nama": "ADR 0005 keputusan keamanan",
+        "mulai": "2026-10-01T18:55:42+08:00",
+        "selesai": "2026-10-01T18:58:19+08:00",
+        "detik": 157,
+        "tok_est": 24530,
+        "muat": [
+          "docs/adr/0005-peringatan-integritas.md",
+          "docs/adr/0004-checkpoint-audit.md",
+          "docs/adr/README.md",
+          "docs/adr/0003-format-brankas.md",
+          "docs/07_DATA_MODEL.md",
+          "docs/15_OBSERVABILITY.md",
+          "docs/14_ERROR_HANDLING.md",
+          "docs/21_SECURITY_RULES.md",
+          "docs/22_CHANGE_POLICY.md",
+          "docs/13_TESTING.md",
+          "docs/24_DEFINITION_OF_DONE.md",
+          "docs/11_COMMANDS.md",
+          "docs/02_SCOPE.md"
+        ]
+      },
+      {
+        "no": 2,
+        "nama": "Skema/migrasi",
+        "mulai": "2026-10-01T18:58:24+08:00",
+        "selesai": "2026-10-01T18:59:07+08:00",
+        "detik": 44,
+        "tok_est": 8313,
+        "muat": [
+          "database/migrations/2026_10_01_000500_create_notification_channels_table.php",
+          "database/migrations/2026_10_01_000600_create_alert_rules_table.php",
+          "database/migrations/2026_10_01_000700_create_alerts_table.php",
+          "database/migrations/2026_10_01_000200_create_secrets_table.php",
+          "database/migrations/2026_09_30_000400_create_admins_table.php",
+          "docs/07_DATA_MODEL.md"
+        ]
+      },
+      {
+        "no": 3,
+        "nama": "Model/akses data",
+        "mulai": "2026-10-01T18:59:12+08:00",
+        "selesai": "2026-10-01T18:59:48+08:00",
+        "detik": 37,
+        "tok_est": 1824,
+        "muat": [
+          "app/Models/NotificationChannel.php",
+          "app/Models/AlertRule.php",
+          "app/Models/Alert.php",
+          "app/Domain/Alerts/Data/AlertKind.php",
+          "app/Domain/Alerts/Data/AlertSeverity.php",
+          "app/Domain/Alerts/Data/AlertStatus.php",
+          "app/Domain/Alerts/Data/ChannelKind.php",
+          "app/Domain/Alerts/Data/ChannelStatus.php",
+          "app/Models/Secret.php",
+          "database/factories/InstitutionFactory.php"
+        ]
+      },
+      {
+        "no": 4,
+        "nama": "Service/logika domain + adaptor Notify",
+        "mulai": "2026-10-01T19:30:15+08:00",
+        "selesai": "2026-10-01T19:34:10+08:00",
+        "detik": 235,
+        "tok_est": 15199,
+        "muat": [
+          "app/Infrastructure/Notify/NotificationMessage.php",
+          "app/Infrastructure/Notify/Notifier.php",
+          "app/Infrastructure/Notify/NotifyFailed.php",
+          "app/Infrastructure/Notify/TelegramNotifier.php",
+          "app/Infrastructure/Notify/SmtpNotifier.php",
+          "app/Infrastructure/Notify/SmtpTransportFactory.php",
+          "app/Domain/Alerts/Data/IntegrityAlert.php",
+          "app/Domain/Alerts/Data/DeliveryReport.php",
+          "app/Domain/Alerts/Data/RaisedAlert.php",
+          "app/Domain/Alerts/Services/AlertDispatcher.php",
+          "app/Domain/Alerts/Actions/RaiseIntegrityAlert.php",
+          "app/Domain/Alerts/Actions/AddNotificationChannel.php",
+          "lang/id/alerts.php",
+          "app/Domain/Audit/Actions/CreateAuditCheckpoint.php",
+          "app/Infrastructure/Vault/Vault.php",
+          "app/Infrastructure/Vault/SecretValue.php",
+          "app/Domain/Vault/Actions/StoreSecret.php",
+          "app/Infrastructure/Notify/SendmailRefusingMailManager.php"
+        ]
+      },
+      {
+        "no": 5,
+        "nama": "Titik masuk: perintah artisan",
+        "mulai": "2026-10-01T19:34:48+08:00",
+        "selesai": "2026-10-01T19:36:53+08:00",
+        "detik": 125,
+        "tok_est": 11156,
+        "muat": [
+          "app/Console/Commands/NotifyChannelAddCommand.php",
+          "app/Console/Commands/NotifyTestCommand.php",
+          "app/Console/Commands/Concerns/RaisesIntegrityAlerts.php",
+          "app/Console/Commands/AuditVerifyCommand.php",
+          "app/Console/Commands/AuditCheckpointCommand.php",
+          "app/Console/Commands/ForbiddenScanCommand.php",
+          "app/Infrastructure/Notify/SmtpTransportFactory.php",
+          "app/Infrastructure/Notify/SmtpNotifier.php",
+          "app/Domain/Alerts/Data/IntegrityAlert.php",
+          "docs/11_COMMANDS.md"
+        ]
+      },
+      {
+        "no": 6,
+        "nama": "UI (dilewati: tanpa halaman di slice ini)",
+        "mulai": "2026-10-01T19:37:00+08:00",
+        "selesai": "2026-10-01T19:37:00+08:00",
+        "detik": 0,
+        "tok_est": 0,
+        "muat": []
+      },
+      {
+        "no": 7,
+        "nama": "Tes",
+        "mulai": "2026-10-01T19:37:00+08:00",
+        "selesai": "2026-10-01T19:49:50+08:00",
+        "detik": 771,
+        "tok_est": 29303,
+        "muat": [
+          "tests/Support/InteractsWithNotify.php",
+          "tests/Feature/Alerts/AlertSchemaTest.php",
+          "tests/Feature/Alerts/NotifierTest.php",
+          "tests/Feature/Alerts/RaiseIntegrityAlertTest.php",
+          "tests/Feature/Alerts/AuditMismatchAlertTest.php",
+          "tests/Feature/Alerts/NotificationChannelCommandsTest.php",
+          "tests/Feature/Alerts/NotifyRedactionTest.php",
+          "tests/Feature/VaultBoundaryTest.php",
+          "tests/Feature/Audit/AuditChainTamperTest.php",
+          "tests/Feature/Audit/AuditCheckpointTamperTest.php",
+          "tests/Feature/Audit/CreateAuditCheckpointTest.php",
+          "tests/Support/InteractsWithAuditChain.php"
+        ]
+      }
+    ],
+    "detik": 1369,
+    "tok_est": 90325
   }
 }

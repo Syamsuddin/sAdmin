@@ -14,11 +14,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
+use Tests\Support\InteractsWithNotify;
 use Tests\TestCase;
 
 /** AC-03 (docs/23): verify hijau atas ≥ 200 entri; perubahan lewat SQL mentah terdeteksi. */
 class AuditChainTamperTest extends TestCase
 {
+    use InteractsWithNotify;
     use RefreshDatabase;
 
     private const ENTRIES = 210;
@@ -66,6 +68,7 @@ class AuditChainTamperTest extends TestCase
 
     public function test_editing_params_redacted_via_raw_sql_fails_verification_and_logs_critical(): void
     {
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $message === 'audit_mismatch' && $context['broken_at_seq'] === 137,
         );
@@ -82,8 +85,9 @@ class AuditChainTamperTest extends TestCase
     {
         $canary = 'CANARY-'.Str::random(24);
         $logged = [];
-        Log::shouldReceive('critical')->once()->andReturnUsing(function (string $message, array $context) use (&$logged): void {
-            $logged = [$message, $context];
+        // Semua log critical dipindai, termasuk alert yang dibuka sesudahnya (ADR 0005 §2.2: detail tanpa isi entri).
+        Log::shouldReceive('critical')->twice()->andReturnUsing(function (string $message, array $context) use (&$logged): void {
+            $logged[] = [$message, $context];
         });
 
         $this->tamper("UPDATE audit_entries SET params_redacted = '{\"bocor\": \"{$canary}\", \"angka\": 9007199254740993}' WHERE seq = 7");
@@ -94,7 +98,7 @@ class AuditChainTamperTest extends TestCase
             ->doesntExpectOutputToContain('9007199254740993')
             ->assertExitCode(1);
 
-        $this->assertSame('audit_mismatch', $logged[0]);
+        $this->assertSame(['audit_mismatch', 'alert_undelivered'], array_column($logged, 0));
         $this->assertStringNotContainsString($canary, (string) json_encode($logged));
         $this->assertStringNotContainsString('9007199254740993', (string) json_encode($logged));
     }
@@ -135,6 +139,7 @@ class AuditChainTamperTest extends TestCase
     #[DataProvider('scalarParams')]
     public function test_scalar_params_end_as_audit_mismatch_not_a_crash(string $json): void
     {
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(
             fn (string $message, array $context): bool => $message === 'audit_mismatch' && $context['broken_at_seq'] === 5,
         );

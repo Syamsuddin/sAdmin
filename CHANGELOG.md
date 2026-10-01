@@ -11,6 +11,8 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 - core: `docs/adr/README.md` berisi indeks dan templat ADR; ADR 0002 diselaraskan dengan templat itu.
 - kontrak 0.3.0: KONTRAK §3 kini merinci isi yang ditandatangani kunci audit (`CheckpointAnchor.signature`): Ed25519 murni atas awalan `sadmin-audit-checkpoint/1` dan JCS `{created_at, hash, seq}`, dengan pengodean base64 standar. Pengodean base64 wajib kanonik (bit sisa nol). Vektor bersama beserta oracle independennya ada di `kontrak/vectors/checkpoint/`. Format ini diusulkan di ADR 0004 (masih **diusulkan**). Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
 - Roadmap M1: Subresource Integrity aset console dijadwalkan di slice `install.sh` (F-01), sesuai keputusan pemilik produk.
+- core: ADR 0004 §2.1 kini mengizinkan `SecretValue::expose()` di adaptor pengirim `app/Infrastructure/Notify` selain brankas (ADR 0005 §2.6, dipilih pemilik produk). Kode domain, perintah, Livewire, HTTP, dan model tetap tak boleh membuka nilai rahasia, dan seed Ed25519 tetap tak pernah keluar dari brankas.
+- core: kriteria AC-03 (audit) diterima seluruhnya dan diarsipkan ke `core/docs/_archive/23-audit.md`.
 
 ### Ditambahkan
 - core: `WebAuthnBoundaryTest` menegakkan aturan satu pintu ADR 0002, yaitu hanya adaptor `app/Infrastructure/WebAuthn` yang memakai pustaka WebAuthn/COSE/CBOR.
@@ -21,7 +23,14 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 - core: `sadmin:audit-verify` kini juga memeriksa checkpoint, sehingga dua serangan yang sebelumnya lolos kini terdeteksi: pemotongan ujung rantai dan penulisan ulang rantai dari suatu titik dengan hash dihitung ulang. Kode exit: 0 utuh, 1 rusak (`audit_mismatch`), 2 checkpoint tak dapat diperiksa karena brankas tak tersedia. Rantai tanpa checkpoint tetap terverifikasi tanpa kunci induk.
 - core: seed kunci Ed25519 (`audit_key`, `service_key`) kini tak pernah keluar dari brankas: `Vault::reveal()` menolaknya, dan pembacaan ulang saat menyimpan rahasia memakai `Vault::matches()` yang membandingkan nilai di dalam brankas (ADR 0003 §2.5).
 
+- core: alert `audit_mismatch` critical (F-04 bagian ketiga, M1). Ketika `sadmin:audit-verify` menemukan rantai atau checkpoint rusak, atau `sadmin:audit-checkpoint` menolak menandatangani, core membuka alert di tabel `alerts` dan langsung mengirimnya ke semua kanal aktif (Telegram dan SMTP instansi). Pengiriman berlangsung sinkron di proses pendeteksi, tidak lewat antrean, sehingga batas 60 detik tak bergantung pada worker dan tak bisa dibungkam dengan menghapus baris `jobs`. Pengiriman dibatasi anggaran 50 detik, dan kanal yang gagal dicoba sekali lagi. Satu kejadian (lokasi kerusakan yang sama) hanya dikirim sekali; alert yang gagal terkirim dicoba lagi pada deteksi berikutnya. Pembukaan dan keberhasilan kirim tercatat di audit (`alert.open`, `alert.notify`). Kode exit verify tidak berubah. Format ini dikunci di ADR 0005 (masih **diusulkan**).
+- core: `php artisan sadmin:notify-channel-add telegram|smtp` menambah kanal notifikasi. Token bot dan kata sandi SMTP dibaca dari prompt tersembunyi, tidak pernah dari argumen, lalu disimpan di brankas. SMTP selalu terenkripsi (TLS langsung atau STARTTLS wajib). Audit hanya mencatat jenis kanal, tanpa chat ID atau alamat email. `php artisan sadmin:notify-test` mengirim pesan uji ke semua kanal aktif dan melaporkan hasil per kanal.
+
+### Keamanan
+- core: galat dari pustaka HTTP/SMTP dibersihkan dari token dan kata sandi sebelum dicatat, termasuk URL Bot API yang memuat token (juga dalam bentuk ter-encode), dan galat aslinya tidak dirantai. Tes grup `redaction` menyalurkan token dan kata sandi canary lewat galat cURL dan galat SMTP yang menggemakan kata sandi, lalu memindai keluaran perintah, log, audit, alert, dan config kanal.
+
 ### Catatan migrasi
+- Migrasi baru, semuanya non-destruktif: `notification_channels`, `alert_rules` (`UNIQUE(tenant_id, kind)`; aturan `audit_mismatch` tak bisa dinonaktifkan), dan `alerts` (indeks unik parsial `alerts_unresolved_dedup`; FK `server_id` menyusul bersama tabel `servers`).
 - Migrasi baru, keduanya non-destruktif: `key_wraps` dan `secrets` (`secrets.key_wrap_id` UNIQUE, satu kunci data per rahasia).
 - Migrasi baru, keduanya non-destruktif: tabel `audit_checkpoints` dan indeks unik parsial `secrets_one_active_audit_key` (satu kunci audit aktif per tenant).
 
@@ -29,7 +38,9 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 - Penyegelan kunci induk (TPM2 lewat `systemd-creds`, atau frasa sandi) dan unit systemd yang memuat kredensialnya menunggu slice `install.sh`. Sebelum itu, brankas di produksi berstatus tak tersedia dan gagal tertutup.
 - Kit pemulihan wajib memuat salinan kunci induk, karena kunci yang tersegel TPM2 tidak bisa dibawa ke VM baru (ADR 0003 §4).
 - Checkpoint belum dijangkarkan ke luar DB core (`anchored_to` masih kosong). Jangkar ke agen, offsite, dan digest harian menunggu paket edge, backup offsite, dan notifikasi. Sampai saat itu, penghapusan checkpoint bersama pemotongan rantai oleh superuser, serta penyerang yang memegang kunci induk, belum terdeteksi (ADR 0004 §4).
-- Alert `audit_mismatch` ke kanal notifikasi belum ada; verify dan checkpoint baru menulis log `critical`.
+- Alert belum bisa diakui atau diselesaikan, dan belum tampil di console (lonceng, halaman *Peringatan*, banner "audit merah" docs/26). Antarmuka itu menunggu slice UI peringatan.
+- Kanal notifikasi belum menjadi bagian kebijakan bertanda tangan. Saat `policy_bundles` hadir (M2), mengubah kanal menjadi perubahan L3 dengan jeda 24 jam (ADR 0005 §4).
+- Alert untuk `VaultIntegrityError` di luar jalur audit, alert non-critical (F-12), dan ringkasan harian belum ada.
 - Sebelum `sadmin:audit-key-init` dijalankan, penjadwal mencatat log `error` `audit_checkpoint_failed` tiap menit. `install.sh` (F-01) akan membuat kunci audit sebelum mengaktifkan penjadwal.
 
 ## [0.1.0-alpha.4] — 2026-09-30
