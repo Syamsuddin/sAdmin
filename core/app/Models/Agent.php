@@ -21,7 +21,7 @@ class Agent extends Model
 
     protected $fillable = [
         'tenant_id', 'server_id', 'agent_version', 'cert_serial', 'cert_expires_at', 'roster_version', 'policy_version',
-        'last_seen_at', 'connection', 'audit_head_seq', 'audit_head_hash',
+        'last_seen_at', 'connection', 'audit_head_seq', 'audit_head_hash', 'trust_fingerprint',
     ];
 
     protected function casts(): array

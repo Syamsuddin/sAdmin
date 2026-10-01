@@ -6,8 +6,32 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.8] — 2026-10-02
+
+Tonggak **M1 Kerangka**, slice 10: penukaran enrolment di core (F-02 sisi core, bagian keempat). Core kini bisa menjawab `Enroll` dengan `EnrollAccept`. ADR 0008 diterima pemilik produk bersama kontrak 0.6.0. Transport lewat gateway menyusul, sehingga belum ada agen yang bisa mendaftar dari ujung ke ujung.
+
 ### Ditambahkan
-- core: ADR 0008 (**Diusulkan**, belum diterima) tentang penukaran enrolment `Enroll`→`EnrollAccept`. ADR ini mengusulkan bentuk roster v1 dan kebijakan v1, format sidik jari kepercayaan, urutan dan atomisitas penukaran token, serta kolom `agents.trust_fingerprint`. ADR memuat empat pertanyaan untuk pemilik produk. Belum ada kode, kontrak, atau skema yang berubah, jadi tidak ada kenaikan versi. Slice implementasi menunggu keputusan pemilik.
+- kontrak 0.6.0: KONTRAK §3 kini menetapkan isi `EnrollAccept` (termasuk field baru `ca_cert`), bentuk roster v1 dan kebijakan v1, serta **sidik jari kepercayaan**.
+  - Sidik jari = SHA-256 atas `sadmin-trust/1`, LF, lalu JCS lima anggota: `roster_hash`, `policy_hash`, `service_pubkey`, `audit_pubkey`, dan `server_id`. Tampilan manusianya 16 kelompok 4 hex dalam dua baris. Agen tidak menyematkan apa pun sebelum admin mengonfirmasi.
+  - Vektor bersama ada di `kontrak/vectors/trust-fingerprint/` (10 vektor) dengan oracle Python independen yang hanya memakai teks kontrak.
+  - Field `kontrak` di badan pesan kini `"0.6"`. Selama 0.x, kenaikan minor memutus kompatibilitas, tetapi belum ada agen yang terdampak.
+- core: `AcceptEnrollment` menukar token sekali pakai menjadi `EnrollAccept` yang ditandatangani kunci layanan. Isinya sertifikat klien agen, sertifikat CA (pinnya harus sama dengan `--ca-sha256`), roster v1, kebijakan v1, kunci publik layanan dan audit.
+  - Seluruh langkah satu transaksi. Galat apa pun, termasuk CSR yang salah, membatalkan semuanya dan tidak membakar token. Token salah, kedaluwarsa, atau terpakai dijawab sama (`E_ENROLL_TOKEN`).
+  - Roster v1 dibuat dari passkey aktif admin aktif saat enrolment pertama, dan butuh minimal satu admin dengan dua passkey aktif. Kebijakan v1 hanya memuat aksi L0 dari katalog, dengan ambang L2/L3 = 1 dan jeda L3 900 detik.
+  - Hostname laporan agen yang berbeda dari hostname terdaftar tidak memblokir. Selisihnya hanya tercatat di audit `server.enroll`, tanpa token dan tanpa CSR.
+- core: tabel `rosters` dan `policy_bundles` (satu dokumen aktif per tenant dijaga basis data), kolom `agents.trust_fingerprint`, dan variabel `SADMIN_CATALOG_PATH` (docs/10).
+- core: ADR 0008 (diterima). Kriteria AC-18 diterima dan diarsipkan ke `core/docs/_archive/23-penukaran-enrolment.md`.
+
+### Keamanan
+- core: sebelum digabung, slice ini melewati review adversarial (docs/22) dengan hasil 0 kritis, 0 tinggi, 3 sedang, dan 8 rendah. Temuan yang ditambal, masing-masing dengan tes:
+  - **Sedang:** awalan token enrolment bisa muncul di stack trace log bila kueri token gagal (`#[SensitiveParameter]` ditambahkan).
+  - **Sedang:** CSR di atas 8192 byte dijawab `E_SCHEMA`, bukan `E_CSR`/`size` seperti KONTRAK §2.
+  - **Rendah:** audit `server.enroll` kini memuat `roster_hash` dan `policy_hash`. Bingkai diverifikasi ulang terhadap kunci layanan yang masuk badan. Pembaca katalog menolak bila berkas YAML aksi muncul.
+  - Sisanya dicatat sebagai risiko yang diterima di ADR 0008 §4 (token terbakar bila pengiriman setelah commit gagal, dokumen rusak belum memicu alert, batasan versi dokumen).
+- Area yang diserang tanpa temuan: kerahasiaan token dan CSR di audit, atomisitas, 8 proses serentak pada token yang sama (tepat satu sukses), tiga enrolment pertama serentak (satu roster), urutan byte `credential_id`, integritas hash dokumen, validasi masukan agen, dan PHP 8.3 serta 8.4.
+
+### Catatan migrasi
+- Migrasi baru, non-destruktif: `2026_10_02_000300_create_rosters_and_policy_bundles_tables` dan `2026_10_02_000400_add_trust_fingerprint_to_agents_table`. Yang kedua menambah kolom `NOT NULL` tanpa default. Belum ada jalur yang membuat baris `agents`, jadi pada instalasi nyata tabelnya kosong. Bila ada isinya, migrasi gagal keras, bukan mengisi tebakan.
 
 ## [0.1.0-alpha.7] — 2026-10-02
 

@@ -12,7 +12,7 @@ Keputusan arsitektural atau keamanan baru dicatat di sini **sebelum** diimplemen
 | [0005](0005-peringatan-integritas.md) | Peringatan integritas dan kanal notifikasi core | Diterima |
 | [0006](0006-tanda-tangan-layanan.md) | Tanda tangan kunci layanan pada bingkai core→agen | Diterima |
 | [0007](0007-ca-internal.md) | CA internal: kunci, pin, dan sertifikat klien agen | Diterima |
-| [0008](0008-penukaran-enrolment.md) | Penukaran enrolment: `Enroll`→`EnrollAccept`, roster/kebijakan awal, sidik jari | **Diusulkan** |
+| [0008](0008-penukaran-enrolment.md) | Penukaran enrolment: `Enroll`→`EnrollAccept`, roster/kebijakan awal, sidik jari | Diterima |
 
 ## Templat
 ```markdown

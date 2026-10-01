@@ -2274,6 +2274,70 @@
         "Keputusan sidebar docs/26 (lebar sidebar ringkas) — pemilik produk"
       ],
       "selesai": "2026-10-02T01:13:41+08:00"
+    },
+    {
+      "fitur": "F-02d Penukaran enrolment Enroll→EnrollAccept",
+      "rute": "Fitur baru (vertical slice) + keputusan kontrak (ADR 0008)",
+      "mulai": "2026-10-02T02:00:00+08:00",
+      "selesai": "2026-10-02T04:30:00+08:00",
+      "rencana": [
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/trust-fingerprint/*",
+        "database/migrations/2026_10_02_000300_create_rosters_and_policy_bundles_tables.php",
+        "database/migrations/2026_10_02_000400_add_trust_fingerprint_to_agents_table.php",
+        "app/Models/Roster.php",
+        "app/Models/PolicyBundle.php",
+        "app/Models/Agent.php",
+        "app/Domain/Fleet/Actions/AcceptEnrollment.php",
+        "app/Domain/Fleet/Services/{TrustDocuments,TrustFingerprint,ActionCatalog}.php",
+        "app/Domain/Fleet/Data/{AcceptedEnrollment,EnrollmentRejected,TrustDocumentCorrupt}.php",
+        "config/sadmin.php",
+        ".env.example",
+        "tests/Feature/Fleet/AcceptEnrollmentTest.php",
+        "tests/Contract/TrustFingerprintVectorsTest.php",
+        "docs/07,10,23,adr/0008,_archive",
+        "../CHANGELOG.md"
+      ],
+      "meter_catatan": "scripts/meter.py dan gerbang.sh tidak ada di repo; durasi dan token tidak diukur untuk slice ini",
+      "deviasi": [
+        "tests/Feature/Fleet/ServerSchemaTest.php dan ServersPageTest.php — di luar rencana: ditambah trust_fingerprint karena kolom baru NOT NULL (tanpa pelonggaran asersi)",
+        "ADR 0008 §2.2 diamandemen setelah review: params audit server.enroll ditambah roster_hash dan policy_hash; bingkai disusun sebelum commit"
+      ],
+      "warn_dilewati": [
+        "Tes keserempakan otomatis tidak ditulis; reviewer membuktikan 8 proses serentak secara manual (1 sukses, 7 E_ENROLL_TOKEN) dan 3 enrolment pertama tenant (1 roster)",
+        "Review adversarial: 0 kritis, 0 tinggi, 3 sedang (S1 awalan token di stack trace, S2 klaim keserempakan, S3 CSR besar salah kode), 8 rendah; S1, S3, R1, R4, R6 ditambal dengan tes, sisanya dicatat di ADR 0008 §4"
+      ],
+      "asumsi": [
+        "kontrak di badan Enroll = major.minor (0.6) selama 0.x",
+        "Status server setelah enrolment = offline sampai Hello",
+        "ActionCatalog membaca tabel §3 CATALOG.md karena YAML per aksi belum ada; version aksi = 1",
+        "Batas kasar CSR 65536 byte; aturan 4096 byte dimiliki CA"
+      ],
+      "dokumen_diperbarui": [
+        "../kontrak/KONTRAK.md (0.6.0)",
+        "docs/07_DATA_MODEL.md",
+        "docs/10_DEV_ENV.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-18, diarsipkan)",
+        "docs/adr/0008-penukaran-enrolment.md",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "PCRE: kuantifier {n,m} maksimum 65535",
+        "Exception::$code tak bisa dideklarasi ulang readonly; pakai errorCode",
+        "PHP exception_ignore_args=Off membocorkan argumen string di stack trace: wajib #[SensitiveParameter]",
+        "Tes constraint DB di dalam RefreshDatabase perlu savepoint (DB::transaction) agar transaksi tak abort"
+      ],
+      "ditunda": [
+        "Inbox gateway dan transport EnrollAccept",
+        "Pemulihan token terbakar bila pengiriman setelah commit gagal; pensiun server",
+        "RaiseIntegrityAlert untuk TrustDocumentCorrupt",
+        "Peringatan di halaman passkey bahwa roster v1 tak ikut berubah",
+        "Tampilan sidik jari di console (Servers\\Show)",
+        "Perluasan ActionCatalog ke YAML per aksi",
+        "Tes keserempakan otomatis",
+        "Edge: verifikasi vektor trust-fingerprint di Go"
+      ]
     }
   ],
   "akumulasi": {

@@ -56,6 +56,7 @@ class ServerSchemaTest extends TestCase
             'roster_version' => 1,
             'policy_version' => 1,
             'connection' => 'disconnected',
+            'trust_fingerprint' => str_repeat('a', 64),
             'created_at' => now(),
             'updated_at' => now(),
             ...$overrides,
@@ -140,6 +141,8 @@ class ServerSchemaTest extends TestCase
             'serial nol' => [['cert_serial' => '0']],
             'serial lewat 2^63-1' => [['cert_serial' => '8000000000000000']],
             'serial 17 digit' => [['cert_serial' => '10000000000000000']],
+            'sidik jari kepercayaan bukan hex' => [['trust_fingerprint' => str_repeat('G', 64)]],
+            'sidik jari kepercayaan kurang panjang' => [['trust_fingerprint' => str_repeat('a', 63)]],
             'kepala audit tanpa hash' => [['audit_head_seq' => 5]],
             'hash kepala audit bukan hex' => [['audit_head_seq' => 5, 'audit_head_hash' => str_repeat('z', 64)]],
         ];

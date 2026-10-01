@@ -83,14 +83,16 @@ Sumber kebenaran skema core. Dokumen lain merujuk, tidak menyalin. State lokal a
 |---|---|---|---|
 | id, tenant_id | char(26) | PK; FK | |
 | version | integer | NOT NULL, UNIQUE(tenant_id,version) | naik monoton |
-| document | jsonb | NOT NULL | format: `../kontrak/KONTRAK.md` |
+| document | jsonb | NOT NULL, CHECK objek | format: `../kontrak/KONTRAK.md` §3 (ADR 0008 §2.4); hash dihitung ulang setiap dibaca |
 | document_hash | char(64) | NOT NULL | |
 | status | text | CHECK IN ('pending','active','superseded','cancelled') | pending selama jeda 24 jam |
 | effective_at | timestamptz | NULL | |
 | created_at / updated_at | timestamptz | | |
 
 ### policy_bundles
-Sama dengan `rosters` (id, tenant_id, version, document, document_hash, status, effective_at, timestamps); `document` = kebijakan agen.
+Sama dengan `rosters` (id, tenant_id, version, document, document_hash, status, effective_at, timestamps); `document` = kebijakan agen (KONTRAK §3, ADR 0008 §2.5).
+
+Indeks dan CHECK `rosters` dan `policy_bundles`: `version` ≥ 1, `document_hash` hex huruf kecil 64, dan indeks unik parsial `<tabel>_one_active (tenant_id) WHERE status='active'` (satu dokumen aktif per tenant). Versi 1 dibuat core saat enrolment pertama (ADR 0008); versi berikutnya lewat `RosterUpdate`/`PolicyBundle` (M2).
 
 ## Armada
 ### servers
@@ -123,6 +125,7 @@ Sama dengan `rosters` (id, tenant_id, version, document, document_hash, status, 
 | connection | text | CHECK IN ('connected','disconnected') | |
 | audit_head_seq | bigint | NULL | |
 | audit_head_hash | char(64) | NULL, CHECK hex huruf kecil | CHECK: terisi ⇔ `audit_head_seq` terisi |
+| trust_fingerprint | char(64) | NOT NULL, CHECK hex huruf kecil | sidik jari kepercayaan saat enrolment (KONTRAK §3, ADR 0008 §2.6); dibandingkan admin dengan terminal agen |
 | created_at / updated_at | timestamptz | | |
 
 ### server_inventory_snapshots
