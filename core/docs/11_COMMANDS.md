@@ -22,6 +22,7 @@ Pemilik perintah paket core. Jalankan dari `core/`. Perintah lintas-paket (`make
 | Undang admin | `php artisan sadmin:admin-invite "<nama panggilan>"` | mencetak tautan bertanda tangan 15 menit untuk mendaftarkan 2 passkey |
 | Verifikasi audit | `php artisan sadmin:audit-verify` (dibungkus `sadmin audit verify`) | exit 0 = hijau |
 | Buat checkpoint audit manual | `php artisan sadmin:audit-checkpoint` | |
+| Periksa brankas | `php artisan sadmin:vault-check` | exit 0 = kunci induk termuat dan semua kunci data rahasia aktif terbuka; tak membuka nilai (ADR 0003) |
 | Tanya status langkah ke agen | `php artisan sadmin:status-query <idempotency_key>` | diagnosa; tidak mengirim ulang amplop |
 | Pindai token UI | `php artisan sadmin:ui-token-scan` | gagal bila ada hex/px/font di luar `resources/css/tokens.css` |
 | Pangkas partisi metrik | `php artisan sadmin:metrics-prune` | terjadwal harian |

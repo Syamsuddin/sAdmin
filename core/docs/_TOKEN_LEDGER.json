@@ -76,5 +76,39 @@
       "est_tokens": 12537
     }
   ],
-  "measured_sessions": {}
+  "measured_sessions": {
+    "5f55df39-80de-4ab4-89c9-6ec5483d055c": {
+      "input": 1172,
+      "output": 1076326,
+      "cache_create": 1749844,
+      "cache_read": 275253036,
+      "msgs": 586,
+      "first_ts": "2026-09-30T01:53:08.107Z",
+      "last_ts": "2026-09-30T02:45:11.553Z",
+      "file": "/Users/syams/.claude/projects/-Users-syams-PROJECTS-sAdmin/5f55df39-80de-4ab4-89c9-6ec5483d055c.jsonl",
+      "synced_at": "2026-10-01T09:10:02+08:00"
+    },
+    "fcf35ba9-4e42-4728-ad9e-fea2bae9a45d": {
+      "input": 354,
+      "output": 208528,
+      "cache_create": 385768,
+      "cache_read": 27366668,
+      "msgs": 177,
+      "first_ts": "2026-09-30T16:01:28.106Z",
+      "last_ts": "2026-09-30T16:38:20.687Z",
+      "file": "/Users/syams/.claude/projects/-Users-syams-PROJECTS-sAdmin/fcf35ba9-4e42-4728-ad9e-fea2bae9a45d.jsonl",
+      "synced_at": "2026-10-01T09:10:02+08:00"
+    },
+    "450b5b95-17dd-447a-8873-3b36521edcef": {
+      "input": 332,
+      "output": 360128,
+      "cache_create": 551184,
+      "cache_read": 35921854,
+      "msgs": 166,
+      "first_ts": "2026-10-01T00:32:42.575Z",
+      "last_ts": "2026-10-01T01:09:49.914Z",
+      "file": "/Users/syams/.claude/projects/-Users-syams-PROJECTS-sAdmin/450b5b95-17dd-447a-8873-3b36521edcef.jsonl",
+      "synced_at": "2026-10-01T09:10:02+08:00"
+    }
+  }
 }

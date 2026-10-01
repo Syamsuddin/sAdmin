@@ -372,7 +372,7 @@ Trigger menolak `UPDATE` dan `DELETE`. Hak `UPDATE/DELETE/TRUNCATE` dicabut dari
 | purpose | text | CHECK IN ('db_password','env','deploy_key','api_token','telegram_token','smtp','upload','service_key','audit_key','ca_key','gateway_hmac','ai_api_key') | |
 | ciphertext | bytea | NOT NULL | XChaCha20-Poly1305 (sodium) dengan kunci data |
 | nonce | bytea | NOT NULL | |
-| key_wrap_id | char(26) | FK→key_wraps.id | |
+| key_wrap_id | char(26) | FK→key_wraps.id, UNIQUE | satu kunci data per rahasia (1:1, ADR 0003) |
 | status | text | CHECK IN ('active','rotated','destroyed') | destroyed = ciphertext ditimpa nol, baris tetap |
 | created_at / updated_at | timestamptz | | |
 
@@ -380,7 +380,7 @@ Trigger menolak `UPDATE` dan `DELETE`. Hak `UPDATE/DELETE/TRUNCATE` dicabut dari
 | Kolom | Tipe | Constraint | Catatan |
 |---|---|---|---|
 | id, tenant_id | char(26) | PK; FK | |
-| wrapped_dek | bytea | NOT NULL | kunci data dibungkus kunci induk |
+| wrapped_dek | bytea | NOT NULL | kunci data dibungkus kunci induk: nonce 24 B ∥ ciphertext (72 B; format & AAD: ADR 0003) |
 | master_key_version | integer | NOT NULL | |
 | created_at | timestamptz | NOT NULL | |
 

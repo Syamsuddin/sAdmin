@@ -14,7 +14,8 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='Identity|Passkey|UiTokenScan|Login'"
+    "test_satu": "php artisan test --filter='Vault|SecretValue'",
+    "vault_check": "php artisan sadmin:vault-check"
   },
   "sesi": [
     {
@@ -44,6 +45,13 @@
       "step": 6,
       "detik": 197,
       "tok_est": 17335
+    },
+    {
+      "mulai": "2026-10-01T08:34:42+08:00",
+      "selesai": null,
+      "step": 8,
+      "detik": 1783,
+      "tok_est": 69634
     }
   ],
   "step_berjalan": null,
@@ -51,7 +59,7 @@
     "sidik_awal": "60b7da4ac5ed8e44",
     "sidik": "0f594247e1b863eb",
     "dokumen": 27,
-    "disegel": "2026-10-01T00:01:45+08:00",
+    "disegel": "2026-10-01T08:34:42+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -68,8 +76,7 @@
         "ke": "0f594247e1b863eb",
         "pada": "2026-10-01T00:01:45+08:00"
       }
-    ],
-    "sidik_sebelumnya": "4dcc55515f1921b3"
+    ]
   },
   "riwayat_fitur": [
     {
@@ -878,13 +885,246 @@
         "Merge ke main & tag v0.1.0-alpha.5: keputusan pemilik produk"
       ],
       "selesai": "2026-10-01T00:38:12+08:00"
+    },
+    {
+      "fitur": "F-01a Brankas",
+      "rute": "Fitur baru + Perubahan keamanan + Ubah skema",
+      "mulai": "2026-10-01T08:40:07+08:00",
+      "rencana": [
+        "core/docs/adr/0003-format-brankas.md",
+        "core/docs/adr/README.md",
+        "core/database/migrations/2026_10_01_000100_create_key_wraps_table.php",
+        "core/database/migrations/2026_10_01_000200_create_secrets_table.php",
+        "core/app/Models/KeyWrap.php",
+        "core/app/Models/Secret.php",
+        "core/app/Domain/Vault/Data/SecretPurpose.php",
+        "core/app/Domain/Vault/Data/SecretStatus.php",
+        "core/app/Domain/Vault/Actions/StoreSecret.php",
+        "core/app/Domain/Vault/Actions/DestroySecret.php",
+        "core/app/Infrastructure/Vault/SecretValue.php",
+        "core/app/Infrastructure/Vault/MasterKey.php",
+        "core/app/Infrastructure/Vault/MasterKeyLoader.php",
+        "core/app/Infrastructure/Vault/SealedSecret.php",
+        "core/app/Infrastructure/Vault/Vault.php",
+        "core/app/Infrastructure/Vault/VaultUnavailable.php",
+        "core/app/Infrastructure/Vault/VaultIntegrityError.php",
+        "core/app/Console/Commands/VaultCheckCommand.php",
+        "core/config/sadmin.php",
+        "core/.env.example",
+        "core/tests/Support/InteractsWithVault.php",
+        "core/tests/Feature/Vault/MasterKeyLoaderTest.php",
+        "core/tests/Feature/Vault/StoreSecretTest.php",
+        "core/tests/Feature/Vault/DestroySecretTest.php",
+        "core/tests/Feature/Vault/VaultTamperTest.php",
+        "core/tests/Feature/Vault/VaultCheckCommandTest.php",
+        "core/tests/Feature/Vault/VaultRedactionTest.php",
+        "core/tests/Feature/VaultBoundaryTest.php",
+        "core/tests/Unit/Infrastructure/SecretValueTest.php",
+        "core/docs/07_DATA_MODEL.md",
+        "core/docs/10_DEV_ENV.md",
+        "core/docs/11_COMMANDS.md",
+        "core/docs/23_ACCEPTANCE_CRITERIA.md",
+        "CHANGELOG.md",
+        "core/docs/_CODING_LEDGER.json",
+        "core/docs/_TOKEN_LEDGER.json"
+      ],
+      "total_step": 7,
+      "step": [
+        {
+          "no": 1,
+          "nama": "ADR + skema/migrasi",
+          "mulai": "2026-10-01T08:40:07+08:00",
+          "selesai": "2026-10-01T08:42:20+08:00",
+          "detik": 134,
+          "tok_est": 18677,
+          "muat": [
+            "docs/adr/0003-format-brankas.md",
+            "docs/adr/README.md",
+            "docs/07_DATA_MODEL.md",
+            "database/migrations/2026_10_01_000100_create_key_wraps_table.php",
+            "database/migrations/2026_10_01_000200_create_secrets_table.php",
+            "docs/22_CHANGE_POLICY.md",
+            "docs/21_SECURITY_RULES.md",
+            "docs/08_ARCHITECTURE.md",
+            "docs/09_STACK.md",
+            "docs/13_TESTING.md",
+            "docs/02_SCOPE.md",
+            "docs/11_COMMANDS.md",
+            "docs/10_DEV_ENV.md",
+            "docs/12_PROJECT_STRUCTURE.md",
+            "docs/20_GUARDRAILS.md",
+            "docs/14_ERROR_HANDLING.md",
+            "docs/15_OBSERVABILITY.md"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Model/akses data",
+          "mulai": "2026-10-01T08:42:21+08:00",
+          "selesai": "2026-10-01T08:42:38+08:00",
+          "detik": 18,
+          "tok_est": 2005,
+          "muat": [
+            "app/Models/KeyWrap.php",
+            "app/Models/Secret.php",
+            "app/Domain/Vault/Data/SecretPurpose.php",
+            "app/Domain/Vault/Data/SecretStatus.php",
+            "app/Models/Admin.php",
+            "app/Models/Authenticator.php",
+            "app/Models/Casts/Bytea.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Service/logika domain",
+          "mulai": "2026-10-01T08:42:38+08:00",
+          "selesai": "2026-10-01T08:45:06+08:00",
+          "detik": 148,
+          "tok_est": 7086,
+          "muat": [
+            "app/Infrastructure/Vault/SecretValue.php",
+            "app/Infrastructure/Vault/MasterKey.php",
+            "app/Infrastructure/Vault/MasterKeyLoader.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Infrastructure/Vault/SealedSecret.php",
+            "app/Infrastructure/Vault/VaultUnavailable.php",
+            "app/Infrastructure/Vault/VaultIntegrityError.php",
+            "app/Domain/Vault/Actions/StoreSecret.php",
+            "app/Domain/Vault/Actions/DestroySecret.php",
+            "config/sadmin.php",
+            ".env.example",
+            "app/Domain/Audit/Actions/AppendAuditEntry.php",
+            "app/Domain/Identity/Actions/InitializeInstitution.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Perintah artisan sadmin:vault-check",
+          "mulai": "2026-10-01T08:45:06+08:00",
+          "selesai": "2026-10-01T08:45:38+08:00",
+          "detik": 33,
+          "tok_est": 991,
+          "muat": [
+            "app/Console/Commands/VaultCheckCommand.php",
+            "app/Console/Commands/AuditVerifyCommand.php"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "UI (dilewati: tanpa halaman)",
+          "mulai": "2026-10-01T08:45:38+08:00",
+          "selesai": "2026-10-01T08:45:38+08:00",
+          "detik": 1,
+          "tok_est": 0,
+          "muat": []
+        },
+        {
+          "no": 6,
+          "nama": "Tes",
+          "mulai": "2026-10-01T08:45:39+08:00",
+          "selesai": "2026-10-01T08:52:57+08:00",
+          "detik": 439,
+          "tok_est": 19887,
+          "muat": [
+            "tests/Support/InteractsWithVault.php",
+            "tests/Unit/Infrastructure/SecretValueTest.php",
+            "tests/Feature/Vault/MasterKeyLoaderTest.php",
+            "tests/Feature/Vault/StoreSecretTest.php",
+            "tests/Feature/Vault/DestroySecretTest.php",
+            "tests/Feature/Vault/VaultTamperTest.php",
+            "tests/Feature/Vault/VaultCheckCommandTest.php",
+            "tests/Feature/Vault/VaultRedactionTest.php",
+            "tests/Feature/VaultBoundaryTest.php",
+            "docs/10_DEV_ENV.md",
+            "docs/11_COMMANDS.md",
+            "docs/23_ACCEPTANCE_CRITERIA.md",
+            "../CHANGELOG.md",
+            "tests/Feature/WebAuthnBoundaryTest.php",
+            "tests/Support/InteractsWithPasskeys.php"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-10-01T08:52:57+08:00",
+          "selesai": "2026-10-01T09:04:23+08:00",
+          "detik": 686,
+          "tok_est": 3278,
+          "muat": [
+            "docs/adr/0003-format-brankas.md"
+          ]
+        },
+        {
+          "no": 8,
+          "nama": "Tambal temuan review adversarial",
+          "mulai": "2026-10-01T09:04:23+08:00",
+          "selesai": "2026-10-01T09:09:47+08:00",
+          "detik": 324,
+          "tok_est": 17710,
+          "muat": [
+            "app/Infrastructure/Vault/MasterKeyLoader.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Infrastructure/Vault/SecretValue.php",
+            "app/Domain/Vault/Actions/StoreSecret.php",
+            "tests/Feature/Vault/MasterKeyLoaderTest.php",
+            "tests/Feature/Vault/VaultTamperTest.php",
+            "tests/Feature/Vault/StoreSecretTest.php",
+            "tests/Feature/Vault/DestroySecretTest.php",
+            "docs/adr/0003-format-brankas.md"
+          ]
+        }
+      ],
+      "detik": 1783,
+      "tok_est": 69634,
+      "deviasi": [
+        "docs/07: secrets.key_wrap_id ditambah UNIQUE (1:1) dan catatan format wrapped_dek — keputusan ADR 0003, bukan improvisasi",
+        "MasterKeyLoader punya parameter konstruktor systemdCredentialsRoot (bawaan /run/credentials/) sebagai seam tes; bukan config/env",
+        "Gerbang langkah ke-8 'Tambal temuan review adversarial' di luar 7 step baku"
+      ],
+      "warn_dilewati": [
+        "S1: kriteria brankas berada di blok bersama AC-01 (F-01/F-03/F-17); dibuktikan 76 tes Vault",
+        "SecretValue lulus + sadmin:vault-check exit 0",
+        "S6: diperiksa review adversarial subagen (0 kritis, 0 tinggi; 3 sedang + 5 rendah ditambal, 1 rendah ditolak beralasan)",
+        "Mutan F (cek 'berkas biasa' dihapus) tetap hidup: redundan dengan cek ukuran 32 byte untuk direktori"
+      ],
+      "asumsi": [
+        "Pembacaan rahasia tak diaudit di MVP (bukan perubahan state); jejak di amplop/langkah pemakai",
+        "Rahasia rotated masih bisa dibuka (dipakai kompensasi kelak)",
+        "Lingkungan dev = APP_ENV persis local/testing; selain itu jalur ketat",
+        "Hex ciphertext/wrapped_dek boleh muncul di log saat insert gagal (bindings QueryException) — bukan nilai rahasia",
+        "Kunci dev lokal pengembang di ~/.local/share/sadmin-dev/vault-dev.key, dirujuk dari core/.env (tak di-commit)"
+      ],
+      "dokumen_diperbarui": [
+        "docs/adr/0003-format-brankas.md (baru, Diusulkan)",
+        "docs/adr/README.md",
+        "docs/07_DATA_MODEL.md (§Rahasia)",
+        "docs/10_DEV_ENV.md",
+        "docs/11_COMMANDS.md (sadmin:vault-check)",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-01 butir brankas)",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "Kunci induk tersegel TPM2 terikat host: kit pemulihan WAJIB memuat salinan kunci induk, atau F-13 mustahil",
+        "Unit systemd PHP core (FPM, runner, antrean, penjadwal) wajib memuat kredensial & FPM meneruskan CREDENTIALS_DIRECTORY ke worker (clear_env)",
+        "Format brankas mengikat sejak rahasia produksi pertama; ubah = enkripsi ulang seluruh brankas"
+      ],
+      "ditunda": [
+        "Penerimaan ADR 0003 oleh pemilik produk (syarat merge)",
+        "Merge feat/m1-brankas ke main & tag pra-rilis: keputusan pemilik produk",
+        "Penyegelan kunci induk TPM2/frasa sandi + unit systemd: slice install.sh (F-01)",
+        "Isi kit pemulihan (salinan kunci induk): slice kit pemulihan (F-01)",
+        "Alert critical untuk VaultIntegrityError/vault_key_mismatch: butuh tabel alerts (slice Alerts)",
+        "Rotasi kunci induk (versi >1) dan rotasi nilai rahasia (status rotated): ADR baru",
+        "Arsip 23: AC-01 belum diarsipkan karena F-01 (install.sh) masih aktif"
+      ],
+      "selesai": "2026-10-01T09:09:47+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 3267,
-    "tok_est": 156589,
+    "detik": 5050,
+    "tok_est": 226223,
     "tok_terukur": 0,
-    "step": 31,
-    "fitur": 6
+    "step": 39,
+    "fitur": 7
   }
 }

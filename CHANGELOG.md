@@ -14,6 +14,15 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 ### Ditambahkan
 - core: `WebAuthnBoundaryTest` menegakkan aturan satu pintu ADR 0002, yaitu hanya adaptor `app/Infrastructure/WebAuthn` yang memakai pustaka WebAuthn/COSE/CBOR.
 - core: tema console light/dark per admin (F-17, M1). Pengalih tema *Ikuti sistem / Terang / Gelap* di topbar menyimpan pilihan ke `admins.theme`. Pilihan `light`/`dark` dirender server sebagai `data-bs-theme` pada `<html>` sehingga tidak berkedip saat dimuat, sedangkan `system` mengikuti `prefers-color-scheme` OS, termasuk ketika OS berganti mode tanpa muat ulang. Setiap perubahan tercatat di audit sebagai `admin.theme_change` dengan nilai lama dan baru. Pilihan yang tidak dikenal ditolak dengan pesan berformat docs/14. Halaman tamu (*Masuk*) selalu mengikuti OS.
+- core: brankas rahasia (F-01 bagian pertama, M1). Setiap rahasia dienkripsi dengan kunci data XChaCha20-Poly1305 miliknya sendiri, dan kunci data itu dibungkus kunci induk. Kunci induk dibaca dari kredensial systemd (`$CREDENTIALS_DIRECTORY/sadmin-vault-master`). Hanya di dev, kunci boleh diambil dari berkas bermode 0600 lewat `SADMIN_VAULT_DEV_KEY`. Sumber ini hanya diterima bila `APP_ENV` = `local`/`testing`, dan di luar itu `CREDENTIALS_DIRECTORY` wajib berada di bawah `/run/credentials/`. Data terasosiasi mengikat ciphertext ke tenant, ID, *purpose*, dan kunci datanya, sehingga baris yang ditukar atau dilabel ulang lewat SQL gagal dibuka alih-alih menghasilkan nilai yang salah. Pembaca rahasia wajib menyebut *purpose* dan tenant yang ia harapkan, sehingga penunjuk yang ditukar di tabel lain tidak membuka rahasia untuk keperluan yang salah. Menyimpan dan menghancurkan rahasia tercatat di audit (`secret.store`, `secret.destroy`) dengan *purpose* saja. Menghancurkan rahasia menimpa ciphertext dan kunci datanya dengan nol. Nilai rahasia dibawa objek yang tidak tercetak saat di-dump dan tidak bisa diserialisasi. Format ini dikunci di ADR 0003 (masih **diusulkan**) beserta vektor emasnya.
+- core: `php artisan sadmin:vault-check` membuktikan bahwa kunci induk yang termuat bisa membuka semua kunci data rahasia aktif, tanpa membuka nilai rahasianya. Perintah ini dipakai `install.sh` dan pemulihan.
+
+### Catatan migrasi
+- Migrasi baru, keduanya non-destruktif: `key_wraps` dan `secrets` (`secrets.key_wrap_id` UNIQUE, satu kunci data per rahasia).
+
+### Belum tercakup
+- Penyegelan kunci induk (TPM2 lewat `systemd-creds`, atau frasa sandi) dan unit systemd yang memuat kredensialnya menunggu slice `install.sh`. Sebelum itu, brankas di produksi berstatus tak tersedia dan gagal tertutup.
+- Kit pemulihan wajib memuat salinan kunci induk, karena kunci yang tersegel TPM2 tidak bisa dibawa ke VM baru (ADR 0003 §4).
 
 ## [0.1.0-alpha.4] — 2026-09-30
 
