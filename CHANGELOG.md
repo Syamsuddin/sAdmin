@@ -6,6 +6,46 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+## [0.1.0-alpha.7] — 2026-10-02
+
+Tonggak **M1 Kerangka**, slice 9: menambah server dan menerbitkan token enrolment (F-02 sisi core, bagian ketiga). Admin kini bisa mendaftarkan server terkelola dari console dan mendapat perintah enrolment agen. Penanganan `Enroll`→`EnrollAccept` di core menyusul.
+
+### Ditambahkan
+- core: halaman **Tambah server** (`Servers\Enroll`). Admin mengisi nama, hostname, dan alamat IP. Console lalu menampilkan perintah `sudo sadmin-agent enroll --gateway <host>:8443 --ca-sha256 <pin> --token <token>`, dan perintah itu hanya tampil sekali.
+  - Token berisi 256 bit acak dalam hex dan berlaku 15 menit. Basis data hanya menyimpan SHA-256-nya.
+  - Token baru untuk server yang masih menunggu enrolment langsung membatalkan token lama.
+  - Penambahan server dan penerbitan token tercatat di audit (`server.register`, `server.enroll_token_issue`) tanpa token.
+  - Bila CA internal, alamat gateway, atau brankas belum siap, atau sudah ada tiga server yang belum dipensiunkan (batas Mode Tunggal), formulir tidak tampil. Sebagai gantinya tampil state Gagal yang menjelaskan tindakannya, dan *Coba lagi* memeriksa ulang. Pada saat simpan pun tidak ada yang ditulis sebelum semua prasyarat terpenuhi.
+  - Semua field yang salah dilaporkan sekaligus. Nama server berupa label DNS huruf kecil. Alamat IP loopback, tak spesifik, link-local, siaran, dan multicast ditolak, dan IP disimpan dalam bentuk kanonik.
+- core: halaman **Server** (`Servers\Index`) menampilkan inventaris server. Halaman ini memenuhi empat state docs/26, status selalu tampil sebagai teks pada lencana berwarna token, dan server yang menunggu enrolment menampilkan masa berlaku tokennya. Beranda console kini halaman ini.
+- core: tabel `servers` dan `agents` sesuai docs/07, plus FK `alerts.server_id`. Basis data ikut menjaga beberapa invarian:
+  - hash token berupa hex unik dan hanya ada selama server `enrolling`;
+  - serial sertifikat agen berupa hex tanpa nol di depan, paling besar 2^63−1;
+  - kepala audit agen selalu berpasangan.
+- core: variabel `SADMIN_GATEWAY_HOST` (docs/10) menentukan host gateway pada perintah enrolment.
+- core: kriteria AC-17 (tambah server dan inventaris) diterima dan diarsipkan ke `core/docs/_archive/23-tambah-server.md`.
+
+### Diubah
+- core: komponen field teks kini menampilkan galat validasi per field (docs/14). Galat dan petunjuk format terhubung ke input lewat `aria-describedby`.
+- core: navigasi sementara (Server, Passkey) ada di topbar, sampai lebar sidebar ringkas docs/26 diputuskan pemilik produk.
+
+### Keamanan
+- core: sebelum digabung, slice ini melewati review adversarial (docs/22) dengan hasil 0 kritis, 0 tinggi, 1 sedang, dan 9 rendah. Semua temuan sedang dan rendah ditambal, masing-masing dengan tes regresi yang terbukti merah tanpa tambalannya. Area yang diserang tanpa temuan: kerahasiaan token, isolasi tenant (termasuk properti Livewire terkunci), batas tiga server dan nama unik di bawah enam proses paralel, serta perilaku PHP 8.3 dan 8.4.
+  - **Sedang:** tombol *Coba lagi* tidak memulihkan halaman setelah simpan gagal, sehingga admin terjebak di state Gagal sampai halaman dimuat ulang.
+  - **Rendah:**
+    - hanya field salah pertama yang dilaporkan;
+    - alamat multicast diterima sebagai IP server;
+    - `SADMIN_GATEWAY_HOST` menerima loopback, siaran, dan nama heksadesimal yang dibaca sebagai IPv4;
+    - `save()` bisa dipanggil dari halaman terbit ulang token;
+    - urutan inventaris tak stabil untuk server yang dibuat pada detik yang sama;
+    - token bisa ikut `serialize()`;
+    - petunjuk format dan label perintah tak terbaca pembaca layar;
+    - formulir tetap tampil saat batas tercapai;
+    - belum ada tes halaman untuk brankas tak tersedia.
+
+### Catatan migrasi
+- Migrasi baru, non-destruktif: `2026_10_02_000100_create_servers_table` (termasuk FK `alerts.server_id` → `servers.id`) dan `2026_10_02_000200_create_agents_table`.
+
 ## [0.1.0-alpha.6] — 2026-10-02
 
 Tonggak **M1 Kerangka**, slice 7–8: kunci layanan dan tanda tangan `sig` bingkai core→agen (F-02 sisi core, bagian pertama), serta CA internal dan sertifikat klien agen (F-02 sisi core, bagian kedua). ADR 0006 dan ADR 0007 beserta kontrak 0.4.0 dan 0.5.0 diterima pemilik produk.

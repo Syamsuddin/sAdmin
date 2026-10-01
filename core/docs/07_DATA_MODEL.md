@@ -105,7 +105,7 @@ Sama dengan `rosters` (id, tenant_id, version, document, document_hash, status, 
 | ownership | text | CHECK IN ('managed','observed','ignored'), default 'managed' | |
 | is_control_plane_host | boolean | NOT NULL, default false | Mode Tunggal |
 | status | text | CHECK IN ('enrolling','online','offline','needs_attention','retired') | |
-| enroll_token_hash | char(64) | NULL | token sekali pakai 15 menit |
+| enroll_token_hash | char(64) | NULL, CHECK hex huruf kecil | SHA-256 token sekali pakai 15 menit (teksnya tak disimpan); indeks unik parsial `servers_enroll_token_hash_unique`; CHECK: hanya terisi selama `status = 'enrolling'` dan selalu bersama `enroll_token_expires_at` |
 | enroll_token_expires_at | timestamptz | NULL | |
 | onboarded_at | timestamptz | NULL | |
 | created_at / updated_at | timestamptz | | |
@@ -116,13 +116,13 @@ Sama dengan `rosters` (id, tenant_id, version, document, document_hash, status, 
 | id, tenant_id | char(26) | PK; FK | |
 | server_id | char(26) | FK→servers.id, UNIQUE | 1:1 |
 | agent_version | text | NOT NULL | |
-| cert_serial | text | NOT NULL | |
+| cert_serial | text | NOT NULL, CHECK | hex huruf kecil tanpa nol di depan, 1..2^63−1 (KONTRAK §2) |
 | cert_expires_at | timestamptz | NOT NULL | 7 hari |
 | roster_version / policy_version | integer | NOT NULL | yang dilaporkan agen |
 | last_seen_at | timestamptz | NULL | dari Heartbeat |
 | connection | text | CHECK IN ('connected','disconnected') | |
 | audit_head_seq | bigint | NULL | |
-| audit_head_hash | char(64) | NULL | |
+| audit_head_hash | char(64) | NULL, CHECK hex huruf kecil | CHECK: terisi ⇔ `audit_head_seq` terisi |
 | created_at / updated_at | timestamptz | | |
 
 ### server_inventory_snapshots
@@ -398,7 +398,7 @@ Indeks unik parsial `secrets_one_active_audit_key (tenant_id) WHERE purpose='aud
 |---|---|---|
 | notification_channels | id, tenant_id, kind CHECK IN ('telegram','smtp'), config jsonb objek (tanpa rahasia; isi per jenis: docs/adr/0005 §2.5), secret_id FK→secrets (purpose `telegram_token`/`smtp`), status CHECK IN ('active','inactive'), timestamps | dikirim juga ke agen sebagai bagian kebijakan (M2) |
 | alert_rules | id, tenant_id, kind CHECK IN (disk_low, mem_high, service_down, cert_expiring, backup_failed, agent_disconnected, audit_mismatch), threshold jsonb objek, enabled bool, timestamps; UNIQUE(tenant_id,kind); CHECK `kind <> 'audit_mismatch' OR enabled` | integritas tak bisa dinonaktifkan |
-| alerts | id, tenant_id, rule_id FK NULL, server_id NULL (FK→servers ditambahkan bersama tabel `servers`), severity CHECK IN ('info','warning','critical'), title, detail jsonb objek, status CHECK IN ('open','acknowledged','resolved'), dedup_key text NULL, opened_at, notified_at NULL, resolved_at NULL (terisi ⇔ `resolved`), timestamps | indeks unik parsial `alerts_unresolved_dedup` (tenant_id, dedup_key) selama belum `resolved`; `notified_at` = kanal pertama yang berhasil (docs/adr/0005 §2.2–2.3) |
+| alerts | id, tenant_id, rule_id FK NULL, server_id NULL FK→servers.id, severity CHECK IN ('info','warning','critical'), title, detail jsonb objek, status CHECK IN ('open','acknowledged','resolved'), dedup_key text NULL, opened_at, notified_at NULL, resolved_at NULL (terisi ⇔ `resolved`), timestamps | indeks unik parsial `alerts_unresolved_dedup` (tenant_id, dedup_key) selama belum `resolved`; `notified_at` = kanal pertama yang berhasil (docs/adr/0005 §2.2–2.3) |
 
 ## Memori
 ### memories

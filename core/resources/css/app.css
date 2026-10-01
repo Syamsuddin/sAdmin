@@ -69,3 +69,40 @@
     border-radius: var(--radius-control);
     background: var(--color-border);
 }
+
+/* Lencana status (docs/26): warna token sebagai penguat; teks status selalu tampil. */
+.ui-badge {
+    color: var(--color-on-accent);
+    font-size: var(--fs-sm);
+}
+
+.ui-badge-info {
+    background: var(--color-info);
+}
+
+.ui-badge-success {
+    background: var(--color-success);
+}
+
+.ui-badge-warning {
+    background: var(--color-warning);
+}
+
+.ui-badge-danger {
+    background: var(--color-danger);
+}
+
+.ui-badge-muted {
+    background: var(--color-text-muted);
+}
+
+/* Perintah untuk disalin admin: monospace, dipatahkan alih-alih menggulir mendatar di layar 375 px. */
+.ui-command {
+    font-family: var(--font-mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: var(--sp-3);
+    border-radius: var(--radius-control);
+    background: var(--color-bg);
+    color: var(--color-text);
+}
