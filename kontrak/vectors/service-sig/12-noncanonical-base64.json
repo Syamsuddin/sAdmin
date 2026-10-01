@@ -1,0 +1,29 @@
+{
+  "description": "Bingkai 01 dengan sig yang byte hasil dekodenya sama tetapi bit sisa karakter terakhir tak nol (RFC 4648 §3.5): dekoder longgar menerimanya, KONTRAK §3 mewajibkan menolak karena tak kanonik",
+  "seed_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "public_key": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
+  "frame": {
+    "type": "Envelope",
+    "id": "01M3TPF3W09Z7BMQZENZRS6WN3",
+    "body": {
+      "kontrak": "0.4",
+      "envelope_id": "01M3TPF3W0Q6DK22DSDR1MXDN7",
+      "phase": "apply",
+      "action_key": "server.inventory",
+      "action_version": 1,
+      "target_server_id": "01M1D7NTM0PFNCTCT37CRVA993",
+      "platform_id": "ubuntu-24.04",
+      "params": {},
+      "risk": "L0",
+      "nonce": "E4frThyGl0EqytBcHEnNCKfAH80qrRHVbHQny5bcPYg",
+      "issued_at": "2026-10-01T03:00:00Z",
+      "expires_at": "2026-10-01T03:10:00Z",
+      "idempotency_key": "01M3TPF3W00E9FRDRKBXKDR542",
+      "plan_hash": null,
+      "step_index": null
+    },
+    "sig": "tHNAP2y0GjKEjjEXA8B1H1ww1FtZMOE3O3euYoDsNc9pGVutuZaknPM9+44Cw989uH9kPQkDiOhnjeJROm5FDR=="
+  },
+  "message": "sadmin-service/1\n{\"body\":{\"action_key\":\"server.inventory\",\"action_version\":1,\"envelope_id\":\"01M3TPF3W0Q6DK22DSDR1MXDN7\",\"expires_at\":\"2026-10-01T03:10:00Z\",\"idempotency_key\":\"01M3TPF3W00E9FRDRKBXKDR542\",\"issued_at\":\"2026-10-01T03:00:00Z\",\"kontrak\":\"0.4\",\"nonce\":\"E4frThyGl0EqytBcHEnNCKfAH80qrRHVbHQny5bcPYg\",\"params\":{},\"phase\":\"apply\",\"plan_hash\":null,\"platform_id\":\"ubuntu-24.04\",\"risk\":\"L0\",\"step_index\":null,\"target_server_id\":\"01M1D7NTM0PFNCTCT37CRVA993\"},\"id\":\"01M3TPF3W09Z7BMQZENZRS6WN3\",\"type\":\"Envelope\"}",
+  "valid": false
+}

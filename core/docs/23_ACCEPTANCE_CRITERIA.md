@@ -8,12 +8,14 @@ Kriteria terima fitur yang dimiliki paket core (`docs/01_PRD.md`). AC yang dimil
 - Given VM Debian 12, When install.sh dijalankan, Then berhenti sebelum mengubah apa pun dengan pesan platform tak didukung.
 - Given admin memilih tema `dark`, When halaman dimuat ulang, Then atribut `data-bs-theme="dark"` dan token gelap (docs/26) aktif; `system` mengikuti OS.
 - Given kunci induk termuat dari kredensial systemd, When rahasia disimpan lalu dibaca, Then nilainya kembali utuh dan audit hanya mencatat `purpose`; baris yang diubah lewat SQL atau kunci induk yang salah membuat pembukaan gagal, dan nilai tak pernah muncul di log/audit (ADR 0003).
+- Given instansi sudah diinisialisasi dan brankas termuat, When `sadmin:service-key-init` dijalankan, Then tepat satu kunci layanan aktif dibuat (seed hanya di brankas), kunci publiknya tercetak dan tercatat di audit `service.key_initialize`, dan pemanggilan kedua (juga setelah kunci dihancurkan) ditolak sebagai rotasi; bingkai core→agen yang disusun core lolos verifikasi `sig` dengan kunci itu dan identik dengan vektor bersama `../kontrak/vectors/service-sig` (ADR 0006).
 ```bash
 make harness SCENARIO=install               # hijau
 curl -m 5 https://<ip-publik-vm>/ ; echo $?  # bukan 0
 php artisan test --filter=ThemePreferenceTest
 php artisan test --filter='Vault|SecretValue'   # Tests: … passed
 php artisan sadmin:vault-check                  # exit 0
+php artisan test --filter='ServiceSigner|InitializeServiceKey|ServiceSignature'   # Tests: … passed
 ```
 
 ## AC-08 `site.create` (F-10)

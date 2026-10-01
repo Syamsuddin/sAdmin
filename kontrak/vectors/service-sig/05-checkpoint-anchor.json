@@ -1,0 +1,18 @@
+{
+  "description": "CheckpointAnchor dari vektor checkpoint 01: bingkai membawa sig kunci layanan di samping signature kunci audit di badan; signature audit ikut ditandatangani sebagai string biasa, tanpa pengecualian apa pun",
+  "seed_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "public_key": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
+  "frame": {
+    "type": "CheckpointAnchor",
+    "id": "01M3R24GD00Z3K173JJ1ZJGJR7",
+    "body": {
+      "seq": 1,
+      "hash": "0676afeb6ed67d29dd0b57eebf2b6c5d3817cb7a8cf0f8d21685d7f45da60695",
+      "signature": "E8UsI62tlekIwKDK8ZZ4Jz4s3xIdR+yUif5e0qoS40VHzFumJsl9xowLvK4DNPbuk+/Fy6alzfE7D3pGR9NkAg==",
+      "created_at": "2026-09-30T02:26:12.345678Z"
+    },
+    "sig": "p+J6AR5hjTriAQktG16AwmF4y9zyAH0ptVDABu68dLrsEvgQWBBzXsRSLLTNggp76YfpHfQ2GUJ70elPCb25Ag=="
+  },
+  "message": "sadmin-service/1\n{\"body\":{\"created_at\":\"2026-09-30T02:26:12.345678Z\",\"hash\":\"0676afeb6ed67d29dd0b57eebf2b6c5d3817cb7a8cf0f8d21685d7f45da60695\",\"seq\":1,\"signature\":\"E8UsI62tlekIwKDK8ZZ4Jz4s3xIdR+yUif5e0qoS40VHzFumJsl9xowLvK4DNPbuk+/Fy6alzfE7D3pGR9NkAg==\"},\"id\":\"01M3R24GD00Z3K173JJ1ZJGJR7\",\"type\":\"CheckpointAnchor\"}",
+  "valid": true
+}

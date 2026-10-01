@@ -6,6 +6,18 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai core→agen (F-02 sisi core, bagian pertama). ADR 0006 dan kontrak 0.4.0 berstatus **diusulkan** dan menunggu penerimaan pemilik produk sebelum digabung.
+
+### Diubah
+- kontrak 0.4.0: KONTRAK §3 kini merinci tanda tangan kunci layanan (`sig`) pada setiap bingkai core→agen. Algoritmenya Ed25519 murni atas awalan `sadmin-service/1` dan JCS objek `{type, id, body}`, sehingga jenis dan ID bingkai ikut terikat. Pada `Envelope`, `secret_values` tingkat atas dikeluarkan dari cakupan, dan agen wajib menolak `secret_values` yang kuncinya tidak sama persis dengan placeholder `$secret` di `params` (`E_SECRET_COMMIT`). Bingkai core→agen terdiri dari tepat empat anggota. `sig` membuktikan asal, bukan kesegaran, sehingga pesan selain `Envelope` wajib idempoten. `EnrollAccept` diverifikasi dengan `service_pubkey` di badannya sendiri. Vektor bersama beserta oracle independennya ada di `kontrak/vectors/service-sig/`. Oracle itu ditulis hanya dari teks KONTRAK, dan JCS-nya diuji terhadap vektor `jcs`/`jcs-reject`. Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
+
+### Ditambahkan
+- core: `php artisan sadmin:service-key-init` membuat kunci layanan Ed25519 instansi sekali. *Seed*-nya hanya disimpan di brankas, sedangkan kunci publiknya dicetak dan dicatat di audit (`service.key_initialize`). Perintah menolak bila kunci pernah ada, termasuk yang sudah dihancurkan, karena kunci baru berarti rotasi dan semua agen yang sudah tersemat akan menolak bingkai. Format ini dikunci di ADR 0006 (diusulkan).
+- core: `ServiceSigner` di `Execution/Dispatch` menyusun bingkai core→agen bertanda tangan kunci layanan aktif tenant. Badan bingkai wajib objek JSON, dan objek kosong tetap `{}`. Tanpa kunci aktif, penyusunan gagal tertutup dan kunci tidak pernah dibuat diam-diam. Bingkai lebih dari 1 MiB ditolak. Sebelum dikembalikan, setiap bingkai diurai ulang dengan pengurai I-JSON ketat dan diverifikasi dengan kunci publik turunan brankas, sama seperti pemeriksaan agen. Pengiriman lewat socket gateway menyusul di slice berikutnya.
+
+### Catatan migrasi
+- Migrasi baru, non-destruktif: indeks unik parsial `secrets_one_active_service_key` (satu kunci layanan aktif per tenant).
+
 ## [0.1.0-alpha.5] — 2026-10-01
 
 Tonggak **M1 Kerangka**, slice 3–6: tema console (F-17), brankas rahasia (F-01 bagian pertama), checkpoint audit bertanda tangan (F-04 bagian kedua), dan alert `audit_mismatch` (F-04 bagian ketiga). Kriteria AC-03 (audit) kini diterima seluruhnya. ADR 0003, 0004, dan 0005 beserta kontrak 0.3.0 diterima pemilik produk.
