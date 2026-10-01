@@ -10,6 +10,7 @@ Keputusan arsitektural atau keamanan baru dicatat di sini **sebelum** diimplemen
 | [0003](0003-format-brankas.md) | Format brankas: enkripsi envelope dan kunci induk | Diterima |
 | [0004](0004-checkpoint-audit.md) | Checkpoint audit bertanda tangan | Diterima |
 | [0005](0005-peringatan-integritas.md) | Peringatan integritas dan kanal notifikasi core | Diterima |
+| [0006](0006-tanda-tangan-layanan.md) | Tanda tangan kunci layanan pada bingkai core→agen | Diusulkan |
 
 ## Templat
 ```markdown

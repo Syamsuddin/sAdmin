@@ -1,0 +1,39 @@
+{
+  "description": "Envelope L0 log.tail_redacted dengan params berisi huruf beraksen, CJK, emoji non-BMP, U+2028, U+007F, U+0001, tab, LF, kutip ganda, backslash, dan '/': hanya kutip, backslash, dan U+0000-U+001F yang di-escape (\\t \\n bentuk pendek, \\u0001 heks kecil), sisanya literal UTF-8; kunci params.penanda menguji urutan unit kode UTF-16 (😀 sebelum U+FB01, beda dari urutan byte UTF-8)",
+  "seed_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "public_key": "JUO5L/EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0=",
+  "frame": {
+    "type": "Envelope",
+    "id": "01m3tqkqr08b1qxwa347req3da",
+    "body": {
+      "kontrak": "0.4",
+      "envelope_id": "01m3tqkqr07y0jtwqt9t5zevq5",
+      "phase": "apply",
+      "action_key": "log.tail_redacted",
+      "action_version": 1,
+      "target_server_id": "01m1d7ntm0pfnctct37crva993",
+      "platform_id": "ubuntu-24.04",
+      "params": {
+        "unit": "aplikasi-contoh.service",
+        "lines": 200,
+        "grep": "aksen: café naïve Ålborg ñ ü | CJK: 日本語 中文 | emoji: 😀 𝄞 | ls[ ] del[] soh[\u0001] tab[\t] lf[\n] | kutip[\"] miring[\\] garis[/]",
+        "penanda": {
+          "ﬁ": 1,
+          "😀": 2,
+          "é": 3,
+          "z": 4
+        }
+      },
+      "risk": "L0",
+      "nonce": "f40H5dTk3hTfMSrFOKbIOMTW5JEwUq5mJoiLG11MPmE",
+      "issued_at": "2026-10-01T03:20:00Z",
+      "expires_at": "2026-10-01T03:30:00Z",
+      "idempotency_key": "01m3tqkqr0bfz58y06z9cfb30e",
+      "plan_hash": null,
+      "step_index": null
+    },
+    "sig": "luq0pcRT5G0Iu4uuWHzy/P7sxawOWxP2Adan8JON/oh1QDr8KFI7JPEVYqT9s8yQipYQL2rzHfAYenjjLKXnAw=="
+  },
+  "message": "sadmin-service/1\n{\"body\":{\"action_key\":\"log.tail_redacted\",\"action_version\":1,\"envelope_id\":\"01m3tqkqr07y0jtwqt9t5zevq5\",\"expires_at\":\"2026-10-01T03:30:00Z\",\"idempotency_key\":\"01m3tqkqr0bfz58y06z9cfb30e\",\"issued_at\":\"2026-10-01T03:20:00Z\",\"kontrak\":\"0.4\",\"nonce\":\"f40H5dTk3hTfMSrFOKbIOMTW5JEwUq5mJoiLG11MPmE\",\"params\":{\"grep\":\"aksen: café naïve Ålborg ñ ü | CJK: 日本語 中文 | emoji: 😀 𝄞 | ls[ ] del[] soh[\\u0001] tab[\\t] lf[\\n] | kutip[\\\"] miring[\\\\] garis[/]\",\"lines\":200,\"penanda\":{\"z\":4,\"é\":3,\"😀\":2,\"ﬁ\":1},\"unit\":\"aplikasi-contoh.service\"},\"phase\":\"apply\",\"plan_hash\":null,\"platform_id\":\"ubuntu-24.04\",\"risk\":\"L0\",\"step_index\":null,\"target_server_id\":\"01m1d7ntm0pfnctct37crva993\"},\"id\":\"01m3tqkqr08b1qxwa347req3da\",\"type\":\"Envelope\"}",
+  "valid": true
+}
