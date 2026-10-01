@@ -1,0 +1,6 @@
+{
+  "description": "Kunci P-256 bertitik terkompresi ditolak (Go crypto/x509 menolaknya)",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIGaMEICAQAwADA5MBMGByqGSM49AgEGCCqGSM49AwEHAyIAAiyB9hWCcGE/Ibvg\nCp0xweq/YmJKkPQmpsqe9FQtZCNUoAAwCgYIKoZIzj0EAwIDSAAwRQIgXmo4H7jT\n+JU7X9t1zA/4fciP18u1DQgHQuFulmhtAxYCIQD5UrNYxg6yCwFwGtxDUH/0lxIW\ncGpFWQA8wNmbMRHRMw==\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "key"
+}

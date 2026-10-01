@@ -1,0 +1,6 @@
+{
+  "description": "Subjek berisi RDN kosong bukan subjek kosong",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIG9MGQCAQAwAjEAMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELIH2FYJwYT8h\nu+AKnTHB6r9iYkqQ9Camyp70VC1kI1Qyw0P/JNvByCCnbrW1mVruXHNFGgNLCW09\niAMo1/KKwqAAMAoGCCqGSM49BAMCA0kAMEYCIQCJNYqALs71j1QHY2ARnAfkGKCv\nCRst+7wUy5uBVrSpfAIhAKG9Sox7zckcqgvJx2Ka8lzhKfpVxn0MysCCpu8Im8qh\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "subject"
+}

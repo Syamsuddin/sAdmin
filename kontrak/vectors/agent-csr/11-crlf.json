@@ -1,0 +1,6 @@
+{
+  "description": "Akhir baris CRLF ditolak: PEM wajib berbaris LF",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\r\nMIG6MGICAQAwADBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABCyB9hWCcGE/Ibvg\r\nCp0xweq/YmJKkPQmpsqe9FQtZCNUMsND/yTbwcggp261tZla7lxzRRoDSwltPYgD\r\nKNfyisKgADAKBggqhkjOPQQDAgNIADBFAiAKrDLeqlqmBX4P8oOyB2Xqgg1WrEK7\r\ncfsui8KCymtU3QIhALlpbf7OijivwXBxMyquKU7gvpITQFINQn91p/bMdf6x\r\n-----END CERTIFICATE REQUEST-----\r\n",
+  "valid": false,
+  "reason": "pem"
+}

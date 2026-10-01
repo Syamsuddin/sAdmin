@@ -326,8 +326,16 @@ class ServiceSignerTest extends TestCase
     public function test_verify_frame_rejects_every_shape_the_agent_rejects(): void
     {
         $publicKey = $this->initServiceKey();
-        $frame = $this->signer()->frame($this->tenantId, 'Ack', self::ulid(), ['id' => self::ulid()]);
-        $f = json_decode($frame, true, 512, JSON_THROW_ON_ERROR);
+        // Varian base64url hanya berbeda bila sig memuat '+' atau '/'; ≈6,5% sig acak tak memuat keduanya, dan tanpa
+        // syarat ini tes gagal acak karena "varian" itu identik dengan sig sah. ID baru = pesan baru = sig baru.
+        for ($attempt = 0; $attempt < 64; $attempt++) {
+            $frame = $this->signer()->frame($this->tenantId, 'Ack', self::ulid(), ['id' => self::ulid()]);
+            $f = json_decode($frame, true, 512, JSON_THROW_ON_ERROR);
+            if (strpbrk($f['sig'], '+/') !== false) {
+                break;
+            }
+        }
+        $this->assertNotSame($f['sig'], strtr($f['sig'], '+/', '-_'), 'Butuh sig yang memuat + atau / untuk menguji penolakan base64url.');
         $encode = fn (mixed $v): string => json_encode($v, JSON_THROW_ON_ERROR);
         // Karakter data terakhir sig 64 byte hanya membawa 2 bit; menyalakan bit terendah indeks alfabetnya mengubah teks
         // tanpa mengubah byte hasil dekode longgar (RFC 4648 §3.5).

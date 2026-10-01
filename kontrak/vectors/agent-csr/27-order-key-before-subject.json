@@ -1,0 +1,6 @@
+{
+  "description": "Kunci P-384 dan subjek tak kosong sekaligus: alasan = key (urutan aturan)",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIIBBzCBjgIBADAPMQ0wCwYDVQQDDARhZ2VuMHYwEAYHKoZIzj0CAQYFK4EEACID\nYgAErS+1fI2AY5Pysj9iGfAc2RF+twbnnDsUtlvN4H+m8FDHxHtCbtkSi0+sIIts\nBuTTMusxFa3Bo/x+JraZe1Zzvs8t4OtZdcmZ5pQFlAXXNiRb7I2E1Hj1m7WR2uBn\n+valoAAwCgYIKoZIzj0EAwIDaAAwZQIxAOSQDdC23CRtzuCdCG7rOyIv7QnSsXYr\nS45JuJEewlVTyhBbY2IVzmPn7QVjlXKAFwIwcT8r90UFTYBmSFftOlJgmeul9pHj\nPv9KJDkzjkWBjl3tYs5EvDMl8L6KfMvjAa+z\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "key"
+}

@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='ServiceSigner|InitializeServiceKey|ServiceSignature'",
+    "test_satu": "php artisan test --filter='CertificateAuthority|AgentCertificate'",
     "vault_check": "php artisan sadmin:vault-check"
   },
   "sesi": [
@@ -73,14 +73,21 @@
       "step": 7,
       "detik": 1063,
       "tok_est": 88887
+    },
+    {
+      "mulai": "2026-10-01T22:02:23+08:00",
+      "selesai": null,
+      "step": 7,
+      "detik": 4373,
+      "tok_est": 91799
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "cda56be612d2e065",
+    "sidik": "2aefeaca63a09770",
     "dokumen": 27,
-    "disegel": "2026-10-01T21:05:49+08:00",
+    "disegel": "2026-10-01T22:02:22+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -111,9 +118,14 @@
         "dari": "8879c3cda53ac53b",
         "ke": "cda56be612d2e065",
         "pada": "2026-10-01T21:05:49+08:00"
+      },
+      {
+        "dari": "cda56be612d2e065",
+        "ke": "2aefeaca63a09770",
+        "pada": "2026-10-01T22:02:22+08:00"
       }
     ],
-    "sidik_sebelumnya": "8879c3cda53ac53b"
+    "sidik_sebelumnya": "cda56be612d2e065"
   },
   "riwayat_fitur": [
     {
@@ -1825,13 +1837,221 @@
         "Arsip 23: AC-01 belum diarsipkan karena F-01 (install.sh) masih aktif"
       ],
       "selesai": "2026-10-01T21:49:16+08:00"
+    },
+    {
+      "fitur": "F-02b CA internal",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-10-01T22:11:50+08:00",
+      "rencana": [
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/agent-cert/oracle.py",
+        "../kontrak/vectors/agent-cert/*.json",
+        "../kontrak/vectors/agent-csr/*.json",
+        "docs/adr/0007-ca-internal.md",
+        "docs/adr/README.md",
+        "database/migrations/2026_10_01_000900_add_single_active_ca_key_index_to_secrets.php",
+        "docs/07_DATA_MODEL.md",
+        "docs/11_COMMANDS.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md",
+        "app/Infrastructure/Vault/Vault.php",
+        "app/Infrastructure/Vault/X509Authority.php",
+        "app/Domain/Fleet/Services/AgentCertificateProfile.php",
+        "app/Domain/Fleet/Services/CertificateAuthority.php",
+        "app/Domain/Fleet/Data/IssuedCertificate.php",
+        "app/Domain/Fleet/Data/CertificateRequestRejected.php",
+        "app/Domain/Fleet/Actions/InitializeCertificateAuthority.php",
+        "app/Console/Commands/CaInitCommand.php",
+        "tests/Feature/Fleet/InitializeCertificateAuthorityTest.php",
+        "tests/Feature/Fleet/CertificateAuthorityTest.php",
+        "tests/Contract/AgentCertificateVectorsTest.php",
+        "tests/Feature/VaultBoundaryTest.php",
+        "../CHANGELOG.md",
+        "docs/_CODING_LEDGER.json",
+        "docs/_TOKEN_LEDGER.json"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Kontrak, vektor & ADR",
+          "mulai": "2026-10-01T22:13:11+08:00",
+          "selesai": "2026-10-01T22:17:31+08:00",
+          "detik": 261,
+          "tok_est": 34929,
+          "muat": [
+            "../kontrak/KONTRAK.md",
+            "../kontrak/vectors/agent-cert/oracle.py",
+            "docs/adr/0006-tanda-tangan-layanan.md",
+            "docs/adr/0007-ca-internal.md",
+            "docs/02_SCOPE.md",
+            "docs/07_DATA_MODEL.md",
+            "docs/21_SECURITY_RULES.md",
+            "docs/22_CHANGE_POLICY.md",
+            "docs/12_PROJECT_STRUCTURE.md",
+            "docs/13_TESTING.md",
+            "docs/20_GUARDRAILS.md",
+            "docs/24_DEFINITION_OF_DONE.md",
+            "docs/11_COMMANDS.md",
+            "app/Infrastructure/Vault/Vault.php"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Skema/migrasi",
+          "mulai": "2026-10-01T22:17:42+08:00",
+          "selesai": "2026-10-01T22:17:50+08:00",
+          "detik": 8,
+          "tok_est": 315,
+          "muat": [
+            "database/migrations/2026_10_01_000900_add_single_active_ca_key_index_to_secrets.php",
+            "database/migrations/2026_10_01_000800_add_single_active_service_key_index_to_secrets.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Service/logika domain",
+          "mulai": "2026-10-01T22:18:18+08:00",
+          "selesai": "2026-10-01T22:22:26+08:00",
+          "detik": 248,
+          "tok_est": 16827,
+          "muat": [
+            "app/Infrastructure/Vault/X509Authority.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Infrastructure/Vault/SecretValue.php",
+            "app/Domain/Vault/Actions/StoreSecret.php",
+            "app/Domain/Fleet/Services/AgentCertificateProfile.php",
+            "app/Domain/Fleet/Services/CertificateAuthority.php",
+            "app/Domain/Fleet/Actions/InitializeCertificateAuthority.php",
+            "app/Domain/Fleet/Data/CertificateRequestRejected.php",
+            "app/Domain/Fleet/Data/CertificateVerification.php",
+            "app/Domain/Fleet/Data/IssuedCertificate.php",
+            "app/Domain/Execution/Actions/InitializeServiceKey.php",
+            "tests/Feature/Vault/StoreSecretTest.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Endpoint: perintah sadmin:ca-init",
+          "mulai": "2026-10-01T22:22:26+08:00",
+          "selesai": "2026-10-01T22:22:55+08:00",
+          "detik": 29,
+          "tok_est": 3139,
+          "muat": [
+            "app/Console/Commands/CaInitCommand.php",
+            "app/Console/Commands/ServiceKeyInitCommand.php",
+            "docs/11_COMMANDS.md",
+            "docs/14_ERROR_HANDLING.md"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "Tes",
+          "mulai": "2026-10-01T22:23:40+08:00",
+          "selesai": "2026-10-01T23:00:47+08:00",
+          "detik": 2227,
+          "tok_est": 29577,
+          "muat": [
+            "tests/Contract/AgentCertificateVectorsTest.php",
+            "tests/Feature/Fleet/InitializeCertificateAuthorityTest.php",
+            "tests/Feature/Fleet/CertificateAuthorityTest.php",
+            "tests/Feature/VaultBoundaryTest.php",
+            "tests/Feature/Execution/InitializeServiceKeyTest.php",
+            "tests/Contract/ServiceSignatureVectorsTest.php",
+            "tests/Support/InteractsWithVault.php",
+            "docs/23_ACCEPTANCE_CRITERIA.md",
+            "../CHANGELOG.md"
+          ]
+        },
+        {
+          "no": 6,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-10-01T23:03:54+08:00",
+          "selesai": "2026-10-01T23:17:24+08:00",
+          "detik": 810,
+          "tok_est": 7012,
+          "muat": [
+            "/Users/syams/.claude/skills/coding-vcbd/references/gerbang-selesai.md",
+            "tests/Feature/Execution/ServiceSignerTest.php"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Perbaikan review adversarial",
+          "mulai": "2026-10-01T23:47:30+08:00",
+          "selesai": "2026-10-02T00:00:40+08:00",
+          "detik": 790,
+          "tok_est": 0,
+          "muat": [
+            "kontrak/KONTRAK.md",
+            "kontrak/vectors/agent-cert/oracle.py",
+            "core/docs/adr/0007-ca-internal.md",
+            "core/app/Domain/Fleet/Services/AgentCertificateProfile.php",
+            "core/app/Infrastructure/Vault/X509Authority.php",
+            "core/tests/Feature/Fleet/CertificateAuthorityTest.php",
+            "core/tests/Contract/AgentCertificateVectorsTest.php",
+            "core/tests/Feature/VaultBoundaryTest.php",
+            "CHANGELOG.md"
+          ]
+        }
+      ],
+      "detik": 4373,
+      "tok_est": 91799,
+      "deviasi": [
+        "app/Domain/Fleet/Data/CertificateVerification.php — di luar rencana: DTO hasil aturan penerimaan gateway (konvensi Data/ docs/12)",
+        "tests/Feature/Vault/StoreSecretTest.php — di luar rencana: reveal() kini menolak ca_key, asersi diperketat",
+        "tests/Feature/Execution/ServiceSignerTest.php — di luar rencana: tes flaky pra-ada F-02a (penolakan base64url gagal ≈6,5% run) diperbaiki, commit terpisah 3730fe0"
+      ],
+      "warn_dilewati": [
+        "S1: kriteria slice berupa butir AC-01, bukan blok bernama F-02b; dibuktikan blok verifikasi AC-01 (67+ tes fitur, Contract 135, redaksi 7) di PHP 8.4 dan 8.3",
+        "S6: diperiksa manual — Domain/Fleet/{Actions,Services,Data}, Infrastructure/Vault, sadmin:ca-init kebab-case; forbidden-scan bersih; tanpa mock tanda tangan",
+        "S7: selisih sebagian besar artefak awalan path (core/ vs relatif); deviasi nyata 3 berkas, lihat deviasi",
+        "DoD make catalog-validate contract-test: Makefile root dan implementasi Go belum ada; sisi PHP --testsuite=Contract hijau"
+      ],
+      "asumsi": [
+        "Profil CA (3650 hari, CN sAdmin internal CA), identitas URI SAN sadmin://server/<id>, pin SHA-256 DER — ditetapkan ADR 0007 (diusulkan) karena dokumen belum merinci",
+        "Isi rahasia ca_key = PEM kunci privat (PKCS#8 atau SEC1) + PEM sertifikat; kedua bentuk kunci diterima saat dibuka",
+        "Penerbitan sertifikat tak menulis audit (tak mengubah state); Action enrolment/CertRenew kelak mencatat serial",
+        "Advisory lock 7301006 untuk sadmin:ca-init",
+        "Toleransi notAfter-notBefore +1 detik karena OpenSSL membaca jam dua kali (terukur 1/50.563)"
+      ],
+      "dokumen_diperbarui": [
+        "../kontrak/KONTRAK.md (§2 sertifikat & pin CA, §7 E_CSR, 0.5.0)",
+        "../kontrak/vectors/agent-cert + agent-csr (oracle + 55 vektor)",
+        "docs/adr/0007-ca-internal.md",
+        "docs/adr/README.md",
+        "docs/07_DATA_MODEL.md (indeks secrets_one_active_ca_key)",
+        "docs/11_COMMANDS.md (sadmin:ca-init)",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-01 butir CA)",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "Runtime produksi PHP 8.3 ≠ dev 8.4: ext-openssl berbeda (default_bits wajib, format ekspor kunci EC); jalankan juga /usr/local/opt/php@8.3/bin/php artisan test",
+        "OpenSSL lewat PHP menerima kurva eksplisit, titik terkompresi, CSR versi lain, dan menormalkan waktu mustahil — aturan KONTRAK §2 wajib diperiksa atas byte DER mentah",
+        "openssl_csr_sign membaca jam dua kali: notAfter-notBefore bisa +1 detik",
+        "Arrow fn PHP menangkap by value: parameter keluaran by-ref (openssl_pkey_export) wajib lewat closure use (&$x)",
+        "Kunci vektor agent-cert diturunkan dari label publik; pin 4b9cf6… tak boleh disematkan di build mana pun"
+      ],
+      "ditunda": [
+        "Penerimaan ADR 0007 + kontrak 0.5.0 oleh pemilik produk: syarat merge feat/m1-ca-internal (bertumpuk di feat/m1-service-key, ADR 0006 juga masih diusulkan)",
+        "Merge ke main dan tag pra-rilis: keputusan pemilik produk",
+        "Sertifikat server TLS gateway (profil + perintah terbit), CertRenew, pencabutan sertifikat: slice gateway/enrolment",
+        "Enroll/EnrollAccept, tabel servers/agents, Servers\\\\Enroll menampilkan pin: slice enrolment",
+        "Pemantauan umur CA dan ADR rotasi CA sebelum 3650 hari: slice Alerts F-12 / ADR baru",
+        "Ekspor sertifikat CA ke gateway (ca.crt) oleh install.sh: slice F-01",
+        "Arsip 23: AC-01 belum diarsipkan karena F-01 (install.sh) masih aktif",
+        "Uji vektor agent-cert/agent-csr sisi Go dan make contract-test: menunggu implementasi edge",
+        "Info review: CA semua tenant bersubjek identik dan identitas tanpa pengikat tenant — relevan saat multi-tenant (pasca-MVP)",
+        "Saran review: suite PHP 8.3 sebagai bagian CI / docs/10 dev env — perlu keputusan pemilik"
+      ],
+      "selesai": "2026-10-02T00:01:15+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 12000,
-    "tok_est": 527468,
+    "detik": 16373,
+    "tok_est": 619267,
     "tok_terukur": 0,
-    "step": 61,
-    "fitur": 10
+    "step": 68,
+    "fitur": 11
   }
 }

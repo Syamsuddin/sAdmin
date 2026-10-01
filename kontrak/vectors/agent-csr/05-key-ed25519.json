@@ -1,0 +1,6 @@
+{
+  "description": "Kunci Ed25519 ditolak",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMH8wMwIBADAAMCowBQYDK2VwAyEAWhkOR3l1OO6ect3+G6kH4g1q4QJwUIVmcTqP\naOXNxbmgADAFBgMrZXADQQBT6nf4ulwMKP1H7QDD4pS95OlelwgKh0SpF7SW2oXN\ncnxvWChFka1kgoZin5UoK1ui5Rhk9LxE4xNcmaorUf8G\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "key"
+}

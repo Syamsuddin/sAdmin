@@ -1,0 +1,6 @@
+{
+  "description": "Base64 tanpa padding ditolak: wajib berpadding dan kanonik",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIHoMIGQAgEAMAAwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQsgfYVgnBhPyG7\n4AqdMcHqv2JiSpD0JqbKnvRULWQjVDLDQ/8k28HIIKdutbWZWu5cc0UaA0sJbT2I\nAyjX8orCoC4wLAYJKoZIhvcNAQkOMR8wHTAbBgNVHREEFDASghB4LmNvbnRvaC5p\nbnZhbGlkMAoGCCqGSM49BAMCA0cAMEQCIDJQnSEbTMv9IfzEPfrRQPal+EVw1TRI\np8Kjjy0YaS6jAiBjXLWwySOcMAS6Q2D6So8WXym9oN1B1VDTqSIIjchq+A\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "pem"
+}

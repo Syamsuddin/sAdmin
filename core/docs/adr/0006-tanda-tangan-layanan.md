@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu penerimaan pemilik produk (syarat merge) |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-02 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Isi yang ditandatangani kunci layanan adalah bagian format amplop, sehingga termasuk gerbang manusia (docs/22_CHANGE_POLICY.md, "perubahan format amplop, rencana, atau kanonisasi"; `../kontrak/KONTRAK.md` §1). Setelah agen pertama menyematkan `service_pubkey` dan menerima bingkai, mengubah format ini memutus verifikasi di semua agen |
 | Lingkup | Kunci layanan (pembuatan, penyimpanan, kunci publik), isi yang ditandatangani `sig` bingkai core→agen, penyusunan bingkai bertanda tangan di core, dan verifikasi sendiri sebelum bingkai dikembalikan ke pengirim |
@@ -103,3 +103,4 @@ Aturan tambahan:
 ## 6. Riwayat
 - 2026-10-01: diusulkan bersama slice F-02a Kunci layanan (M1) dan kontrak 0.4.0 (`../kontrak/KONTRAK.md` §3).
 - 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi, 5 sedang, 5 rendah). Perubahannya: seluruh badan, termasuk `secret_values`, wajib I-JSON, dan badan tingkat atas selalu objek (§2.3 langkah 1). ID bingkai wajib ULID huruf kecil (KONTRAK §8, vektor dihasilkan ulang). KONTRAK §3 kini mewajibkan versi dokumen kepercayaan naik, pemeriksaan penerima, dan sidik jari enrolment yang mencakup `service_pubkey` dan `audit_pubkey`. Konsekuensi pada komitmen `secret_values` dicatat. Isi yang ditandatangani (§2.2) tidak berubah.
+- 2026-10-02: **diterima** pemilik produk bersama kontrak 0.4.0. Mulai saat ini, setiap perubahan pada bagian 2 dan KONTRAK §3 (tanda tangan kunci layanan) wajib lewat gerbang manusia (docs/22).

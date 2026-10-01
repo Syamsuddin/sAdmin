@@ -1,0 +1,6 @@
+{
+  "description": "Kunci P-256 berparameter kurva eksplisit ditolak (bukan namedCurve; Go crypto/x509 menolaknya)",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIIBmDCCAT4CAQAwADCCATMwgewGByqGSM49AgEwgeACAQEwLAYHKoZIzj0BAQIh\nAP////8AAAABAAAAAAAAAAAAAAAA////////////////MEQEIP////8AAAABAAAA\nAAAAAAAAAAAA///////////////8BCBaxjXYqjqT57PrvVV2mIa8ZR0GsMxTsPY7\nzjw+J9JgSwRBBGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT+NC4v4a\nf5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfUCIQD/////AAAAAP//////////vOb6\nracXnoTzucrC/GMlUQIBAQNCAAQsgfYVgnBhPyG74AqdMcHqv2JiSpD0JqbKnvRU\nLWQjVDLDQ/8k28HIIKdutbWZWu5cc0UaA0sJbT2IAyjX8orCoAAwCgYIKoZIzj0E\nAwIDSAAwRQIhAPjZ6Aap0mX6kANoAGBIuL+4ezbOy11BKHDciJYfI7eWAiBxpDrA\nEyFEiqarcyS1FqnJZhx8nqmRlEeYB91xHKeTeQ==\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "key"
+}

@@ -9,6 +9,7 @@ Kriteria terima fitur yang dimiliki paket core (`docs/01_PRD.md`). AC yang dimil
 - Given admin memilih tema `dark`, When halaman dimuat ulang, Then atribut `data-bs-theme="dark"` dan token gelap (docs/26) aktif; `system` mengikuti OS.
 - Given kunci induk termuat dari kredensial systemd, When rahasia disimpan lalu dibaca, Then nilainya kembali utuh dan audit hanya mencatat `purpose`; baris yang diubah lewat SQL atau kunci induk yang salah membuat pembukaan gagal, dan nilai tak pernah muncul di log/audit (ADR 0003).
 - Given instansi sudah diinisialisasi dan brankas termuat, When `sadmin:service-key-init` dijalankan, Then tepat satu kunci layanan aktif dibuat (seed hanya di brankas), kunci publiknya tercetak dan tercatat di audit `service.key_initialize`, dan pemanggilan kedua (juga setelah kunci dihancurkan) ditolak sebagai rotasi; bingkai core→agen yang disusun core lolos verifikasi `sig` dengan kunci itu dan identik dengan vektor bersama `../kontrak/vectors/service-sig` (ADR 0006).
+- Given instansi sudah diinisialisasi dan brankas termuat, When `sadmin:ca-init` dijalankan, Then tepat satu CA internal aktif dibuat (kunci privat dan sertifikat hanya di brankas), pin `--ca-sha256` tercetak dan tercatat di audit `ca.initialize`, dan pemanggilan kedua (juga setelah CA dihancurkan) ditolak sebagai rotasi; sertifikat klien agen yang diterbitkan core dari CSR sah lolos aturan penerimaan gateway KONTRAK §2, sedangkan CSR dan sertifikat pada vektor bersama `../kontrak/vectors/agent-csr` dan `agent-cert` diputus persis seperti oracle (ADR 0007).
 ```bash
 make harness SCENARIO=install               # hijau
 curl -m 5 https://<ip-publik-vm>/ ; echo $?  # bukan 0
@@ -16,6 +17,7 @@ php artisan test --filter=ThemePreferenceTest
 php artisan test --filter='Vault|SecretValue'   # Tests: … passed
 php artisan sadmin:vault-check                  # exit 0
 php artisan test --filter='ServiceSigner|InitializeServiceKey|ServiceSignature'   # Tests: … passed
+php artisan test --filter='CertificateAuthority|AgentCertificate'   # Tests: … passed
 ```
 
 ## AC-08 `site.create` (F-10)

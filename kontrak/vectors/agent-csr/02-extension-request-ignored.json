@@ -1,0 +1,6 @@
+{
+  "description": "Permintaan ekstensi (SAN DNS) diabaikan, CSR tetap diterima; core tak pernah menyalinnya",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIHsMIGTAgEAMAAwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQsgfYVgnBhPyG7\n4AqdMcHqv2JiSpD0JqbKnvRULWQjVDLDQ/8k28HIIKdutbWZWu5cc0UaA0sJbT2I\nAyjX8orCoDEwLwYJKoZIhvcNAQkOMSIwIDAeBgNVHREEFzAVghNhZ2VuLmNvbnRv\naC5pbnZhbGlkMAoGCCqGSM49BAMCA0gAMEUCICjuC9X/D5RHYk4eIAVPkO3UIZAV\nL4vdh2nJ3URPrGRTAiEAgJcJ1t4BuD9a4jKkC9E9CUM7FaJdZfrqAHhSyoAq628=\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": true,
+  "reason": null
+}

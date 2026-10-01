@@ -6,13 +6,28 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
-Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai core→agen (F-02 sisi core, bagian pertama). ADR 0006 dan kontrak 0.4.0 berstatus **diusulkan** dan menunggu penerimaan pemilik produk sebelum digabung.
+## [0.1.0-alpha.6] — 2026-10-02
+
+Tonggak **M1 Kerangka**, slice 7–8: kunci layanan dan tanda tangan `sig` bingkai core→agen (F-02 sisi core, bagian pertama), serta CA internal dan sertifikat klien agen (F-02 sisi core, bagian kedua). ADR 0006 dan ADR 0007 beserta kontrak 0.4.0 dan 0.5.0 diterima pemilik produk.
 
 ### Diubah
 - kontrak 0.4.0: KONTRAK §3 kini merinci tanda tangan kunci layanan (`sig`) pada setiap bingkai core→agen. Algoritmenya Ed25519 murni atas awalan `sadmin-service/1` dan JCS objek `{type, id, body}`, sehingga jenis dan ID bingkai ikut terikat. Pada `Envelope`, `secret_values` tingkat atas dikeluarkan dari cakupan, dan agen wajib menolak `secret_values` yang kuncinya tidak sama persis dengan placeholder `$secret` di `params` (`E_SECRET_COMMIT`). Bingkai core→agen terdiri dari tepat empat anggota. `sig` membuktikan asal, bukan kesegaran. Karena itu dokumen kepercayaan hanya diterima bila versinya naik, pesan lain wajib idempoten, dan pesan untuk satu agen diperiksa terhadap identitas penerimanya. `EnrollAccept` diverifikasi dengan `service_pubkey` di badannya sendiri, dan sidik jari yang dicocokkan admin saat enrolment wajib mencakup roster, `service_pubkey`, dan `audit_pubkey`. KONTRAK §8 kini menetapkan ID sebagai ULID huruf kecil yang dibandingkan apa adanya, sesuai ID yang dibuat core. Vektor bersama beserta oracle independennya ada di `kontrak/vectors/service-sig/`. Oracle itu ditulis hanya dari teks KONTRAK, dan JCS-nya diuji terhadap vektor `jcs`/`jcs-reject`. Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
 
+- kontrak 0.5.0: KONTRAK §2 kini menetapkan sertifikat dan pin CA.
+  - Pin `--ca-sha256` = SHA-256 atas DER sertifikat CA (64 hex huruf kecil).
+  - Profil CA: ECDSA P-256, `CA:TRUE, pathlen:0`, berlaku 3650 hari.
+  - Aturan CSR agen diperiksa berurutan: ukuran ≤ 4096 byte, satu blok PEM ber-LF dengan base64 kanonik, tata letak DER versi 0, kunci P-256, subjek kosong (`30 00`), dan tanda tangan `ecdsa-with-SHA256` tanpa parameter yang sah. Atribut CSR diabaikan.
+  - Kunci diperiksa atas byte SPKI mentah, sehingga kurva eksplisit dan titik terkompresi ditolak. Go `crypto/x509` tak bisa mengurai keduanya, padahal OpenSSL menerimanya.
+  - Profil sertifikat klien: berumur 7 hari, subjek kosong, dan identitas di satu URI SAN kritis `sadmin://server/<server_id>`.
+  - Ada aturan penerimaan sertifikat di gateway, beserta alasannya. Aturan `key` diperiksa sebelum `issuer`, dan waktu berlaku diurai ketat. Identitas koneksi diambil dari SAN, bukan subjek.
+  - Agen wajib memeriksa EKU `serverAuth` dan nama host pada sertifikat gateway, karena CA yang sama juga menandatangani sertifikat agen.
+  - KONTRAK §7 menambah kode galat `E_CSR`.
+  - Vektor bersama `kontrak/vectors/agent-csr/` (27) dan `agent-cert/` (28) dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang), termasuk vektor batas dan multi-pelanggaran.
+
 ### Ditambahkan
-- core: `php artisan sadmin:service-key-init` membuat kunci layanan Ed25519 instansi sekali. *Seed*-nya hanya disimpan di brankas, sedangkan kunci publiknya dicetak dan dicatat di audit (`service.key_initialize`). Perintah menolak bila kunci pernah ada, termasuk yang sudah dihancurkan, karena kunci baru berarti rotasi dan semua agen yang sudah tersemat akan menolak bingkai. Format ini dikunci di ADR 0006 (diusulkan).
+- core: `php artisan sadmin:ca-init` membuat CA internal instansi sekali. Kunci privat dan sertifikat CA hanya disimpan di brankas (`ca_key`). Pin dicetak dan dicatat di audit (`ca.initialize`), dihitung dari sertifikat yang dibuka ulang dari brankas. Perintah menolak bila CA pernah ada karena CA baru berarti rotasi. Format ini dikunci di ADR 0007 (**diterima** pemilik produk).
+- core: `CertificateAuthority` (`Domain/Fleet`) menerbitkan sertifikat klien agen dari CSR yang lolos KONTRAK §2. Tanda tangan CSR diverifikasi eksplisit atas DER. Tanpa CA aktif, penerbitan gagal tertutup. Sebelum dikembalikan, sertifikat diperiksa ulang dengan aturan penerimaan gateway dan profil penerbitan, termasuk himpunan ekstensi dan flag kritisnya. Kunci privat CA hanya dipakai di `Infrastructure/Vault/X509Authority`, dan `Vault::reveal()` kini menolak purpose `ca_key`. Enrolment yang memakainya menyusul.
+- core: `php artisan sadmin:service-key-init` membuat kunci layanan Ed25519 instansi sekali. *Seed*-nya hanya disimpan di brankas, sedangkan kunci publiknya dicetak dan dicatat di audit (`service.key_initialize`). Perintah menolak bila kunci pernah ada, termasuk yang sudah dihancurkan, karena kunci baru berarti rotasi dan semua agen yang sudah tersemat akan menolak bingkai. Format ini dikunci di ADR 0006 (**diterima** pemilik produk).
 - core: `ServiceSigner` di `Execution/Dispatch` menyusun bingkai core→agen bertanda tangan kunci layanan aktif tenant. Badan bingkai wajib objek JSON, dan objek kosong tetap `{}`. Tanpa kunci aktif, penyusunan gagal tertutup dan kunci tidak pernah dibuat diam-diam. Bingkai lebih dari 1 MiB ditolak. Sebelum dikembalikan, setiap bingkai diurai ulang dengan pengurai I-JSON ketat dan diverifikasi dengan kunci publik turunan brankas, sama seperti pemeriksaan agen. Pengiriman lewat socket gateway menyusul di slice berikutnya.
 
 ### Keamanan
@@ -24,9 +39,19 @@ Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai c
   - jalur larik asosiatif kini diuji terhadap vektor.
 
   Komitmen placeholder rahasia, penolakan tanda tangan oleh kunci yang di-*rotate* di brankas, galat tak tertangkap pada perintah init kunci, dan pipa verifikasi pesan non-`Envelope` di agen ditunda ke slice pemiliknya.
+- core: slice CA internal juga melewati review adversarial, dengan hasil 1 kritis dan 4 sedang. Semuanya ditambal dengan tes regresi dan vektor, dan uji mutasi ulang membunuh 19 dari 19 mutan sasaran.
+  - **Kritis:** `sadmin:ca-init` selalu gagal di PHP 8.3 (runtime produksi), karena PHP 8.3 menuntut `default_bits` di config OpenSSL juga untuk kunci EC. Suite kini dijalankan di PHP 8.3 dan 8.4.
+  - **Sedang:**
+    - CSR berkurva eksplisit atau bertitik terkompresi sempat diterima dan menghasilkan sertifikat yang tak bisa diurai gateway Go.
+    - CSR versi selain 0 sempat lolos pemeriksaan lalu gagal sebagai galat internal.
+    - Profil penerbitan belum dijaga tes negatif.
+    - Agen belum diwajibkan memeriksa identitas gateway.
+  - **Rendah:** base64 tak kanonik, waktu mustahil yang dinormalkan PHP, warning `openssl_x509_parse` yang lolos, regex `$` yang meloloskan LF, pertahanan berlapis `X509Authority::sign()`, dan akar masalah OpenSSL yang hilang dari pesan galat.
+- core: tes `ServiceSignerTest` untuk penolakan `sig` base64url tak lagi gagal acak (≈6,5% run). Sig tanpa `+` atau `/` sebelumnya membuat varian uji identik dengan sig sah.
 
 ### Catatan migrasi
 - Migrasi baru, non-destruktif: indeks unik parsial `secrets_one_active_service_key` (satu kunci layanan aktif per tenant).
+- Migrasi baru, non-destruktif: indeks unik parsial `secrets_one_active_ca_key` (satu CA internal aktif per tenant).
 
 ## [0.1.0-alpha.5] — 2026-10-01
 
