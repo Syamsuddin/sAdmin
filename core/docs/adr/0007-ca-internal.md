@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan**. Menunggu penerimaan pemilik produk sebagai syarat merge |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-02 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Pin CA dan profil sertifikat adalah bagian protokol (`../kontrak/KONTRAK.md` §2, kontrak 0.5.0). Setelah agen pertama menyematkan pin, mengganti CA berarti rotasi, dan rotasi termasuk gerbang manusia docs/22 ("rotasi CA internal, kunci layanan, atau kunci audit") |
 | Lingkup | Pembuatan dan penyimpanan kunci serta sertifikat CA, sidik jari pin `--ca-sha256`, aturan CSR agen, profil sertifikat klien agen, penerbitan di core beserta verifikasi sendiri, dan aturan penerimaan sertifikat klien yang dipakai bersama gateway |
@@ -112,3 +112,4 @@ Identitas agen = `server_id` di **satu** URI `subjectAltName` kritis `sadmin://s
   - Agen wajib memeriksa identitas gateway.
   - Pertahanan berlapis di `X509Authority::sign()`, dan pesan galat OpenSSL kini menyertakan akar masalahnya.
   - Vektor bertambah 20, termasuk vektor batas dan multi-pelanggaran.
+- 2026-10-02: **diterima** pemilik produk bersama kontrak 0.5.0. Mulai saat ini, setiap perubahan pada bagian 2 dan KONTRAK §2 (sertifikat & pin CA) wajib lewat gerbang manusia (docs/22).
