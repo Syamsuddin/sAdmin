@@ -21,14 +21,27 @@ Bingkai WebSocket: satu pesan JSON teks per bingkai: `{"type": "<NamaPesan>", "i
 
 Sertifikat & pin CA, normatif:
 - **CA internal**: satu per tenant, kunci ECDSA P-256 di brankas core. Sertifikatnya X.509 v3 swa-tanda-tangan, subjek = penerbit = `CN=sAdmin internal CA`, masa berlaku 3650 hari (boleh lebih 1 detik, dengan alasan yang sama seperti sertifikat klien di bawah), `basicConstraints` kritis `CA:TRUE, pathlen:0`, `keyUsage` kritis `keyCertSign, cRLSign`, tanda tangan `ecdsa-with-SHA256`. Mengganti CA adalah rotasi dan butuh gerbang manusia (`core/docs/22_CHANGE_POLICY.md`).
-- **Pin CA** (`--ca-sha256` saat enrolment) = SHA-256 atas byte DER sertifikat CA, ditulis 64 hex huruf kecil. Agen hanya menerima server TLS gateway yang rantainya berakhir pada sertifikat CA dengan sidik jari persis sama dengan pin. Profil sertifikat server gateway ditetapkan bersama slice gateway.
+- **Pin CA** (`--ca-sha256` saat enrolment) = SHA-256 atas byte DER sertifikat CA, ditulis 64 hex huruf kecil. Agen hanya menerima server TLS gateway yang memenuhi tiga syarat:
+  - rantainya berakhir pada sertifikat CA dengan sidik jari persis sama dengan pin;
+  - sertifikat ujungnya ber-`extendedKeyUsage` `serverAuth`;
+  - sertifikat ujungnya memuat nama host `--gateway` di `subjectAltName`.
+
+  CA yang sama juga menandatangani sertifikat klien agen. Karena itu agen wajib menolak sertifikat server yang tidak ber-`serverAuth` atau yang memuat URI `sadmin://server/…`. Tanpa aturan ini, agen yang dibobol bisa menyamar sebagai gateway bagi agen lain. Profil lengkap sertifikat server gateway ditetapkan bersama slice gateway.
 - **CSR agen** (`Enroll.csr`, `CertRenew`) diperiksa berurutan, dan alasan penolakannya adalah aturan pertama yang dilanggar. Semua pelanggaran ditolak `E_CSR`.
   1. `size`: teks paling banyak 4096 byte.
-  2. `pem`: tepat satu blok `-----BEGIN CERTIFICATE REQUEST-----` … `-----END CERTIFICATE REQUEST-----` berisi baris base64 standar yang diakhiri LF. Teks boleh diakhiri satu LF, tanpa teks lain, CRLF, atau header PEM.
-  3. `structure`: isinya DER CSR (PKCS#10) yang sah.
-  4. `key`: kunci publiknya ECDSA P-256.
-  5. `subject`: subjeknya kosong, karena subjek CSR akan tersalin ke sertifikat.
-  6. `signature`: tanda tangan `ecdsa-with-SHA256` sah atas `CertificationRequestInfo`, sebagai bukti kepemilikan kunci privat.
+  2. `pem`: tepat satu blok `-----BEGIN CERTIFICATE REQUEST-----` … `-----END CERTIFICATE REQUEST-----` berisi baris base64 standar yang diakhiri LF. Base64-nya wajib berpadding dan kanonik, seperti di §3. Teks boleh diakhiri satu LF, tanpa teks lain, CRLF, atau header PEM.
+  3. `structure`: tata letak DER, diperiksa atas byte mentah.
+     - DER berbentuk panjang minimal, bertag satu byte, tanpa sisa byte.
+     - `CertificationRequest` = SEQUENCE berisi tepat tiga anggota: `CertificationRequestInfo`, AlgorithmIdentifier, dan BIT STRING.
+     - `CertificationRequestInfo` = SEQUENCE berisi tepat empat anggota: INTEGER **0**, Name, SubjectPublicKeyInfo, dan atribut `[0]`.
+  4. `key`: byte SubjectPublicKeyInfo identik dengan bentuk ECDSA P-256 berkurva bernama (`namedCurve prime256v1`) dengan titik tak terkompresi, yaitu awalan hex `3059301306072a8648ce3d020106082a8648ce3d03010703420004` disusul 64 byte X‖Y (total 91 byte).
+     - Kurva eksplisit dan titik terkompresi ditolak di sini. Go `crypto/x509` tak bisa mengurai keduanya, padahal OpenSSL menerimanya, jadi aturan ini diperiksa atas byte mentah.
+     - CSR yang lolos aturan 1–4 tetapi kuncinya tetap tak terurai (titik di luar kurva) ditolak `structure`.
+  5. `subject`: byte Name = `30 00` (tanpa RDN sama sekali), karena subjek CSR akan tersalin ke sertifikat. Name yang berisi RDN kosong bukan subjek kosong.
+  6. `signature`: semua syarat berikut wajib terpenuhi, sebagai bukti kepemilikan kunci privat.
+     - AlgorithmIdentifier byte-identik `300a06082a8648ce3d040302` (`ecdsa-with-SHA256` tanpa parameter).
+     - BIT STRING tanpa bit sisa.
+     - Tanda tangan ECDSA sah atas byte DER `CertificationRequestInfo`.
 
   Atribut CSR, misalnya permintaan ekstensi, diabaikan dan tak pernah disalin ke sertifikat.
 - **Sertifikat klien agen** diterbitkan core dari CSR yang lolos aturan di atas. Profilnya X.509 v3 dengan rincian berikut:
@@ -41,18 +54,22 @@ Sertifikat & pin CA, normatif:
   Core mencatat serial sebagai hex huruf kecil tanpa nol di depan (`agents.cert_serial`).
 - **Penerimaan sertifikat klien di gateway** diperiksa berurutan, dan alasannya adalah aturan pertama yang dilanggar.
   1. `pem`: berlaku untuk vektor, dengan aturan blok yang sama seperti CSR tetapi berlabel `CERTIFICATE`. Di TLS, sertifikat datang sebagai DER.
-  2. `structure`: isinya DER sertifikat X.509 yang sah.
-  3. `issuer`: penerbit = subjek CA, dengan byte DER identik.
-  4. `signature`: tanda tangannya sah dengan kunci CA.
-  5. `validity`: `notBefore` ≤ sekarang ≤ `notAfter`, kedua batas inklusif, untuk sertifikat klien **dan** sertifikat CA.
-  6. `key`: kunci publiknya ECDSA P-256.
+  2. `structure`: tata letak DER, diperiksa atas byte mentah dengan aturan DER yang sama seperti CSR. `Certificate` = SEQUENCE berisi tepat tiga anggota: TBSCertificate, AlgorithmIdentifier, dan BIT STRING. TBSCertificate memuat Name penerbit, Validity, Name subjek, dan SubjectPublicKeyInfo pada posisi baku.
+  3. `key`: aturan `key` CSR (91 byte SPKI mentah), diperiksa sebelum pengurai X.509 pustaka dipakai.
+     - Sertifikat yang lolos aturan 1–3 tetapi tak bisa diurai pustaka X.509 ditolak `structure`.
+     - Waktu `Validity` wajib UTCTime `YYMMDDHHMMSSZ` atau GeneralizedTime `YYYYMMDDHHMMSSZ` (RFC 5280 §4.1.2.5), dengan tanggal dan jam yang mungkin. Waktu lain, misalnya bulan 13, ditolak `structure` dan tidak dinormalkan.
+  4. `issuer`: penerbit = subjek CA, dengan byte DER identik.
+  5. `signature`: tanda tangannya sah dengan kunci CA.
+  6. `validity`: `notBefore` ≤ sekarang ≤ `notAfter`, kedua batas inklusif, untuk sertifikat klien **dan** sertifikat CA.
   7. `basic_constraints`: ada dan `CA:FALSE`.
   8. `eku`: `extendedKeyUsage` ada dan memuat `clientAuth`.
   9. `san`: `subjectAltName` berisi tepat satu nama, yaitu URI yang seluruhnya cocok dengan `sadmin://server/<ULID>` (ULID huruf kecil, §8).
   10. Sertifikat belum dicabut. Mekanisme pencabutan ditetapkan bersama enrolment.
 
   Identitas koneksi = `server_id` dari URI itu, bukan subjek atau nama lain. Gateway memakai identitas ini untuk meneruskan pesan.
-- Vektor bersama dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (pustaka Python `cryptography`, ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang). Aturan pencabutan di luar vektor.
+- Vektor bersama dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (pustaka Python `cryptography` ditambah pengurai DER mentah, ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang).
+  - Ada vektor batas dan vektor multi-pelanggaran yang mengunci urutan aturan. Aturan pencabutan di luar vektor.
+  - Kunci vektor diturunkan dari label publik, jadi CA dan pin vektor tak boleh dipakai di luar tes.
   - `kontrak/vectors/agent-csr/*.json` berisi `csr_pem` → `valid` dan `reason`.
   - `kontrak/vectors/agent-cert/*.json` berisi `ca_pem`, `ca_sha256`, `cert_pem`, dan `now` → `valid`, `server_id`, dan `reason`.
 

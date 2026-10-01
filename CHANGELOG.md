@@ -14,11 +14,13 @@ Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai c
 - kontrak 0.5.0: KONTRAK §2 kini menetapkan sertifikat dan pin CA.
   - Pin `--ca-sha256` = SHA-256 atas DER sertifikat CA (64 hex huruf kecil).
   - Profil CA: ECDSA P-256, `CA:TRUE, pathlen:0`, berlaku 3650 hari.
-  - Aturan CSR agen diperiksa berurutan: ukuran ≤ 4096 byte, satu blok PEM ber-LF, DER sah, kunci P-256, subjek kosong, dan tanda tangan `ecdsa-with-SHA256` yang sah. Atribut CSR diabaikan.
+  - Aturan CSR agen diperiksa berurutan: ukuran ≤ 4096 byte, satu blok PEM ber-LF dengan base64 kanonik, tata letak DER versi 0, kunci P-256, subjek kosong (`30 00`), dan tanda tangan `ecdsa-with-SHA256` tanpa parameter yang sah. Atribut CSR diabaikan.
+  - Kunci diperiksa atas byte SPKI mentah, sehingga kurva eksplisit dan titik terkompresi ditolak. Go `crypto/x509` tak bisa mengurai keduanya, padahal OpenSSL menerimanya.
   - Profil sertifikat klien: berumur 7 hari, subjek kosong, dan identitas di satu URI SAN kritis `sadmin://server/<server_id>`.
-  - Ada aturan penerimaan sertifikat di gateway, beserta alasannya. Identitas koneksi diambil dari SAN, bukan subjek.
+  - Ada aturan penerimaan sertifikat di gateway, beserta alasannya. Aturan `key` diperiksa sebelum `issuer`, dan waktu berlaku diurai ketat. Identitas koneksi diambil dari SAN, bukan subjek.
+  - Agen wajib memeriksa EKU `serverAuth` dan nama host pada sertifikat gateway, karena CA yang sama juga menandatangani sertifikat agen.
   - KONTRAK §7 menambah kode galat `E_CSR`.
-  - Vektor bersama `kontrak/vectors/agent-csr/` dan `agent-cert/` dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang).
+  - Vektor bersama `kontrak/vectors/agent-csr/` (27) dan `agent-cert/` (28) dihasilkan oracle independen `kontrak/vectors/agent-cert/oracle.py` (ECDSA deterministik RFC 6979, keluaran identik bila dijalankan ulang), termasuk vektor batas dan multi-pelanggaran.
 
 ### Ditambahkan
 - core: `php artisan sadmin:ca-init` membuat CA internal instansi sekali. Kunci privat dan sertifikat CA hanya disimpan di brankas (`ca_key`). Pin dicetak dan dicatat di audit (`ca.initialize`), dihitung dari sertifikat yang dibuka ulang dari brankas. Perintah menolak bila CA pernah ada karena CA baru berarti rotasi. Format ini dikunci di ADR 0007 (diusulkan).
@@ -35,6 +37,15 @@ Tonggak **M1 Kerangka**, slice 7: kunci layanan dan tanda tangan `sig` bingkai c
   - jalur larik asosiatif kini diuji terhadap vektor.
 
   Komitmen placeholder rahasia, penolakan tanda tangan oleh kunci yang di-*rotate* di brankas, galat tak tertangkap pada perintah init kunci, dan pipa verifikasi pesan non-`Envelope` di agen ditunda ke slice pemiliknya.
+- core: slice CA internal juga melewati review adversarial, dengan hasil 1 kritis dan 4 sedang. Semuanya ditambal dengan tes regresi dan vektor, dan uji mutasi ulang membunuh 19 dari 19 mutan sasaran.
+  - **Kritis:** `sadmin:ca-init` selalu gagal di PHP 8.3 (runtime produksi), karena PHP 8.3 menuntut `default_bits` di config OpenSSL juga untuk kunci EC. Suite kini dijalankan di PHP 8.3 dan 8.4.
+  - **Sedang:**
+    - CSR berkurva eksplisit atau bertitik terkompresi sempat diterima dan menghasilkan sertifikat yang tak bisa diurai gateway Go.
+    - CSR versi selain 0 sempat lolos pemeriksaan lalu gagal sebagai galat internal.
+    - Profil penerbitan belum dijaga tes negatif.
+    - Agen belum diwajibkan memeriksa identitas gateway.
+  - **Rendah:** base64 tak kanonik, waktu mustahil yang dinormalkan PHP, warning `openssl_x509_parse` yang lolos, regex `$` yang meloloskan LF, pertahanan berlapis `X509Authority::sign()`, dan akar masalah OpenSSL yang hilang dari pesan galat.
+- core: tes `ServiceSignerTest` untuk penolakan `sig` base64url tak lagi gagal acak (≈6,5% run). Sig tanpa `+` atau `/` sebelumnya membuat varian uji identik dengan sig sah.
 
 ### Catatan migrasi
 - Migrasi baru, non-destruktif: indeks unik parsial `secrets_one_active_service_key` (satu kunci layanan aktif per tenant).

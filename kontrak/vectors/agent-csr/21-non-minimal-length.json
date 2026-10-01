@@ -1,0 +1,6 @@
+{
+  "description": "Panjang DER tak minimal (bentuk panjang berawalan nol) ditolak sebagai struktur",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIIAujBiAgEAMAAwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQsgfYVgnBhPyG7\n4AqdMcHqv2JiSpD0JqbKnvRULWQjVDLDQ/8k28HIIKdutbWZWu5cc0UaA0sJbT2I\nAyjX8orCoAAwCgYIKoZIzj0EAwIDSAAwRQIgCqwy3qpapgV+D/KDsgdl6oINVqxC\nu3H7LovCgsprVN0CIQC5aW3+zoo4r8FwcTMqrilO4L6SE0BSDUJ/daf2zHX+sQ==\n-----END CERTIFICATE REQUEST-----\n",
+  "valid": false,
+  "reason": "structure"
+}

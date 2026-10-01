@@ -70,7 +70,8 @@ class CertificateAuthorityTest extends TestCase
     /** Config OpenSSL uji: tes tak bergantung pada openssl.cnf sistem. */
     private function opensslOptions(string $extensions = ''): array
     {
-        return ['config' => $this->tempFile("[req]\ndistinguished_name = dn\n[dn]\n[ext]\n{$extensions}\n"), 'digest_alg' => 'sha256'];
+        // default_bits: PHP 8.3 menolak openssl_pkey_new tanpanya, juga untuk kunci EC (ADR 0007 §2.3 langkah 4).
+        return ['config' => $this->tempFile("[req]\ndefault_bits = 2048\ndistinguished_name = dn\n[dn]\n[ext]\n{$extensions}\n"), 'digest_alg' => 'sha256'];
     }
 
     /** @return array{OpenSSLAsymmetricKey, string} kunci agen P-256 dan CSR-nya (PEM) */
@@ -296,10 +297,14 @@ class CertificateAuthorityTest extends TestCase
         $secret = Secret::query()->where('purpose', SecretPurpose::CaKey->value)->sole();
         app(DestroySecret::class)->handle($secret->id, ActorType::LocalRoot, null);
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('sadmin:ca-init');
-
-        $this->ca()->fingerprint($this->tenantId);
+        try {
+            $this->ca()->fingerprint($this->tenantId);
+            $this->fail('CA yang dihancurkan seharusnya gagal tertutup.');
+        } catch (DomainException $e) {
+            // Pesan tak buntu: sadmin:ca-init akan menolak CA yang pernah ada, jadi rotasi ikut disebut.
+            $this->assertStringContainsString('sadmin:ca-init', $e->getMessage());
+            $this->assertStringContainsString('rotasi CA', $e->getMessage());
+        }
     }
 
     public function test_certificates_never_chain_to_another_tenants_authority(): void
@@ -399,6 +404,8 @@ class CertificateAuthorityTest extends TestCase
             ['extendedKeyUsage' => 'clientAuth # komentar'],
             ['subjectAltName' => 'URI:sadmin://server/x=y'],
             ['bukan nama' => 'clientAuth'],
+            ['basicConstraints' => "critical, CA:TRUE, pathlen:0\n"],
+            ["basicConstraints\n" => 'critical, CA:TRUE, pathlen:0'],
         ];
         $before = $this->temporaryConfigs();
 
@@ -425,8 +432,124 @@ class CertificateAuthorityTest extends TestCase
             $this->fail('OpenSSL seharusnya menolak CSR rusak.');
         } catch (InvalidArgumentException $e) {
             $this->assertStringContainsString('OpenSSL menolak', $e->getMessage());
+            // TEM-11: akar masalah dari OpenSSL ikut di pesan, bukan hilang ditelan penangan warning.
+            $this->assertStringContainsString('Rincian: ', $e->getMessage());
         }
 
         $this->assertNoTemporaryConfigLeft($before);
+    }
+
+    /**
+     * Sertifikat bertanda tangan kunci CA uji dengan profil yang bisa diatur, untuk menguji profil penerbitan.
+     *
+     * @return array{cert: string, ca: string, key: string, serial: int}
+     */
+    private function signedWithProfile(string $extensions, int $days, ?string $csr = null): array
+    {
+        $bundle = X509Authority::generate(AgentCertificateProfile::CA_COMMON_NAME, AgentCertificateProfile::authorityExtensions(), 30, 7);
+        preg_match('/\A(.+?-----END (?:EC )?PRIVATE KEY-----\n)(.+)\z/s', $bundle->expose(), $parts);
+        [$agentKey, $agentCsr] = $this->agentCsr();
+        $serial = 4242;
+        $options = $this->opensslOptions($extensions);
+        $cert = openssl_csr_sign($csr ?? $agentCsr, $parts[2], $parts[1], $days, $options + ['x509_extensions' => 'ext'], $serial);
+        $this->assertNotFalse($cert);
+        $this->assertTrue(openssl_x509_export($cert, $pem));
+
+        return ['cert' => $pem, 'ca' => $parts[2], 'key' => (string) openssl_pkey_get_details($agentKey)['key'], 'serial' => $serial];
+    }
+
+    /** Regresi TEM-04: gerbang "tertulis ⇒ terverifikasi" menolak tiap penyimpangan profil penerbitan, bukan hanya serial. */
+    public function test_issuance_profile_rejects_every_deviation(): void
+    {
+        $profile = 'subjectAltName = critical, URI:sadmin://server/'.self::SERVER_ID."\nbasicConstraints = critical, CA:FALSE\nkeyUsage = critical, digitalSignature\nextendedKeyUsage = clientAuth\nauthorityKeyIdentifier = keyid:always";
+        $good = $this->signedWithProfile($profile, 7);
+        $this->assertNotNull(AgentCertificateProfile::conformingIssued($good['cert'], $good['ca'], self::SERVER_ID, $good['key'], $good['serial']), 'Kontrol positif harus lolos.');
+
+        $deviations = [
+            'SAN tidak kritis' => [str_replace('subjectAltName = critical, ', 'subjectAltName = ', $profile), 7],
+            'basicConstraints tidak kritis' => [str_replace('basicConstraints = critical, ', 'basicConstraints = ', $profile), 7],
+            'ekstensi keenam' => [$profile."\nsubjectKeyIdentifier = hash", 7],
+            'ekstensi kurang' => [str_replace("\nauthorityKeyIdentifier = keyid:always", '', $profile), 7],
+            'umur 6 hari' => [$profile, 6],
+            'umur 8 hari' => [$profile, 8],
+        ];
+        foreach ($deviations as $what => [$extensions, $days]) {
+            $cert = $this->signedWithProfile($extensions, $days);
+            $this->assertNull(AgentCertificateProfile::conformingIssued($cert['cert'], $cert['ca'], self::SERVER_ID, $cert['key'], $cert['serial']), "{$what} seharusnya tak lolos profil penerbitan.");
+        }
+
+        [, $withSubject] = $this->agentCsr(['commonName' => 'agen']);
+        $subject = $this->signedWithProfile($profile, 7, $withSubject);
+        $this->assertNull(AgentCertificateProfile::conformingIssued($subject['cert'], $subject['ca'], self::SERVER_ID, (string) openssl_pkey_get_details(openssl_pkey_get_public($subject['cert']))['key'], $subject['serial']), 'Subjek tak kosong seharusnya tak lolos.');
+        $this->assertNull(AgentCertificateProfile::conformingIssued($good['cert'], $good['ca'], self::SERVER_ID, (string) openssl_pkey_get_details(openssl_pkey_get_public($subject['cert']))['key'], $good['serial']), 'Kunci selain kunci CSR seharusnya tak lolos.');
+
+        // Vektor 20 lolos aturan gateway (subjek diabaikan), tetapi bukan sertifikat terbitan core.
+        $vector = json_decode((string) file_get_contents(base_path('../kontrak/vectors/agent-cert/20-subject-ignored.json')), true);
+        $info = openssl_x509_parse($vector['cert_pem']);
+        $this->assertTrue(AgentCertificateProfile::verify($vector['cert_pem'], $vector['ca_pem'], (new \DateTimeImmutable($vector['now']))->getTimestamp())->valid());
+        $this->assertNull(AgentCertificateProfile::conformingIssued($vector['cert_pem'], $vector['ca_pem'], self::SERVER_ID, (string) openssl_pkey_get_details(openssl_pkey_get_public($vector['cert_pem']))['key'], (int) $info['serialNumber']));
+    }
+
+    /** Regresi TEM-04 (open): bundel CA berkunci bukan P-256 atau bertanda tangan kunci lain gagal tertutup. */
+    public function test_authority_bundle_must_be_p256_and_self_signed(): void
+    {
+        $p384 = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'secp384r1'] + $this->opensslOptions());
+        $this->assertInstanceOf(OpenSSLAsymmetricKey::class, $p384);
+        $options = $this->opensslOptions("basicConstraints = critical, CA:TRUE, pathlen:0\nkeyUsage = critical, keyCertSign, cRLSign");
+        $p384Cert = openssl_csr_sign(openssl_csr_new(['commonName' => AgentCertificateProfile::CA_COMMON_NAME], $p384, $options), null, $p384, 30, $options + ['x509_extensions' => 'ext'], 12);
+        $this->assertNotFalse($p384Cert);
+        $this->assertTrue(openssl_pkey_export($p384, $p384Pem, null, $options) && openssl_x509_export($p384Cert, $p384CertPem));
+
+        // Sertifikat berkunci A (cocok dengan kunci privat A) tetapi ditandatangani kunci B: hanya cek tanda tangan sendiri yang menolaknya.
+        $a = X509Authority::generate(AgentCertificateProfile::CA_COMMON_NAME, AgentCertificateProfile::authorityExtensions(), 30, 13);
+        $b = X509Authority::generate(AgentCertificateProfile::CA_COMMON_NAME, AgentCertificateProfile::authorityExtensions(), 30, 14);
+        preg_match('/\A(.+?-----END (?:EC )?PRIVATE KEY-----\n)(.+)\z/s', $a->expose(), $partsA);
+        preg_match('/\A(.+?-----END (?:EC )?PRIVATE KEY-----\n)/s', $b->expose(), $partsB);
+        $keyA = openssl_pkey_get_private($partsA[1]);
+        $this->assertInstanceOf(OpenSSLAsymmetricKey::class, $keyA);
+        $requestA = openssl_csr_new(['commonName' => AgentCertificateProfile::CA_COMMON_NAME], $keyA, $options);
+        $crossSigned = openssl_csr_sign($requestA, null, $partsB[1], 30, $options + ['x509_extensions' => 'ext'], 15);
+        $this->assertNotFalse($crossSigned);
+        $this->assertTrue(openssl_x509_export($crossSigned, $crossSignedPem));
+        $this->assertTrue(openssl_x509_check_private_key($crossSignedPem, $keyA));
+
+        foreach (['P-384' => $p384Pem.$p384CertPem, 'tanda tangan kunci lain' => $partsA[1].$crossSignedPem] as $case => $contents) {
+            $tenant = Tenant::factory()->create()->id;
+            app(StoreSecret::class)->handle($tenant, SecretPurpose::CaKey, new SecretValue($contents), ActorType::LocalRoot, null);
+            try {
+                $this->ca()->certificatePem($tenant);
+                $this->fail("Bundel CA {$case} seharusnya gagal dibuka.");
+            } catch (VaultIntegrityError $e) {
+                $this->assertStringContainsString('ADR 0007', $e->getMessage(), $case);
+            }
+        }
+    }
+
+    /** Regresi TEM-09: brankas hanya menandatangani teks CSR PEM menjadi sertifikat ujung. */
+    public function test_vault_signing_accepts_only_csr_text_and_leaf_profiles(): void
+    {
+        $bundle = X509Authority::generate(AgentCertificateProfile::CA_COMMON_NAME, AgentCertificateProfile::authorityExtensions(), 30, 7);
+        $csr = $this->agentCsr()[1];
+        $csrFile = $this->tempFile($csr);
+
+        foreach (['file://'.$csrFile, $csrFile, $csr."x\n", str_replace("\n", "\r\n", $csr)] as $input) {
+            try {
+                X509Authority::sign($bundle, $input, AgentCertificateProfile::agentExtensions(self::SERVER_ID), 7, 5);
+                $this->fail('Masukan selain teks satu blok CSR seharusnya ditolak.');
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString('CERTIFICATE REQUEST', $e->getMessage());
+            }
+        }
+
+        foreach ([['basicConstraints' => 'critical, CA:TRUE'], ['keyUsage' => 'critical, keyCertSign'], ['keyUsage' => 'cRLSign']] as $extensions) {
+            try {
+                X509Authority::sign($bundle, $csr, $extensions, 7, 5);
+                $this->fail('Ekstensi CA seharusnya ditolak: '.json_encode($extensions));
+            } catch (InvalidArgumentException $e) {
+                $this->assertStringContainsString('sertifikat ujung', $e->getMessage());
+            }
+        }
+
+        $this->assertStringStartsWith('-----BEGIN CERTIFICATE-----', X509Authority::sign($bundle, $csr, AgentCertificateProfile::agentExtensions(self::SERVER_ID), 7, 5));
     }
 }

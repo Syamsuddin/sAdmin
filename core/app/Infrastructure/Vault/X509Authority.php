@@ -20,9 +20,17 @@ final class X509Authority
     private const SECTION = 'sadmin_ext';
 
     /** Nama & nilai ekstensi di config OpenSSL: tanpa LF, `[`, `$`, `@`, `=`, atau `#`, jadi tak bisa menyisipkan bagian atau variabel. */
-    private const SAFE_NAME = '/^[A-Za-z]+$/';
+    private const SAFE_NAME = '/\A[A-Za-z]+\z/';
 
-    private const SAFE_VALUE = '/^[A-Za-z0-9:\/,. _-]+$/';
+    private const SAFE_VALUE = '/\A[A-Za-z0-9:\/,. _-]+\z/';
+
+    /** sign() hanya menerbitkan sertifikat ujung: ekstensi yang menjadikannya CA ditolak (pertahanan berlapis). */
+    private const CA_EXTENSION = '/CA:TRUE|keyCertSign|cRLSign/i';
+
+    private const CSR_PEM = '/\A-----BEGIN CERTIFICATE REQUEST-----\n(?:[A-Za-z0-9+\/=]+\n)+-----END CERTIFICATE REQUEST-----\n\z/';
+
+    /** @var list<string> warning PHP dan galat OpenSSL dari pemanggilan call() terakhir (tanpa material kunci) */
+    private static array $lastErrors = [];
 
     /** Kedua bentuk kunci diterima saat dibuka agar rahasia tetap terbaca setelah PHP diperbarui (ADR 0007 §2.1). */
     private const BUNDLE = '/\A(-----BEGIN ((?:EC )?PRIVATE KEY)-----\n(?:[A-Za-z0-9+\/=]+\n)+-----END \2-----\n)(-----BEGIN CERTIFICATE-----\n(?:[A-Za-z0-9+\/=]+\n)+-----END CERTIFICATE-----\n)\z/';
@@ -37,12 +45,12 @@ final class X509Authority
         return self::withConfig($extensions, function (array $options) use ($commonName, $days, $serial): SecretValue {
             $key = self::call(fn () => openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => self::CURVE] + $options));
             if (! $key instanceof OpenSSLAsymmetricKey) {
-                throw new RuntimeException('OpenSSL gagal membuat kunci CA.');
+                throw new RuntimeException('OpenSSL gagal membuat kunci CA.'.self::errors());
             }
             $csr = self::call(fn () => openssl_csr_new(['commonName' => $commonName], $key, $options));
             $cert = $csr === false ? false : self::call(fn () => openssl_csr_sign($csr, null, $key, $days, $options + ['x509_extensions' => self::SECTION], $serial));
             if ($cert === false) {
-                throw new RuntimeException('OpenSSL gagal membuat sertifikat CA.');
+                throw new RuntimeException('OpenSSL gagal membuat sertifikat CA.'.self::errors());
             }
             $keyPem = '';
             $certPem = '';
@@ -51,7 +59,7 @@ final class X509Authority
                 return openssl_pkey_export($key, $keyPem, null, $options);
             });
             if (! $exported || ! openssl_x509_export($cert, $certPem)) {
-                throw new RuntimeException('OpenSSL gagal membuat sertifikat CA.');
+                throw new RuntimeException('OpenSSL gagal mengekspor kunci atau sertifikat CA.'.self::errors());
             }
 
             try {
@@ -81,13 +89,20 @@ final class X509Authority
      */
     public static function sign(#[SensitiveParameter] SecretValue $bundle, string $csrPem, array $extensions, int $days, int $serial): string
     {
+        // OpenSSL juga menerima path `file://…`; hanya teks satu blok CSR yang boleh sampai ke sini.
+        if (preg_match(self::CSR_PEM, $csrPem) !== 1) {
+            throw new InvalidArgumentException('CSR yang ditandatangani CA wajib teks satu blok PEM CERTIFICATE REQUEST.');
+        }
+        if (preg_grep(self::CA_EXTENSION, $extensions) !== []) {
+            throw new InvalidArgumentException('CA internal hanya menerbitkan sertifikat ujung; ekstensi CA ditolak.');
+        }
         [$key, $caPem] = self::open($bundle);
 
         return self::withConfig($extensions, function (array $options) use ($key, $caPem, $csrPem, $days, $serial): string {
             $cert = self::call(fn () => openssl_csr_sign($csrPem, $caPem, $key, $days, $options + ['x509_extensions' => self::SECTION], $serial));
             $certPem = '';
             if ($cert === false || ! openssl_x509_export($cert, $certPem)) {
-                throw new InvalidArgumentException('OpenSSL menolak menandatangani CSR.');
+                throw new InvalidArgumentException('OpenSSL menolak menandatangani CSR.'.self::errors());
             }
 
             return $certPem;
@@ -131,7 +146,9 @@ final class X509Authority
      */
     private static function withConfig(array $extensions, callable $fn): mixed
     {
-        $lines = ['[req]', 'distinguished_name = sadmin_dn', '[sadmin_dn]', '['.self::SECTION.']'];
+        // default_bits: PHP 8.3 menolak openssl_pkey_new bila panjang kunci dari config < 384 bit, juga untuk kunci EC
+        // yang tak memakainya; tanpa baris ini sadmin:ca-init selalu gagal di runtime produksi (PHP 8.4 tak memeriksa).
+        $lines = ['[req]', 'default_bits = 2048', 'distinguished_name = sadmin_dn', '[sadmin_dn]', '['.self::SECTION.']'];
         foreach ($extensions as $name => $value) {
             if (preg_match(self::SAFE_NAME, $name) !== 1 || preg_match(self::SAFE_VALUE, $value) !== 1) {
                 throw new InvalidArgumentException("Ekstensi X.509 {$name} memuat karakter di luar himpunan aman config OpenSSL.");
@@ -158,9 +175,10 @@ final class X509Authority
     }
 
     /**
-     * Fungsi OpenSSL melapor gagal lewat nilai kembali dan warning PHP. Warning-nya ditelan di sini (Laravel
+     * Fungsi OpenSSL melapor gagal lewat nilai kembali dan warning PHP. Warning-nya ditangkap di sini (Laravel
      * menjadikannya exception yang bisa membawa isi argumen) dan antrean galat OpenSSL dikosongkan agar tak
-     * terbawa ke pemanggilan berikutnya; pemanggil memeriksa nilai kembali.
+     * terbawa ke pemanggilan berikutnya; pemanggil memeriksa nilai kembali. Teks keduanya (kode & alasan pustaka,
+     * tanpa nilai argumen) disimpan untuk pesan galat, supaya akar masalah tak hilang.
      *
      * @template T
      *
@@ -169,14 +187,25 @@ final class X509Authority
      */
     private static function call(callable $fn): mixed
     {
-        set_error_handler(static fn (): bool => true);
+        $errors = [];
+        set_error_handler(static function (int $level, string $message) use (&$errors): bool {
+            $errors[] = $message;
+
+            return true;
+        });
         try {
             return $fn();
         } finally {
             restore_error_handler();
-            while (openssl_error_string() !== false) {
-                // kosongkan antrean
+            while (($error = openssl_error_string()) !== false) {
+                $errors[] = $error;
             }
+            self::$lastErrors = $errors;
         }
+    }
+
+    private static function errors(): string
+    {
+        return self::$lastErrors === [] ? '' : ' Rincian: '.implode('; ', array_unique(self::$lastErrors));
     }
 }

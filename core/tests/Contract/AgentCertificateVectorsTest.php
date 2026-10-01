@@ -71,8 +71,8 @@ class AgentCertificateVectorsTest extends TestCase
         $this->assertSame($vector['reason'], $reason);
         $this->assertSame($vector['valid'], $reason === null);
         if (isset($request)) {
-            // CSR yang diteruskan ke OpenSSL dibangun ulang dari DER; untuk teks kanonik hasilnya identik.
-            $this->assertSame($vector['csr_pem'], $request['csr']);
+            // CSR yang diteruskan ke OpenSSL dibangun ulang dari DER: blok yang sama, selalu diakhiri tepat satu LF.
+            $this->assertSame(rtrim($vector['csr_pem'], "\n")."\n", $request['csr']);
             $this->assertStringStartsWith('-----BEGIN PUBLIC KEY-----', $request['publicKey']);
         }
     }

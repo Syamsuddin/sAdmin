@@ -1,0 +1,6 @@
+{
+  "description": "Dua LF penutup ditolak",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIG6MGICAQAwADBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABCyB9hWCcGE/Ibvg\nCp0xweq/YmJKkPQmpsqe9FQtZCNUMsND/yTbwcggp261tZla7lxzRRoDSwltPYgD\nKNfyisKgADAKBggqhkjOPQQDAgNIADBFAiAKrDLeqlqmBX4P8oOyB2Xqgg1WrEK7\ncfsui8KCymtU3QIhALlpbf7OijivwXBxMyquKU7gvpITQFINQn91p/bMdf6x\n-----END CERTIFICATE REQUEST-----\n\n",
+  "valid": false,
+  "reason": "pem"
+}

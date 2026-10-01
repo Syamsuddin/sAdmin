@@ -70,6 +70,6 @@ final class CertificateAuthority
     private function requireKeyId(string $tenantId): string
     {
         return $this->activeKeyId($tenantId)
-            ?? throw new DomainException('CA internal belum dibuat; jalankan sadmin:ca-init lebih dulu (ADR 0007 §2.1).');
+            ?? throw new DomainException('Tidak ada CA internal aktif. Bila belum pernah dibuat, jalankan sadmin:ca-init; bila pernah ada lalu dihancurkan, CA baru adalah rotasi CA yang butuh gerbang manusia (docs/22, ADR 0007 §2.1).');
     }
 }

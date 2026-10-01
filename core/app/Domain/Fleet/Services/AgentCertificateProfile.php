@@ -32,12 +32,21 @@ final class AgentCertificateProfile
 
     private const SAN_PREFIX = 'sadmin://server/';
 
-    private const CURVE = 'prime256v1';
-
     /** DER AlgorithmIdentifier ecdsa-with-SHA256 (1.2.840.10045.4.3.2) tanpa parameter. */
     private const ECDSA_WITH_SHA256 = "\x30\x0a\x06\x08\x2a\x86\x48\xce\x3d\x04\x03\x02";
 
     private const EMPTY_NAME = "\x30\x00";
+
+    private const VERSION_0 = "\x02\x01\x00";
+
+    /**
+     * SubjectPublicKeyInfo ECDSA P-256 berkurva bernama dengan titik tak terkompresi: awalan ini + 64 byte X‖Y (91 byte).
+     * OpenSSL juga menerima kurva eksplisit dan titik terkompresi, padahal Go `crypto/x509` menolak keduanya; karena
+     * itu aturan `key` memeriksa byte SPKI mentah (KONTRAK §2), bukan nama kurva hasil OpenSSL.
+     */
+    private const P256_SPKI_PREFIX = "\x30\x59\x30\x13\x06\x07\x2a\x86\x48\xce\x3d\x02\x01\x06\x08\x2a\x86\x48\xce\x3d\x03\x01\x07\x03\x42\x00\x04";
+
+    private const P256_SPKI_BYTES = 91;
 
     /** OID DER ekstensi profil sertifikat klien => kritis (KONTRAK §2: tepat lima, tiga kritis). */
     private const AGENT_EXTENSIONS = [
@@ -98,7 +107,8 @@ final class AgentCertificateProfile
 
     /**
      * Memeriksa CSR agen menurut KONTRAK §2 secara berurutan; pelanggaran pertama dilempar sebagai
-     * CertificateRequestRejected. Tanda tangan diverifikasi eksplisit atas DER CertificationRequestInfo.
+     * CertificateRequestRejected. Tata letak DER, versi, dan SPKI diperiksa atas byte mentah sebelum OpenSSL mengurai
+     * apa pun; tanda tangan diverifikasi eksplisit atas DER CertificationRequestInfo.
      *
      * @return array{csr: string, publicKey: string} CSR (PEM dibangun ulang dari DER) dan kunci publiknya (PEM)
      */
@@ -109,23 +119,29 @@ final class AgentCertificateProfile
         }
         $der = self::pemBlock($csrPem, 'CERTIFICATE REQUEST') ?? throw new CertificateRequestRejected('pem');
 
+        // CertificationRequest = SEQUENCE { CertificationRequestInfo, AlgorithmIdentifier, BIT STRING };
+        // CertificationRequestInfo = SEQUENCE { INTEGER 0, Name, SubjectPublicKeyInfo, [0] atribut }.
         $parts = self::children($der);
         $info = $parts !== null && count($parts) === 3 ? self::children($parts[0]) : null;
-        $signature = $parts !== null && count($parts) === 3 ? self::bitString($parts[2]) : null;
-        if ($parts === null || $info === null || count($info) !== 4 || $signature === null) {
+        if ($parts === null || $info === null || count($info) !== 4 || $info[0] !== self::VERSION_0
+            || ord($info[3][0]) !== 0xA0 || ord($parts[1][0]) !== 0x30 || ord($parts[2][0]) !== 0x03) {
             throw new CertificateRequestRejected('structure');
+        }
+        if (! self::isP256Spki($info[2])) {
+            throw new CertificateRequestRejected('key');
         }
         $csr = self::pem($der, 'CERTIFICATE REQUEST');
         $publicKey = self::quietly(fn () => openssl_csr_get_public_key($csr));
-        if (! $publicKey instanceof OpenSSLAsymmetricKey) {
+        $publicKeyPem = $publicKey instanceof OpenSSLAsymmetricKey ? self::publicKeyPem($publicKey) : null;
+        if (! $publicKey instanceof OpenSSLAsymmetricKey || $publicKeyPem === null) {
             throw new CertificateRequestRejected('structure');
         }
-
-        $publicKeyPem = self::p256Pem($publicKey) ?? throw new CertificateRequestRejected('key');
         if ($info[1] !== self::EMPTY_NAME) {
             throw new CertificateRequestRejected('subject');
         }
-        if ($parts[1] !== self::ECDSA_WITH_SHA256 || self::quietly(fn () => openssl_verify($parts[0], $signature, $publicKey, OPENSSL_ALGO_SHA256)) !== 1) {
+        $signature = self::bitString($parts[2]);
+        if ($parts[1] !== self::ECDSA_WITH_SHA256 || $signature === null
+            || self::quietly(fn () => openssl_verify($parts[0], $signature, $publicKey, OPENSSL_ALGO_SHA256)) !== 1) {
             throw new CertificateRequestRejected('signature');
         }
 
@@ -133,17 +149,19 @@ final class AgentCertificateProfile
     }
 
     /**
-     * Aturan penerimaan sertifikat klien di gateway (KONTRAK §2), berurutan, pada waktu $now (detik Unix). Sertifikat
-     * CA adalah masukan tepercaya (dipin), jadi CA yang tak terurai = galat masukan, bukan penolakan.
+     * Aturan penerimaan sertifikat klien di gateway (KONTRAK §2), berurutan, pada waktu $now (detik Unix). Tata letak
+     * DER dan SPKI diperiksa atas byte mentah sebelum OpenSSL mengurai. Sertifikat CA adalah masukan tepercaya (dipin),
+     * jadi CA yang tak terurai = galat masukan, bukan penolakan.
      */
     public static function verify(string $certPem, string $caPem, int $now): CertificateVerification
     {
         $caDer = self::pemBlock($caPem, 'CERTIFICATE');
-        $caNames = $caDer === null ? null : self::names($caDer);
+        $caFields = $caDer === null ? null : self::tbsFields($caDer);
         $ca = $caDer === null ? false : self::quietly(fn () => openssl_x509_read(self::pem($caDer, 'CERTIFICATE')));
-        $caInfo = $ca instanceof OpenSSLCertificate ? openssl_x509_parse($ca) : false;
+        $caInfo = $ca instanceof OpenSSLCertificate ? self::parsed($ca) : null;
         $caKey = $ca instanceof OpenSSLCertificate ? self::quietly(fn () => openssl_pkey_get_public($ca)) : false;
-        if ($caNames === null || $caInfo === false || ! $caKey instanceof OpenSSLAsymmetricKey) {
+        if ($caFields === null || $caInfo === null || ! $caKey instanceof OpenSSLAsymmetricKey
+            || $caFields['notBefore'] === null || $caFields['notAfter'] === null) {
             throw new InvalidArgumentException('Sertifikat CA tak dapat diurai.');
         }
 
@@ -151,11 +169,16 @@ final class AgentCertificateProfile
         if ($der === null) {
             return CertificateVerification::rejected('pem');
         }
-        $names = self::names($der);
-        $cert = $names === null ? false : self::quietly(fn () => openssl_x509_read(self::pem($der, 'CERTIFICATE')));
-        $info = $cert instanceof OpenSSLCertificate ? openssl_x509_parse($cert) : false;
-        $key = $cert instanceof OpenSSLCertificate ? self::quietly(fn () => openssl_pkey_get_public($cert)) : false;
-        if ($names === null || ! $cert instanceof OpenSSLCertificate || $info === false || ! $key instanceof OpenSSLAsymmetricKey) {
+        $fields = self::tbsFields($der);
+        if ($fields === null) {
+            return CertificateVerification::rejected('structure');
+        }
+        if (! self::isP256Spki($fields['spki'])) {
+            return CertificateVerification::rejected('key');
+        }
+        $cert = self::quietly(fn () => openssl_x509_read(self::pem($der, 'CERTIFICATE')));
+        $info = $cert instanceof OpenSSLCertificate ? self::parsed($cert) : null;
+        if (! $cert instanceof OpenSSLCertificate || $info === null || $fields['notBefore'] === null || $fields['notAfter'] === null) {
             return CertificateVerification::rejected('structure');
         }
 
@@ -164,10 +187,9 @@ final class AgentCertificateProfile
         $san = preg_match('#\AURI:'.preg_quote(self::SAN_PREFIX, '#').'('.self::ULID.')\z#', (string) ($extensions['subjectAltName'] ?? ''), $match) === 1;
 
         return match (true) {
-            $names['issuer'] !== $caNames['subject'] => CertificateVerification::rejected('issuer'),
+            $fields['issuer'] !== $caFields['subject'] => CertificateVerification::rejected('issuer'),
             self::quietly(fn () => openssl_x509_verify($cert, $caKey)) !== 1 => CertificateVerification::rejected('signature'),
-            ! self::within($info, $now) || ! self::within($caInfo, $now) => CertificateVerification::rejected('validity'),
-            self::p256Pem($key) === null => CertificateVerification::rejected('key'),
+            ! self::within($fields, $now) || ! self::within($caFields, $now) => CertificateVerification::rejected('validity'),
             ($extensions['basicConstraints'] ?? null) !== 'CA:FALSE' => CertificateVerification::rejected('basic_constraints'),
             ! $clientAuth => CertificateVerification::rejected('eku'),
             ! $san => CertificateVerification::rejected('san'),
@@ -184,22 +206,22 @@ final class AgentCertificateProfile
     public static function conformingIssued(string $certPem, string $caPem, string $serverId, string $publicKeyPem, int $serial): ?IssuedCertificate
     {
         $der = self::pemBlock($certPem, 'CERTIFICATE');
-        $names = $der === null ? null : self::names($der);
-        $info = $der === null ? false : self::quietly(fn () => openssl_x509_parse(self::pem($der, 'CERTIFICATE')));
+        $fields = $der === null ? null : self::tbsFields($der);
+        $info = $der === null ? null : self::parsed(self::pem($der, 'CERTIFICATE'));
         $key = $der === null ? false : self::quietly(fn () => openssl_pkey_get_public(self::pem($der, 'CERTIFICATE')));
-        if ($names === null || $info === false || ! $key instanceof OpenSSLAsymmetricKey) {
+        if ($fields === null || $info === null || ! $key instanceof OpenSSLAsymmetricKey || $fields['notBefore'] === null || $fields['notAfter'] === null) {
             return null;
         }
 
         $expectedExtensions = self::AGENT_EXTENSIONS;
         ksort($expectedExtensions);
-        $notBefore = (int) $info['validFrom_time_t'];
-        $notAfter = (int) $info['validTo_time_t'];
+        $notBefore = $fields['notBefore'];
+        $notAfter = $fields['notAfter'];
 
         $conforms = self::verify($certPem, $caPem, $notBefore)->serverId === $serverId
-            && $names['subject'] === self::EMPTY_NAME
+            && $fields['subject'] === self::EMPTY_NAME
             && self::issuedValidityConforms($notAfter - $notBefore, self::AGENT_CERT_DAYS)
-            && self::p256Pem($key) === $publicKeyPem
+            && self::publicKeyPem($key) === $publicKeyPem
             && ($info['serialNumber'] ?? null) === (string) $serial
             && ($info['signatureTypeSN'] ?? null) === 'ecdsa-with-SHA256'
             && self::extensionCriticality((string) $der) === $expectedExtensions;
@@ -247,33 +269,55 @@ final class AgentCertificateProfile
         return $flags;
     }
 
-    /** @param array<string, mixed> $info hasil openssl_x509_parse */
-    private static function within(array $info, int $now): bool
+    /** @param array{notBefore: ?int, notAfter: ?int} $fields */
+    private static function within(array $fields, int $now): bool
     {
-        return (int) $info['validFrom_time_t'] <= $now && $now <= (int) $info['validTo_time_t'];
+        return $fields['notBefore'] !== null && $fields['notAfter'] !== null && $fields['notBefore'] <= $now && $now <= $fields['notAfter'];
     }
 
-    /** PEM kunci publik bila ECDSA P-256; selain itu null. */
-    private static function p256Pem(OpenSSLAsymmetricKey $key): ?string
+    /** SPKI mentah = ECDSA P-256 berkurva bernama, titik tak terkompresi (KONTRAK §2 aturan `key`). */
+    private static function isP256Spki(string $spki): bool
+    {
+        return strlen($spki) === self::P256_SPKI_BYTES && str_starts_with($spki, self::P256_SPKI_PREFIX);
+    }
+
+    private static function publicKeyPem(OpenSSLAsymmetricKey $key): ?string
     {
         $details = openssl_pkey_get_details($key);
-        if ($details === false || $details['type'] !== OPENSSL_KEYTYPE_EC || ($details['ec']['curve_name'] ?? null) !== self::CURVE) {
+
+        return $details === false ? null : (string) $details['key'];
+    }
+
+    /**
+     * openssl_x509_parse yang total: warning ditelan, dan waktu yang tak terurai (time_t negatif) = tak terurai.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function parsed(OpenSSLCertificate|string $certificate): ?array
+    {
+        $info = self::quietly(fn () => openssl_x509_parse($certificate));
+        if (! is_array($info) || ! is_int($info['validFrom_time_t'] ?? null) || ! is_int($info['validTo_time_t'] ?? null)
+            || $info['validFrom_time_t'] < 0 || $info['validTo_time_t'] < 0) {
             return null;
         }
 
-        return (string) $details['key'];
+        return $info;
     }
 
-    /** DER satu blok PEM berlabel $label menurut aturan `pem` KONTRAK §2, atau null. */
+    /**
+     * DER satu blok PEM berlabel $label menurut aturan `pem` KONTRAK §2 (base64 standar berpadding yang kanonik), atau
+     * null.
+     */
     private static function pemBlock(string $text, string $label): ?string
     {
         $pattern = '/\A-----BEGIN '.$label.'-----\n((?:[A-Za-z0-9+\/=]+\n)+)-----END '.$label.'-----\n?\z/';
         if (preg_match($pattern, $text, $match) !== 1) {
             return null;
         }
-        $der = base64_decode(str_replace("\n", '', $match[1]), true);
+        $body = str_replace("\n", '', $match[1]);
+        $der = base64_decode($body, true);
 
-        return $der === false || $der === '' ? null : $der;
+        return $der === false || $der === '' || base64_encode($der) !== $body ? null : $der;
     }
 
     private static function pem(string $der, string $label): string
@@ -282,19 +326,62 @@ final class AgentCertificateProfile
     }
 
     /**
-     * Byte DER mentah penerbit dan subjek dari satu sertifikat X.509, atau null bila strukturnya bukan sertifikat.
+     * Byte DER mentah penerbit, subjek, dan SPKI satu sertifikat X.509, beserta masa berlakunya (detik Unix), atau null
+     * bila tata letaknya bukan Certificate = SEQUENCE { TBSCertificate, AlgorithmIdentifier, BIT STRING }. Waktu
+     * diurai sendiri dari DER karena konversi PHP menormalkan tanggal mustahil (bulan 13 menjadi Januari).
      *
-     * @return array{issuer: string, subject: string}|null
+     * @return array{issuer: string, subject: string, spki: string, notBefore: ?int, notAfter: ?int}|null
      */
-    private static function names(string $der): ?array
+    private static function tbsFields(string $der): ?array
     {
         $certificate = self::children($der);
-        $tbs = $certificate !== null && count($certificate) === 3 ? self::children($certificate[0]) : null;
+        if ($certificate === null || count($certificate) !== 3 || ord($certificate[1][0]) !== 0x30 || ord($certificate[2][0]) !== 0x03) {
+            return null;
+        }
+        $tbs = self::children($certificate[0]);
         if ($tbs !== null && $tbs !== [] && ord($tbs[0][0]) === 0xA0) {
             array_shift($tbs); // [0] EXPLICIT version
         }
+        if ($tbs === null || count($tbs) < 6 || ord($tbs[2][0]) !== 0x30 || ord($tbs[4][0]) !== 0x30 || ord($tbs[5][0]) !== 0x30) {
+            return null;
+        }
 
-        return $tbs !== null && count($tbs) >= 6 ? ['issuer' => $tbs[2], 'subject' => $tbs[4]] : null;
+        $validity = self::children($tbs[3]);
+
+        return [
+            'issuer' => $tbs[2],
+            'subject' => $tbs[4],
+            'spki' => $tbs[5],
+            'notBefore' => $validity !== null && count($validity) === 2 ? self::time($validity[0]) : null,
+            'notAfter' => $validity !== null && count($validity) === 2 ? self::time($validity[1]) : null,
+        ];
+    }
+
+    /**
+     * Detik Unix dari UTCTime `YYMMDDHHMMSSZ` atau GeneralizedTime `YYYYMMDDHHMMSSZ` (RFC 5280 §4.1.2.5), atau null bila
+     * bentuknya lain atau tanggal/jamnya mustahil.
+     */
+    private static function time(string $tlv): ?int
+    {
+        $head = self::header($tlv, 0, strlen($tlv));
+        $text = $head === null ? '' : substr($tlv, $head['start'], $head['end'] - $head['start']);
+        $pattern = match ($head['tag'] ?? null) {
+            0x17 => '/\A(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z\z/',
+            0x18 => '/\A(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})Z\z/',
+            default => null,
+        };
+        if ($pattern === null || preg_match($pattern, $text, $m) !== 1) {
+            return null;
+        }
+        [, $year, $month, $day, $hour, $minute, $second] = array_map('intval', $m);
+        if (strlen($m[1]) === 2) {
+            $year += $year < 50 ? 2000 : 1900;
+        }
+        if (! checkdate($month, $day, $year) || $hour > 23 || $minute > 59 || $second > 59) {
+            return null;
+        }
+
+        return gmmktime($hour, $minute, $second, $month, $day, $year);
     }
 
     /** Isi BIT STRING DER tanpa bit sisa, atau null. */

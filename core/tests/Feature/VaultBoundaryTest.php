@@ -62,6 +62,19 @@ class VaultBoundaryTest extends TestCase
         $this->assertSame([], $offenders, 'Pakai Vault::caCertificate()/signCertificateRequest(), bukan fungsi OpenSSL kunci privat atau X509Authority langsung.');
     }
 
+    /** ADR 0007 §2.3: CertificateAuthority satu-satunya penerbit sertifikat; pemanggil lain brankas CA tak diizinkan. */
+    public function test_only_the_certificate_authority_asks_the_vault_to_sign_certificates(): void
+    {
+        $callers = [];
+        foreach ($this->appSources() as $path => $source) {
+            if (! str_starts_with($path, self::VAULT) && preg_match('/->signCertificateRequest\s*\(/', $source) === 1) {
+                $callers[] = $path;
+            }
+        }
+
+        $this->assertSame(['Domain/Fleet/Services/CertificateAuthority.php'], $callers);
+    }
+
     public function test_secret_values_are_exposed_only_in_the_vault_and_notify_adapters(): void
     {
         $offenders = [];
