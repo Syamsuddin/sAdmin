@@ -6,6 +6,9 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- core: ADR 0008 (**Diusulkan**, belum diterima) tentang penukaran enrolment `Enroll`→`EnrollAccept`. ADR ini mengusulkan bentuk roster v1 dan kebijakan v1, format sidik jari kepercayaan, urutan dan atomisitas penukaran token, serta kolom `agents.trust_fingerprint`. ADR memuat empat pertanyaan untuk pemilik produk. Belum ada kode, kontrak, atau skema yang berubah, jadi tidak ada kenaikan versi. Slice implementasi menunggu keputusan pemilik.
+
 ## [0.1.0-alpha.7] — 2026-10-02
 
 Tonggak **M1 Kerangka**, slice 9: menambah server dan menerbitkan token enrolment (F-02 sisi core, bagian ketiga). Admin kini bisa mendaftarkan server terkelola dari console dan mendapat perintah enrolment agen. Penanganan `Enroll`→`EnrollAccept` di core menyusul.
