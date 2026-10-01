@@ -29,6 +29,9 @@ final class Vault
 
     public const WRAPPED_DEK_BYTES = self::NONCE_BYTES + self::DEK_BYTES + self::TAG_BYTES;
 
+    /** Seed kunci penanda tangan: dipakai di dalam brankas saja, tak pernah dikembalikan reveal() (ADR 0004 §2.1). */
+    private const ED25519_PURPOSES = [SecretPurpose::AuditKey, SecretPurpose::ServiceKey];
+
     public function __construct(private readonly MasterKeyLoader $loader) {}
 
     /** Mengenkripsi satu nilai dengan kunci data baru; ID dibuat pemanggil karena ikut diikat ke AAD. */
@@ -62,9 +65,25 @@ final class Vault
     /**
      * Membuka nilai satu rahasia (ADR 0003 §2.5). Pemanggil menyebut purpose & tenant yang ia harapkan, sehingga
      * penunjuk yang ditukar di tabel perujuk tak membuka rahasia lain. Baris dibaca ulang di bawah FOR SHARE agar
-     * tak hancur di tengah jalan. Gagal tertutup: tak pernah mengembalikan nilai yang tak terverifikasi.
+     * tak hancur di tengah jalan. Gagal tertutup: tak pernah mengembalikan nilai yang tak terverifikasi. Seed kunci
+     * Ed25519 ditolak: brankas memakainya di dalam saja (ADR 0004 §2.1).
      */
     public function reveal(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): SecretValue
+    {
+        if (in_array($expectedPurpose, self::ED25519_PURPOSES, true)) {
+            throw new InvalidArgumentException("Seed {$expectedPurpose->value} tak pernah dibuka keluar brankas; pakai signEd25519() atau ed25519PublicKey() (ADR 0004 §2.1).");
+        }
+
+        return $this->open($secretId, $expectedPurpose, $tenantId);
+    }
+
+    /** Membandingkan nilai tersimpan dengan $expected di dalam brankas tanpa mengembalikannya (baca ulang saat simpan, §2.4). */
+    public function matches(string $secretId, SecretPurpose $expectedPurpose, string $tenantId, #[SensitiveParameter] SecretValue $expected): bool
+    {
+        return $this->open($secretId, $expectedPurpose, $tenantId)->equals($expected);
+    }
+
+    private function open(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): SecretValue
     {
         return DB::transaction(function () use ($secretId, $expectedPurpose, $tenantId): SecretValue {
             $secret = Secret::query()->sharedLock()->findOrFail($secretId);
@@ -96,6 +115,21 @@ final class Vault
 
             return new SecretValue($plain);
         });
+    }
+
+    /**
+     * Menandatangani pesan dengan kunci Ed25519 yang seed-nya ada di brankas (ADR 0004 §2.1). Seed tak pernah keluar
+     * dari Infrastructure/Vault; pemanggil hanya menerima tanda tangan 64 byte.
+     */
+    public function signEd25519(string $secretId, SecretPurpose $expectedPurpose, string $tenantId, string $message): string
+    {
+        return Ed25519::sign($this->open($secretId, self::signingPurpose($expectedPurpose), $tenantId), $message);
+    }
+
+    /** Kunci publik 32 byte dari seed Ed25519 di brankas (ADR 0004 §2.1). */
+    public function ed25519PublicKey(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): string
+    {
+        return Ed25519::publicKey($this->open($secretId, self::signingPurpose($expectedPurpose), $tenantId));
     }
 
     /** Membuktikan satu kunci data terbuka dengan kunci induk yang termuat, tanpa membuka nilai rahasianya (§2.6). */
@@ -147,6 +181,16 @@ final class Vault
         }
 
         return $dek;
+    }
+
+    /** Hanya kunci yang di ../kontrak/KONTRAK.md §3 berjenis Ed25519; rahasia lain tak boleh dipakai menandatangani. */
+    private static function signingPurpose(SecretPurpose $purpose): SecretPurpose
+    {
+        if (! in_array($purpose, self::ED25519_PURPOSES, true)) {
+            throw new InvalidArgumentException("Rahasia ber-purpose {$purpose->value} bukan kunci Ed25519.");
+        }
+
+        return $purpose;
     }
 
     private static function wrapAad(string $tenantId, string $keyWrapId, int $masterKeyVersion): string

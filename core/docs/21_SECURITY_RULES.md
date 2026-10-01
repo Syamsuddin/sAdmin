@@ -36,7 +36,7 @@ Pemilik aturan keamanan paket core. Level risiko: `../catalog/CATALOG.md` §1. K
 | AI | kebijakan aliran data per kelas; rahasia tidak pernah masuk prompt; isi email (pasca-MVP) tak pernah dibaca AI |
 
 ## Audit & integritas
-- Setiap Action yang mengubah state menulis `audit_entries` dalam transaksi yang sama.
+- Setiap Action yang mengubah state menulis `audit_entries` dalam transaksi yang sama. Pengecualian: pembuatan checkpoint audit, karena checkpoint adalah artefak audit itu sendiri (docs/adr/0004 §2.4).
 - Checkpoint bertanda tangan tiap 15 menit atau 100 entri → agen (berkas append-only), offsite object lock, digest harian.
 - `sadmin:audit-verify` harian (penjadwal) dan manual; rekonsiliasi dengan receipt agen; ketidakcocokan = alert critical.
 

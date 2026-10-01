@@ -60,6 +60,7 @@ Begitu rahasia produksi pertama tertulis, rincian ini tidak dapat diubah tanpa m
 
 ### 2.5 Pembacaan
 - Rahasia hanya dibaca lewat `App\Infrastructure\Vault\Vault::reveal(secret_id, purpose yang diharapkan, tenant_id)`. Pemanggil selalu menyebut keperluan dan tenant yang ia harapkan.
+  - Pengecualian: seed kunci Ed25519 (`audit_key`, `service_key`) tidak pernah dikembalikan `reveal()`. Brankas memakainya di dalam saja (`signEd25519()`, `ed25519PublicKey()`; ADR 0004 §2.1). Baca ulang saat menyimpan (§2.4) memakai `matches()`, yang membandingkan nilai di dalam brankas tanpa mengembalikannya.
   - AAD hanya mencegah baris `secrets` diubah. Tanpa pemeriksaan ini, penunjuk yang ditukar di tabel perujuk (mis. `ai_provider_configs.api_key_secret_id` diarahkan ke kunci audit) akan membuka rahasia lain untuk keperluan yang salah.
   - Pemeriksaan ini bermakna karena `purpose` dan `tenant_id` sendiri dijamin AAD.
 - Urutan `reveal()`:
@@ -131,3 +132,4 @@ Vektor ini dihitung oleh skrip independen yang hanya memakai fungsi sodium dan t
 ## 6. Riwayat
 - 2026-10-01: diusulkan bersama slice F-01a Brankas (M1).
 - 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi). Perubahannya: lingkungan dev memakai daftar izin `local`/`testing`; di luar dev `CREDENTIALS_DIRECTORY` wajib di bawah `/run/credentials/`; kunci dev ditolak bila ikut ada kredensial systemd; regex nama kredensial memakai `\z`; berkas kunci dibaca lewat satu handle; `reveal()` mewajibkan purpose dan tenant yang diharapkan dan membaca ulang baris dengan `FOR SHARE`; `SecretValue` menimpa nilainya dengan nol saat dihancurkan. Format byte (§2.2–2.3) dan vektor emas tidak berubah.
+- 2026-10-01: §2.5 ditambah pengecualian seed kunci Ed25519 bersama ADR 0004 (review adversarial F-04b): `reveal()` menolak `audit_key`/`service_key`, baca ulang saat simpan memakai `matches()`. Format byte dan vektor emas tidak berubah.

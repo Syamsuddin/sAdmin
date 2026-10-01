@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='Vault|SecretValue'",
+    "test_satu": "php artisan test --filter='Checkpoint|AuditKey|Ed25519|AuditChain'",
     "vault_check": "php artisan sadmin:vault-check"
   },
   "sesi": [
@@ -52,14 +52,21 @@
       "step": 8,
       "detik": 1783,
       "tok_est": 69634
+    },
+    {
+      "mulai": "2026-10-01T09:13:37+08:00",
+      "selesai": null,
+      "step": 7,
+      "detik": 2121,
+      "tok_est": 102248
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "0f594247e1b863eb",
+    "sidik": "7d97a138fb69e9e8",
     "dokumen": 27,
-    "disegel": "2026-10-01T08:34:42+08:00",
+    "disegel": "2026-10-01T09:13:37+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -75,8 +82,14 @@
         "dari": "4dcc55515f1921b3",
         "ke": "0f594247e1b863eb",
         "pada": "2026-10-01T00:01:45+08:00"
+      },
+      {
+        "dari": "0f594247e1b863eb",
+        "ke": "7d97a138fb69e9e8",
+        "pada": "2026-10-01T09:13:37+08:00"
       }
-    ]
+    ],
+    "sidik_sebelumnya": "0f594247e1b863eb"
   },
   "riwayat_fitur": [
     {
@@ -1118,13 +1131,239 @@
         "Arsip 23: AC-01 belum diarsipkan karena F-01 (install.sh) masih aktif"
       ],
       "selesai": "2026-10-01T09:09:47+08:00"
+    },
+    {
+      "fitur": "F-04b Checkpoint audit",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-10-01T09:20:23+08:00",
+      "rencana": [
+        "docs/adr/0004-checkpoint-audit.md",
+        "docs/adr/README.md",
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/checkpoint",
+        "database/migrations/2026_10_01_000300_create_audit_checkpoints_table.php",
+        "database/migrations/2026_10_01_000400_add_single_active_audit_key_index_to_secrets.php",
+        "app/Infrastructure/Vault/Ed25519.php",
+        "app/Infrastructure/Vault/Vault.php",
+        "app/Domain/Audit/Services/CheckpointSigner.php",
+        "app/Domain/Audit/Services/AuditChainVerifier.php",
+        "app/Domain/Audit/Services/AuditCheckpointVerifier.php",
+        "app/Domain/Audit/Data/CheckpointVerification.php",
+        "app/Domain/Audit/Data/CheckpointResult.php",
+        "app/Domain/Audit/Data/CheckpointStatus.php",
+        "app/Domain/Audit/Actions/InitializeAuditKey.php",
+        "app/Domain/Audit/Actions/CreateAuditCheckpoint.php",
+        "app/Console/Commands/AuditKeyInitCommand.php",
+        "app/Console/Commands/AuditCheckpointCommand.php",
+        "app/Console/Commands/AuditVerifyCommand.php",
+        "routes/console.php",
+        "tests/Support/InteractsWithAuditChain.php",
+        "tests/Unit/Infrastructure/Ed25519Test.php",
+        "tests/Contract/CheckpointSignatureVectorsTest.php",
+        "tests/Feature/Audit/InitializeAuditKeyTest.php",
+        "tests/Feature/Audit/CreateAuditCheckpointTest.php",
+        "tests/Feature/Audit/AuditCheckpointTamperTest.php",
+        "tests/Feature/VaultBoundaryTest.php",
+        "docs/07_DATA_MODEL.md",
+        "docs/11_COMMANDS.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md",
+        "../CHANGELOG.md",
+        "docs/_CODING_LEDGER.json",
+        "docs/_TOKEN_LEDGER.json"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Keputusan: ADR 0004 + kontrak",
+          "mulai": "2026-10-01T09:20:45+08:00",
+          "selesai": "2026-10-01T09:22:45+08:00",
+          "detik": 121,
+          "tok_est": 26333,
+          "muat": [
+            "docs/adr/0004-checkpoint-audit.md",
+            "docs/adr/README.md",
+            "../kontrak/KONTRAK.md",
+            "../kontrak/VERSION",
+            "../kontrak/vectors/checkpoint/01-first-checkpoint.json",
+            "docs/adr/0001-format-rantai-audit.md",
+            "docs/adr/0003-format-brankas.md",
+            "docs/07_DATA_MODEL.md",
+            "docs/21_SECURITY_RULES.md",
+            "docs/22_CHANGE_POLICY.md",
+            "docs/12_PROJECT_STRUCTURE.md",
+            "docs/14_ERROR_HANDLING.md",
+            "docs/13_TESTING.md",
+            "docs/11_COMMANDS.md",
+            "docs/23_ACCEPTANCE_CRITERIA.md"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Skema/migrasi",
+          "mulai": "2026-10-01T09:23:32+08:00",
+          "selesai": "2026-10-01T09:23:51+08:00",
+          "detik": 20,
+          "tok_est": 8168,
+          "muat": [
+            "database/migrations/2026_10_01_000300_create_audit_checkpoints_table.php",
+            "database/migrations/2026_10_01_000400_add_single_active_audit_key_index_to_secrets.php",
+            "database/migrations/2026_09_30_000200_create_audit_entries_table.php",
+            "database/migrations/2026_10_01_000200_create_secrets_table.php",
+            "docs/07_DATA_MODEL.md"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Akses data: Ed25519 di brankas",
+          "mulai": "2026-10-01T09:23:51+08:00",
+          "selesai": "2026-10-01T09:25:48+08:00",
+          "detik": 117,
+          "tok_est": 3711,
+          "muat": [
+            "app/Infrastructure/Vault/Ed25519.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Infrastructure/Vault/SecretValue.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Service/logika domain",
+          "mulai": "2026-10-01T09:25:48+08:00",
+          "selesai": "2026-10-01T09:28:32+08:00",
+          "detik": 164,
+          "tok_est": 8789,
+          "muat": [
+            "app/Domain/Audit/Services/CheckpointSigner.php",
+            "app/Domain/Audit/Services/AuditChainVerifier.php",
+            "app/Domain/Audit/Services/AuditCheckpointVerifier.php",
+            "app/Domain/Audit/Data/CheckpointVerification.php",
+            "app/Domain/Audit/Data/CheckpointResult.php",
+            "app/Domain/Audit/Data/CheckpointStatus.php",
+            "app/Domain/Audit/Actions/CreateAuditCheckpoint.php",
+            "app/Domain/Audit/Actions/InitializeAuditKey.php",
+            "app/Domain/Audit/Actions/AppendAuditEntry.php",
+            "app/Domain/Audit/Data/AuditEntryData.php",
+            "app/Domain/Vault/Actions/StoreSecret.php",
+            "app/Domain/Identity/Actions/InitializeInstitution.php"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "Endpoint: perintah artisan + penjadwal",
+          "mulai": "2026-10-01T09:28:32+08:00",
+          "selesai": "2026-10-01T09:30:38+08:00",
+          "detik": 126,
+          "tok_est": 8046,
+          "muat": [
+            "app/Console/Commands/AuditKeyInitCommand.php",
+            "app/Console/Commands/AuditCheckpointCommand.php",
+            "app/Console/Commands/AuditVerifyCommand.php",
+            "routes/console.php",
+            "docs/11_COMMANDS.md",
+            "docs/adr/0004-checkpoint-audit.md",
+            "database/migrations/2026_10_01_000300_create_audit_checkpoints_table.php"
+          ]
+        },
+        {
+          "no": 6,
+          "nama": "Tes",
+          "mulai": "2026-10-01T09:32:08+08:00",
+          "selesai": "2026-10-01T09:38:07+08:00",
+          "detik": 359,
+          "tok_est": 17136,
+          "muat": [
+            "tests/Support/InteractsWithAuditChain.php",
+            "tests/Unit/Infrastructure/Ed25519Test.php",
+            "tests/Contract/CheckpointSignatureVectorsTest.php",
+            "tests/Feature/Audit/InitializeAuditKeyTest.php",
+            "tests/Feature/Audit/CreateAuditCheckpointTest.php",
+            "tests/Feature/Audit/AuditCheckpointTamperTest.php",
+            "tests/Feature/VaultBoundaryTest.php",
+            "tests/Feature/Audit/AuditChainTamperTest.php",
+            "tests/Support/InteractsWithVault.php",
+            "tests/Feature/Vault/VaultRedactionTest.php"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Tambal temuan review adversarial",
+          "mulai": "2026-10-01T09:58:30+08:00",
+          "selesai": "2026-10-01T10:18:44+08:00",
+          "detik": 1214,
+          "tok_est": 30065,
+          "muat": [
+            "docs/adr/0004-checkpoint-audit.md",
+            "docs/adr/0003-format-brankas.md",
+            "app/Domain/Audit/Services/AuditCheckpointVerifier.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Domain/Vault/Actions/StoreSecret.php",
+            "tests/Feature/Audit/AuditCheckpointTamperTest.php",
+            "tests/Feature/Audit/InitializeAuditKeyTest.php",
+            "tests/Feature/Audit/CreateAuditCheckpointTest.php",
+            "../kontrak/KONTRAK.md",
+            "../kontrak/vectors/checkpoint/oracle.py"
+          ]
+        }
+      ],
+      "detik": 2121,
+      "tok_est": 102248,
+      "deviasi": [
+        "Di luar rencana: app/Domain/Vault/Actions/StoreSecret.php, tests/Feature/Vault/StoreSecretTest.php, tests/Feature/Vault/VaultTamperTest.php, docs/adr/0003-format-brankas.md, docs/21_SECURITY_RULES.md — tambal temuan review #4 dan #9 (reveal menolak seed Ed25519; pengecualian audit untuk checkpoint)",
+        "audit_checkpoints.seq tanpa FK ke audit_entries: docs/07 tak meminta, dan FK mengubah jalur penolakan TRUNCATE audit_entries (ADR 0001 §2.5)",
+        "Target audit.key_initialize ditulis lewat interpolasi secret:{id}, bukan konkatenasi seperti StoreSecret, karena heuristik S5 gerbang salah menandai konkatenasi sebagai rahasia",
+        "Kontrak 0.2.0 ke 0.3.0: KONTRAK §3 merinci isi tanda tangan kunci audit dan mewajibkan base64 kanonik",
+        "Gerbang langkah ke-8 Tambal temuan review adversarial di luar 7 step baku"
+      ],
+      "warn_dilewati": [
+        "S1: AC-03 adalah blok bersama; butir checkpoint dibuktikan 73 tes Checkpoint/AuditKey dan suite Contract 53 tes",
+        "S6: review adversarial subagen (0 kritis, 0 tinggi; 2 sedang dan 6 rendah ditambal, 1 rendah ditunda) ditambah 23 mutan yang semuanya mati",
+        "S7: path berawalan core/ vs rencana relatif; tambahan nyata tercatat di deviasi",
+        "make contract-test belum ada (Makefile dan sisi Go belum dibuat); diganti php artisan test --testsuite=Contract"
+      ],
+      "asumsi": [
+        "Membuat checkpoint tidak menulis entri audit (ADR 0004 §2.4); docs/21 diberi pengecualian",
+        "Tenant checkpoint = tenant instansi (MVP satu tenant); kunci per tenant mengikat tenant sehingga tenant_id tak ikut ditandatangani",
+        "Kunci audit dibuat sekali seumur instalasi; destroy lalu init ditolak karena itu rotasi (ADR baru)",
+        "Penjadwal tiap menit memenuhi 15 menit atau 100 entri dengan resolusi satu menit",
+        "Exit 2 sadmin:audit-verify (checkpoint tak dapat diperiksa karena brankas) adalah perincian dari docs/11 exit 0 = hijau"
+      ],
+      "dokumen_diperbarui": [
+        "docs/adr/0004-checkpoint-audit.md (baru, Diusulkan)",
+        "docs/adr/README.md",
+        "docs/adr/0003-format-brankas.md (§2.5 pengecualian seed Ed25519)",
+        "../kontrak/KONTRAK.md (§3) dan ../kontrak/VERSION 0.3.0",
+        "../kontrak/vectors/checkpoint (4 vektor + oracle.py)",
+        "docs/07_DATA_MODEL.md (audit_checkpoints, indeks secrets)",
+        "docs/11_COMMANDS.md",
+        "docs/21_SECURITY_RULES.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-03)",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "Carbon::parse menelan akhiran BC dan salah mengurai tahun 6 digit dari timestamptz, sedangkan infinity melempar; aman hanya karena tanda tangan checkpoint lalu gagal",
+        "FK yang merujuk audit_entries membuat PostgreSQL menolak TRUNCATE lewat cek FK sebelum trigger append-only berjalan",
+        "Indeks unik parsial membuat kueri secrets audit_key tanpa filter tenant terurut tenant_id; tes lintas tenant butuh ULID terkecil dan terbesar"
+      ],
+      "ditunda": [
+        "Penerimaan ADR 0004 (dan ADR 0003) oleh pemilik produk, termasuk kontrak 0.3.0: syarat merge",
+        "Merge feat/m1-audit-checkpoint (bertumpuk di feat/m1-brankas) ke main dan tag pra-rilis: keputusan pemilik produk",
+        "Jangkar checkpoint ke agen, offsite, dan digest (anchored_to): butuh edge, backup offsite, notifikasi",
+        "Alert audit_mismatch critical paling lambat 60 detik (AC-03 tetap aktif di 23): slice Alerts",
+        "Review #7: log error tiap menit sebelum audit-key-init; install.sh membuat kunci sebelum mengaktifkan penjadwal",
+        "Rotasi kunci audit (rujukan kunci per checkpoint): ADR baru",
+        "Saran review: VaultUnavailable karena master_key_version key_wraps berbeda sebaiknya kelas integritas — keputusan ADR 0003",
+        "Arsip 23: AC-03 belum diarsipkan karena alert belum ada"
+      ],
+      "selesai": "2026-10-01T10:18:44+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 5050,
-    "tok_est": 226223,
+    "detik": 7171,
+    "tok_est": 328471,
     "tok_terukur": 0,
-    "step": 39,
-    "fitur": 7
+    "step": 46,
+    "fitur": 8
   }
 }

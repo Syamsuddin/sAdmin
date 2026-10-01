@@ -345,12 +345,13 @@ Trigger menolak `UPDATE` dan `DELETE`. Hak `UPDATE/DELETE/TRUNCATE` dicabut dari
 ### audit_checkpoints
 | Kolom | Tipe | Constraint | Catatan |
 |---|---|---|---|
-| seq | bigint | PK | seq entri terakhir yang dicakup |
+| seq | bigint | PK, CHECK ≥ 1 | seq entri terakhir yang dicakup; tanpa FK (ADR 0004 §2.3) |
 | tenant_id | char(26) | NOT NULL | |
-| hash | char(64) | NOT NULL | |
-| signature | text | NOT NULL | Ed25519 kunci audit |
-| anchored_to | text[] | NOT NULL | subset {'agents','offsite','digest'} |
-| created_at | timestamptz | NOT NULL | tiap 15 menit atau 100 entri |
+| hash | char(64) | NOT NULL, CHECK hex huruf kecil | `hash` entri ber-`seq` itu |
+| signature | text | NOT NULL, CHECK base64 88 karakter | Ed25519 kunci audit; isi yang ditandatangani: `../kontrak/KONTRAK.md` §3 |
+| anchored_to | text[] | NOT NULL, CHECK subset | subset {'agents','offsite','digest'}; `{}` saat dibuat |
+| created_at | timestamptz(6) | NOT NULL | ikut ditandatangani; tiap 15 menit atau 100 entri |
+Trigger menolak `DELETE`/`TRUNCATE` dan `UPDATE` selain penambahan `anchored_to` (ADR 0004).
 
 ### agent_audit_receipts
 | Kolom | Tipe | Constraint | Catatan |
@@ -375,6 +376,7 @@ Trigger menolak `UPDATE` dan `DELETE`. Hak `UPDATE/DELETE/TRUNCATE` dicabut dari
 | key_wrap_id | char(26) | FK→key_wraps.id, UNIQUE | satu kunci data per rahasia (1:1, ADR 0003) |
 | status | text | CHECK IN ('active','rotated','destroyed') | destroyed = ciphertext ditimpa nol, baris tetap |
 | created_at / updated_at | timestamptz | | |
+Indeks unik parsial `secrets_one_active_audit_key (tenant_id) WHERE purpose='audit_key' AND status='active'`: tepat satu kunci audit aktif per tenant (ADR 0004).
 
 ### key_wraps
 | Kolom | Tipe | Constraint | Catatan |
