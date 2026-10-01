@@ -15,6 +15,7 @@ use App\Models\Tenant;
 use DomainException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\InteractsWithVault;
 use Tests\TestCase;
@@ -68,7 +69,7 @@ class DestroySecretTest extends TestCase
 
         $this->expectException(DomainException::class);
 
-        app(Vault::class)->reveal(Secret::query()->findOrFail($secret->id));
+        app(Vault::class)->reveal($secret->id, SecretPurpose::DbPassword, $this->tenant->id);
     }
 
     public function test_destroying_twice_is_a_no_op_without_audit(): void
@@ -90,7 +91,19 @@ class DestroySecretTest extends TestCase
 
         $this->destroy($gone);
 
-        $this->assertSame('tetap', app(Vault::class)->reveal(Secret::query()->findOrFail($kept->id))->expose());
+        $this->assertSame('tetap', app(Vault::class)->reveal($kept->id, SecretPurpose::DbPassword, $this->tenant->id)->expose());
+    }
+
+    public function test_destroy_locks_the_row_before_deciding(): void
+    {
+        $secret = $this->store('kata-sandi-db');
+        DB::enableQueryLog();
+
+        $this->destroy($secret);
+
+        // Tanpa FOR UPDATE, dua penghancuran serentak sama-sama melihat `active` dan mencatat audit ganda.
+        $locked = array_filter(DB::getQueryLog(), fn (array $q): bool => preg_match('/^select .* from "secrets" .* for update$/i', $q['query']) === 1);
+        $this->assertNotEmpty($locked, 'DestroySecret wajib mengunci baris secrets (FOR UPDATE).');
     }
 
     public function test_unknown_secret_is_rejected(): void

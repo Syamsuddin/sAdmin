@@ -10,7 +10,8 @@ use WeakMap;
 /**
  * Pembawa nilai rahasia polos (ADR 0003 §2.4). Nilainya disimpan di luar objek (WeakMap privat), sehingga
  * var_dump, print_r, var_export, json_encode, dan cast (array) tak pernah mencetaknya, dan objek tak dapat
- * diserialisasi atau diklon. Nilai hanya keluar lewat expose(), tepat di titik pemakaiannya.
+ * diserialisasi atau diklon. Nilai hanya keluar lewat expose(), tepat di titik pemakaiannya, dan ditimpa nol saat
+ * objek dihancurkan.
  */
 final class SecretValue
 {
@@ -25,6 +26,16 @@ final class SecretValue
 
         self::$values ??= new WeakMap;
         self::$values[$this] = $value;
+    }
+
+    /** Upaya terbaik: menimpa nilai dengan nol bila tak ada salinan lain yang masih memegangnya (ADR 0003 §2.4). */
+    public function __destruct()
+    {
+        if (self::$values !== null && isset(self::$values[$this])) {
+            $value = self::$values[$this];
+            unset(self::$values[$this]);
+            sodium_memzero($value);
+        }
     }
 
     public function expose(): string

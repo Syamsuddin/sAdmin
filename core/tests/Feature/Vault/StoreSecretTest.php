@@ -8,6 +8,7 @@ use App\Domain\Vault\Data\SecretPurpose;
 use App\Domain\Vault\Data\SecretStatus;
 use App\Infrastructure\Vault\SecretValue;
 use App\Infrastructure\Vault\Vault;
+use App\Infrastructure\Vault\VaultIntegrityError;
 use App\Infrastructure\Vault\VaultUnavailable;
 use App\Models\AuditEntry;
 use App\Models\Casts\Bytea;
@@ -67,7 +68,7 @@ class StoreSecretTest extends TestCase
         $this->assertSame($this->tenant->id, $row->keyWrap->tenant_id);
         $this->assertTrue(Str::isUlid($row->id) && $row->id === strtolower($row->id));
 
-        $this->assertSame($value, app(Vault::class)->reveal($row)->expose());
+        $this->assertSame($value, app(Vault::class)->reveal($row->id, SecretPurpose::TelegramToken, $this->tenant->id)->expose());
     }
 
     public function test_writes_one_audit_entry_with_purpose_only(): void
@@ -92,7 +93,7 @@ class StoreSecretTest extends TestCase
 
         $secret = $this->store($value, SecretPurpose::DeployKey);
 
-        $this->assertSame($value, app(Vault::class)->reveal($secret->fresh() ?? $secret)->expose());
+        $this->assertSame($value, app(Vault::class)->reveal($secret->id, SecretPurpose::DeployKey, $this->tenant->id)->expose());
     }
 
     public function test_each_secret_gets_its_own_data_key_and_nonces(): void
@@ -109,11 +110,44 @@ class StoreSecretTest extends TestCase
         $this->assertNotSame($a->keyWrap->wrapped_dek, $b->keyWrap->wrapped_dek);
     }
 
+    public function test_data_keys_are_never_reused(): void
+    {
+        $kek = random_bytes(32);
+        $this->useVaultKey($kek);
+        $unwrap = fn (Secret $secret): string|false => sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
+            substr((string) $secret->keyWrap?->wrapped_dek, 24),
+            "sadmin-vault/1/key_wrap/{$secret->tenant_id}/{$secret->key_wrap_id}/1",
+            substr((string) $secret->keyWrap?->wrapped_dek, 0, 24),
+            $kek,
+        );
+
+        $a = $unwrap($this->store('nilai-a'));
+        $b = $unwrap($this->store('nilai-b'));
+
+        $this->assertIsString($a);
+        $this->assertIsString($b);
+        $this->assertSame(32, strlen($a));
+        $this->assertNotSame($a, $b, 'Setiap rahasia wajib punya kunci data sendiri (ADR 0003 §2.2).');
+    }
+
+    public function test_secret_that_does_not_read_back_identically_is_rolled_back(): void
+    {
+        // Kunci induk berganti tepat setelah key_wraps tertulis: pembacaan ulang di transaksi yang sama harus gagal.
+        KeyWrap::created(fn () => $this->useVaultKey());
+
+        try {
+            $this->store('nilai');
+            $this->fail('Rahasia yang tak terbaca ulang seharusnya membatalkan penyimpanan.');
+        } catch (VaultIntegrityError) {
+            $this->assertNothingWritten();
+        }
+    }
+
     public function test_every_purpose_of_the_data_model_is_accepted(): void
     {
         foreach (SecretPurpose::cases() as $purpose) {
             $secret = $this->store('nilai-'.$purpose->value, $purpose);
-            $this->assertSame('nilai-'.$purpose->value, app(Vault::class)->reveal($secret)->expose());
+            $this->assertSame('nilai-'.$purpose->value, app(Vault::class)->reveal($secret->id, $purpose, $this->tenant->id)->expose());
         }
 
         $this->assertSame(count(SecretPurpose::cases()), Secret::query()->count());

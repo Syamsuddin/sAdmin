@@ -49,15 +49,15 @@
     {
       "mulai": "2026-10-01T08:34:42+08:00",
       "selesai": null,
-      "step": 6,
-      "detik": 773,
-      "tok_est": 48646
+      "step": 7,
+      "detik": 1459,
+      "tok_est": 51924
     }
   ],
   "step_berjalan": {
-    "no": 7,
-    "nama": "Gerbang fitur",
-    "mulai": "2026-10-01T08:52:57+08:00"
+    "no": 8,
+    "nama": "Tambal temuan review adversarial",
+    "mulai": "2026-10-01T09:04:23+08:00"
   },
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
@@ -892,10 +892,10 @@
     }
   ],
   "akumulasi": {
-    "detik": 4040,
-    "tok_est": 205235,
+    "detik": 4726,
+    "tok_est": 208513,
     "tok_terukur": 0,
-    "step": 37,
+    "step": 38,
     "fitur": 6
   },
   "fitur_aktif": {
@@ -1054,9 +1054,20 @@
           "tests/Feature/WebAuthnBoundaryTest.php",
           "tests/Support/InteractsWithPasskeys.php"
         ]
+      },
+      {
+        "no": 7,
+        "nama": "Gerbang fitur",
+        "mulai": "2026-10-01T08:52:57+08:00",
+        "selesai": "2026-10-01T09:04:23+08:00",
+        "detik": 686,
+        "tok_est": 3278,
+        "muat": [
+          "docs/adr/0003-format-brankas.md"
+        ]
       }
     ],
-    "detik": 773,
-    "tok_est": 48646
+    "detik": 1459,
+    "tok_est": 51924
   }
 }

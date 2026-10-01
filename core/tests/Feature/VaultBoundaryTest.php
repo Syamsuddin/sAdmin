@@ -43,6 +43,7 @@ class VaultBoundaryTest extends TestCase
             'Encrypter' => '/Illuminate\\\\(Contracts\\\\)?Encryption\\\\/',
             'helper encrypt()/decrypt()' => '/(?<![\w>:$])(?<!function )(?:en|de)crypt\s*\(/i',
             'cast encrypted' => '/[\'"]encrypted(?::[\w\\\\]+)?[\'"]/',
+            "layanan 'encrypter'" => '/[\'"]encrypter[\'"]/',
         ];
 
         $offenders = [];
@@ -64,5 +65,6 @@ class VaultBoundaryTest extends TestCase
         $this->assertSame(0, preg_match('/(?<![\w>:$])(?<!function )(?:en|de)crypt\s*\(/i', '$cipher->decrypt($v);'));
         $this->assertSame(1, preg_match('/[\'"]encrypted(?::[\w\\\\]+)?[\'"]/', "'token' => 'encrypted:array',"));
         $this->assertSame(1, preg_match('/\bCrypt::|Facades\\\\Crypt\b/', 'use Illuminate\Support\Facades\Crypt;'));
+        $this->assertSame(1, preg_match('/[\'"]encrypter[\'"]/', 'app(\'encrypter\')->encrypt($v);'));
     }
 }

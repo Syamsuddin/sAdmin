@@ -77,14 +77,14 @@ class VaultRedactionTest extends TestCase
     public function test_canary_never_leaks_on_success_or_failure_paths(): void
     {
         $kept = $this->store('-tetap');
-        $this->assertSame($this->canary.'-tetap', app(Vault::class)->reveal($kept)->expose());
+        $this->assertSame($this->canary.'-tetap', app(Vault::class)->reveal($kept->id, SecretPurpose::ApiToken, $this->tenant->id)->expose());
         app(DestroySecret::class)->handle($this->store('-hancur')->id, ActorType::Admin, 'admin-uji');
 
         $this->capture(fn () => $this->store('-tenant-asing', strtolower((string) Str::ulid())));
 
         $tampered = $this->store('-diubah');
         DB::table('secrets')->where('id', $tampered->id)->update(['ciphertext' => Bytea::literal(strrev($tampered->ciphertext))]);
-        $this->capture(fn () => app(Vault::class)->reveal(Secret::query()->with('keyWrap')->findOrFail($tampered->id)));
+        $this->capture(fn () => app(Vault::class)->reveal($tampered->id, SecretPurpose::ApiToken, $this->tenant->id));
 
         $this->withoutVaultKey();
         $this->capture(fn () => $this->store('-tanpa-kunci'));

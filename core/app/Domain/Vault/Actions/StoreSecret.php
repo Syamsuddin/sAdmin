@@ -52,8 +52,7 @@ final class StoreSecret
             ]);
 
             // Invarian "tertulis ⇒ terbuka": rahasia yang tersimpan tapi tak terbuka hilang tanpa jejak. Batalkan di sini.
-            $stored = Secret::query()->with('keyWrap')->findOrFail($secretId);
-            if (! $this->vault->reveal($stored)->equals($value)) {
+            if (! $this->vault->reveal($secretId, $purpose, $tenantId)->equals($value)) {
                 throw new UnexpectedValueException('Rahasia tak terbaca ulang identik; penyimpanan dibatalkan.');
             }
 
@@ -67,7 +66,7 @@ final class StoreSecret
                 paramsRedacted: ['purpose' => $purpose->value],
             ));
 
-            return $stored;
+            return Secret::query()->with('keyWrap')->findOrFail($secretId);
         });
     }
 }

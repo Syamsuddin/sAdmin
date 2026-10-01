@@ -39,17 +39,16 @@ class VaultTamperTest extends TestCase
         return app(StoreSecret::class)->handle($this->tenant->id, $purpose, new SecretValue($value), ActorType::System, null);
     }
 
-    private function reveal(Secret $secret): string
+    /** Membuka seperti pemakai brankas: dengan purpose & tenant yang ia harapkan (bawaan: nilai saat disimpan). */
+    private function reveal(Secret $secret, ?SecretPurpose $purpose = null, ?string $tenantId = null): string
     {
-        $fresh = Secret::query()->with('keyWrap')->findOrFail($secret->id);
-
-        return app(Vault::class)->reveal($fresh)->expose();
+        return app(Vault::class)->reveal($secret->id, $purpose ?? $secret->purpose, $tenantId ?? $secret->tenant_id)->expose();
     }
 
-    private function assertRevealFails(Secret $secret, string $exception = VaultIntegrityError::class): void
+    private function assertRevealFails(Secret $secret, string $exception = VaultIntegrityError::class, ?SecretPurpose $purpose = null, ?string $tenantId = null): void
     {
         try {
-            $this->reveal($secret);
+            $this->reveal($secret, $purpose, $tenantId);
             $this->fail('Rahasia yang diubah seharusnya gagal dibuka.');
         } catch (VaultIntegrityError|VaultUnavailable $e) {
             $this->assertInstanceOf($exception, $e);
@@ -82,7 +81,7 @@ class VaultTamperTest extends TestCase
             'nonce' => '\\x606162636465666768696a6b6c6d6e6f7071727374757677',
             'ciphertext' => '\\x9a462847f618faecdf6bfc2253e57db447dc9c26ea8c5dca6e53712219fdbe33b0697793']);
 
-        $this->assertSame('rahasia-uji-ADR-0003', $this->reveal(Secret::query()->findOrFail($secret)));
+        $this->assertSame('rahasia-uji-ADR-0003', app(Vault::class)->reveal($secret, SecretPurpose::ApiToken, $tenant)->expose());
         $this->assertSame($hex(0x20, 32), sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
             hex2bin('f4182753f4c55f31a7ddad9583b14bbda28b9ff7276c65ad5208c77e35391daf4bb77814e72375c562a3f794bc4f9d08') ?: '',
             "sadmin-vault/1/key_wrap/{$tenant}/{$wrap}/1", $hex(0x40, 24), $hex(0x00, 32),
@@ -107,7 +106,32 @@ class VaultTamperTest extends TestCase
 
         DB::table('secrets')->where('id', $secret->id)->update(['purpose' => 'upload']);
 
+        // Pemakai yang mengharapkan api_token ditolak oleh pemeriksaan purpose; yang mengikuti label baru ditolak AAD.
         $this->assertRevealFails($secret);
+        $this->assertRevealFails($secret, purpose: SecretPurpose::Upload);
+    }
+
+    public function test_reveal_rereads_the_row_under_a_share_lock(): void
+    {
+        $secret = $this->store('nilai');
+        DB::enableQueryLog();
+
+        $this->reveal($secret);
+
+        // Tanpa FOR SHARE, penghancuran yang selesai di tengah pembacaan memicu galat Integritas palsu (alert critical).
+        $shared = array_filter(DB::getQueryLog(), fn (array $q): bool => preg_match('/^select .* from "secrets" .* for share$/i', $q['query']) === 1);
+        $this->assertNotEmpty($shared, 'Vault::reveal wajib membaca ulang baris secrets di bawah FOR SHARE.');
+    }
+
+    public function test_caller_expecting_another_purpose_or_tenant_is_refused(): void
+    {
+        $secret = $this->store('kunci-audit', SecretPurpose::AuditKey);
+        $other = Tenant::factory()->create();
+
+        // Penunjuk di tabel perujuk ditukar ke rahasia lain: nilai tak boleh dipakai untuk keperluan yang salah.
+        $this->assertRevealFails($secret, purpose: SecretPurpose::AiApiKey);
+        $this->assertRevealFails($secret, tenantId: $other->id);
+        $this->assertSame('kunci-audit', $this->reveal($secret));
     }
 
     public function test_moving_a_secret_to_another_tenant_fails(): void
@@ -117,6 +141,7 @@ class VaultTamperTest extends TestCase
 
         DB::table('secrets')->where('id', $secret->id)->update(['tenant_id' => $other->id]);
         $this->assertRevealFails($secret);
+        $this->assertRevealFails($secret, tenantId: $other->id);
 
         DB::table('secrets')->where('id', $secret->id)->update(['tenant_id' => $this->tenant->id]);
         DB::table('key_wraps')->where('id', $secret->key_wrap_id)->update(['tenant_id' => $other->id]);
@@ -161,6 +186,11 @@ class VaultTamperTest extends TestCase
         $short = $this->store('nilai-pendek');
         $this->updateBytea('key_wraps', $short->key_wrap_id, ['wrapped_dek' => substr($this->wrappedDek($short), 0, 71)]);
         $this->assertRevealFails($short);
+
+        // Lebih pendek dari nonce: tanpa penjaga panjang, sodium melempar SodiumException alih-alih gagal tertutup.
+        $tiny = $this->store('nilai-mungil');
+        $this->updateBytea('key_wraps', $tiny->key_wrap_id, ['wrapped_dek' => substr($this->wrappedDek($tiny), 0, 10)]);
+        $this->assertRevealFails($tiny);
 
         $nonce = $this->store('nilai-nonce');
         $this->updateBytea('secrets', $nonce->id, ['nonce' => substr($nonce->nonce, 0, 12)]);

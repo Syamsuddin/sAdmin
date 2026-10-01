@@ -21,6 +21,6 @@ PHP 8.3 + ekstensi di `docs/09_STACK.md`, Composer, Node.js LTS, PostgreSQL 16 l
 | `SADMIN_RP_ID`, `SADMIN_ORIGIN` | WebAuthn: RP ID sebenarnya = `institutions.console_hostname`; `SADMIN_RP_ID` hanya nilai bawaan `sadmin:institution-init`; `SADMIN_ORIGIN` kosong = `https://<hostname>`, diisi hanya di dev bila ada port (ADR 0002) |
 | `SADMIN_GATEWAY_SOCKET`, `SADMIN_INBOX_SOCKET` | Unix socket ke/dari gateway |
 | `SADMIN_VAULT_CRED` | nama kredensial `systemd-creds` kunci induk (bawaan `sadmin-vault-master`), dibaca dari `$CREDENTIALS_DIRECTORY` saat runtime |
-| `SADMIN_VAULT_DEV_KEY` | dev/tes saja: path berkas kunci induk 32 byte mentah bermode 0600; **ditolak** bila `APP_ENV=production` (ADR 0003) |
+| `SADMIN_VAULT_DEV_KEY` | dev/tes saja: path berkas kunci induk 32 byte mentah bermode 0600; **hanya** diterima bila `APP_ENV` = `local`/`testing` dan `CREDENTIALS_DIRECTORY` kosong (ADR 0003) |
 | `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT` | Reverb |
 | `SADMIN_TEST_PASSKEY_SEED` | hanya `testing`: kunci passkey uji deterministik (docs/13_TESTING.md) |

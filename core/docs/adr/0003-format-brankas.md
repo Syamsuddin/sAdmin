@@ -23,10 +23,15 @@ Begitu rahasia produksi pertama tertulis, rincian ini tidak dapat diubah tanpa m
 ### 2.1 Kunci induk
 - Panjangnya tepat 32 byte acak (CSPRNG), disimpan sebagai byte mentah tanpa pengodean dan tanpa baris baru.
 - Hanya satu kunci yang aktif, yaitu `master_key_version` = `1`. Baris dengan versi lain wajib ditolak (gagal tertutup). Mendukung versi lain berarti rotasi kunci induk, yang butuh ADR baru.
+- *Lingkungan dev* berarti `APP_ENV` persis `local` atau `testing`. Ini daftar izin: nilai lain, termasuk salah ketik seperti `Production`, diperlakukan sebagai lingkungan ketat.
 - Sumber kunci diperiksa berurutan:
-  1. Bila `SADMIN_VAULT_DEV_KEY` diisi, isinya adalah path berkas lokal berisi kunci. Berkas itu wajib tidak bisa dibaca grup maupun pengguna lain (`mode & 0o077 = 0`, mis. `0600`). Sumber ini **ditolak** bila `APP_ENV=production`, meskipun berkasnya sah.
-  2. Bila tidak, core membaca berkas `$CREDENTIALS_DIRECTORY/<nama>`. `<nama>` = `SADMIN_VAULT_CRED` (bawaan `sadmin-vault-master`) dan wajib cocok dengan `^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`. `CREDENTIALS_DIRECTORY` diisi systemd untuk unit yang memakai `LoadCredential=`/`LoadCredentialEncrypted=`. Variabel ini dibaca dari lingkungan proses **saat runtime**, bukan dari konfigurasi, supaya `config:cache` tidak membekukannya.
+  1. Bila `SADMIN_VAULT_DEV_KEY` diisi, isinya adalah path berkas lokal berisi kunci. Berkas itu wajib tidak bisa dibaca grup maupun pengguna lain (`mode & 0o077 = 0`, mis. `0600`). Sumber ini **ditolak** di luar lingkungan dev, meskipun berkasnya sah. Sumber ini juga ditolak bila `CREDENTIALS_DIRECTORY` ikut terisi, karena konfigurasinya ambigu.
+  2. Bila tidak, core membaca berkas `$CREDENTIALS_DIRECTORY/<nama>`.
+     - `<nama>` = `SADMIN_VAULT_CRED` (bawaan `sadmin-vault-master`) dan seluruh string-nya wajib cocok dengan `^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\z`, tanpa baris baru di akhir.
+     - `CREDENTIALS_DIRECTORY` diisi systemd untuk unit yang memakai `LoadCredential=`/`LoadCredentialEncrypted=`. Variabel ini dibaca dari lingkungan proses **saat runtime**, bukan dari konfigurasi, supaya `config:cache` tidak membekukannya.
+     - Di luar lingkungan dev, `realpath(CREDENTIALS_DIRECTORY)` wajib berada di bawah `/run/credentials/`, tempat systemd menaruh kredensial unit. Dengan begitu, `.env` yang diubah (Laravel menyalin isi `.env` ke `getenv()`) tidak bisa mengarahkan kunci induk ke berkas polos sembarang.
   3. Bila tidak ada sumber yang sah, brankas berstatus *tak tersedia*. Semua operasi rahasia gagal tertutup, sedangkan bagian console yang tidak memakai rahasia tetap berjalan.
+- Berkas kunci diperiksa dan dibaca lewat **satu handle** (`fopen` → `fstat` → `fread`), sehingga tidak ada celah antara pemeriksaan dan pembacaan. Berkas wajib berupa berkas biasa berukuran tepat 32 byte, dan core tidak pernah membaca lebih dari itu.
 - Core tidak pernah menulis kunci induk ke DB, log, cache, atau berkas, dan tidak pernah membuatnya. Kunci dibuat dan disegel oleh `install.sh`.
 
 ### 2.2 Kunci data dan pembungkusnya
@@ -51,16 +56,21 @@ Begitu rahasia produksi pertama tertulis, rincian ini tidak dapat diubah tanpa m
 - `rotated` disiapkan untuk rotasi nilai dan baru dipakai oleh slice yang membutuhkannya. Rahasia `rotated` masih bisa dibuka.
 - Nilai rahasia tidak pernah masuk audit, log, pesan exception, maupun jejak tumpukan:
   - setiap parameter bernilai rahasia diberi `#[\SensitiveParameter]`;
-  - nilai dibawa objek `SecretValue` yang tidak dapat diserialisasi, tampil tersamar di `var_dump`/`print_r`/`var_export`/`json_encode`, dan hanya membuka nilainya lewat `expose()`.
+  - nilai dibawa objek `SecretValue` yang tidak dapat diserialisasi, tampil tersamar di `var_dump`/`print_r`/`var_export`/`json_encode`, dan hanya membuka nilainya lewat `expose()`. Saat objek dihancurkan, nilainya ditimpa nol. Ini upaya terbaik: salinan string yang masih dipegang pemanggil tidak ikut terhapus.
 
 ### 2.5 Pembacaan
-- Rahasia hanya dibaca lewat `App\Infrastructure\Vault\Vault::reveal()`, dengan urutan berikut:
-  1. tolak bila status `destroyed`;
-  2. muat kunci induk;
-  3. pastikan `master_key_version` = versi aktif;
-  4. buka DEK dengan `AAD_w`;
-  5. buka nilai dengan `AAD_s`;
-  6. hapus DEK dari memori (`sodium_memzero`).
+- Rahasia hanya dibaca lewat `App\Infrastructure\Vault\Vault::reveal(secret_id, purpose yang diharapkan, tenant_id)`. Pemanggil selalu menyebut keperluan dan tenant yang ia harapkan.
+  - AAD hanya mencegah baris `secrets` diubah. Tanpa pemeriksaan ini, penunjuk yang ditukar di tabel perujuk (mis. `ai_provider_configs.api_key_secret_id` diarahkan ke kunci audit) akan membuka rahasia lain untuk keperluan yang salah.
+  - Pemeriksaan ini bermakna karena `purpose` dan `tenant_id` sendiri dijamin AAD.
+- Urutan `reveal()`:
+  1. di dalam transaksi, baca ulang baris `secrets` dengan `FOR SHARE`. Penghancuran memegang `FOR UPDATE`, jadi rahasia tidak bisa hancur di tengah pembacaan dan model basi tidak bisa membuka rahasia yang sudah hancur;
+  2. tolak bila status `destroyed`;
+  3. tolak bila `purpose` atau `tenant_id` berbeda dari yang diharapkan (`VaultIntegrityError`);
+  4. muat kunci induk;
+  5. pastikan `master_key_version` = versi aktif;
+  6. buka DEK dengan `AAD_w`;
+  7. buka nilai dengan `AAD_s`;
+  8. hapus DEK dari memori (`sodium_memzero`).
 - Kegagalan tag AEAD atau panjang yang tidak sah memunculkan `VaultIntegrityError`, yang masuk kelas *Integritas* docs/14. Kunci yang tidak tersedia atau versi lain memunculkan `VaultUnavailable` (*Galat infrastruktur core*). Keduanya tidak memuat nilai rahasia maupun kunci.
 - Di MVP pembacaan tidak diaudit karena bukan perubahan state. Jejaknya tercatat di langkah atau amplop yang memakai nilai itu.
 
@@ -104,18 +114,20 @@ Vektor ini dihitung oleh skrip independen yang hanya memakai fungsi sodium dan t
 - Setiap unit systemd yang menjalankan PHP core (FPM, runner, antrean, penjadwal) wajib memuat kredensial ini dan berjalan sebagai pengguna yang bisa membacanya. FPM juga wajib meneruskan `CREDENTIALS_DIRECTORY` ke worker. Rinciannya diatur di slice `install.sh`.
 - Setelah rahasia produksi pertama tertulis, format ini mengikat. Mengubahnya berarti mengenkripsi ulang seluruh brankas dan wajib lewat gerbang manusia.
 - Bila brankas tidak tersedia, console tidak ikut jatuh: login dan halaman tanpa rahasia tetap berjalan.
+- Bila penulisan ke DB gagal, `QueryException` Laravel mencatat SQL beserta bindings-nya. Akibatnya, hex ciphertext dan `wrapped_dek` bisa muncul di log. Ini diterima: keduanya bukan nilai rahasia dan sudah ada di DB yang sama. Membuang bindings akan menghilangkan bahan diagnosis.
 
 ## 5. Penegakan
 | Klausul | Dijaga oleh |
 |---|---|
-| 2.1 sumber dan validasi kunci induk | `MasterKeyLoaderTest` |
-| 2.2–2.3 format, AAD, 1:1 | `StoreSecretTest`, `VaultTamperTest`, constraint UNIQUE `secrets.key_wrap_id` |
-| 2.4 transaksi, audit, penghancuran | `StoreSecretTest`, `DestroySecretTest` |
+| 2.1 sumber, daftar izin lingkungan dev, `/run/credentials/`, bentuk berkas | `MasterKeyLoaderTest` |
+| 2.2–2.3 format, AAD, 1:1, DEK tidak dipakai ulang | `StoreSecretTest`, `VaultTamperTest`, constraint UNIQUE `secrets.key_wrap_id` |
+| 2.4 transaksi, baca ulang, audit, penghancuran (`FOR UPDATE`) | `StoreSecretTest`, `DestroySecretTest` |
 | 2.4 nilai tidak bocor | `VaultRedactionTest` (grup `redaction`), `SecretValueTest` |
-| 2.5 gagal tertutup | `VaultTamperTest` |
+| 2.5 purpose/tenant yang diharapkan, `FOR SHARE`, gagal tertutup | `VaultTamperTest`, `DestroySecretTest` |
 | 2.6 pemeriksaan | `VaultCheckCommandTest` |
 | 2.7 satu pintu | `VaultBoundaryTest` |
 | 2.8 vektor emas | `VaultTamperTest::test_golden_vector_opens` |
 
 ## 6. Riwayat
 - 2026-10-01: diusulkan bersama slice F-01a Brankas (M1).
+- 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi). Perubahannya: lingkungan dev memakai daftar izin `local`/`testing`; di luar dev `CREDENTIALS_DIRECTORY` wajib di bawah `/run/credentials/`; kunci dev ditolak bila ikut ada kredensial systemd; regex nama kredensial memakai `\z`; berkas kunci dibaca lewat satu handle; `reveal()` mewajibkan purpose dan tenant yang diharapkan dan membaca ulang baris dengan `FOR SHARE`; `SecretValue` menimpa nilainya dengan nol saat dihancurkan. Format byte (§2.2–2.3) dan vektor emas tidak berubah.

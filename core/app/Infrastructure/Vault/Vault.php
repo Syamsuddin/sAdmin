@@ -7,6 +7,7 @@ use App\Domain\Vault\Data\SecretStatus;
 use App\Models\KeyWrap;
 use App\Models\Secret;
 use DomainException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use SensitiveParameter;
@@ -58,36 +59,43 @@ final class Vault
         return new SealedSecret($wrapped, $kek->version, $nonce, $ciphertext);
     }
 
-    /** Membuka nilai satu rahasia (ADR 0003 §2.5). Gagal tertutup: tak pernah mengembalikan nilai yang tak terverifikasi. */
-    public function reveal(Secret $secret): SecretValue
+    /**
+     * Membuka nilai satu rahasia (ADR 0003 §2.5). Pemanggil menyebut purpose & tenant yang ia harapkan, sehingga
+     * penunjuk yang ditukar di tabel perujuk tak membuka rahasia lain. Baris dibaca ulang di bawah FOR SHARE agar
+     * tak hancur di tengah jalan. Gagal tertutup: tak pernah mengembalikan nilai yang tak terverifikasi.
+     */
+    public function reveal(string $secretId, SecretPurpose $expectedPurpose, string $tenantId): SecretValue
     {
-        if ($secret->status === SecretStatus::Destroyed) {
-            throw new DomainException("Rahasia {$secret->id} sudah dihancurkan.");
-        }
-        $wrap = $secret->keyWrap ?? throw new VaultIntegrityError("Rahasia {$secret->id} tak punya kunci data.");
+        return DB::transaction(function () use ($secretId, $expectedPurpose, $tenantId): SecretValue {
+            $secret = Secret::query()->sharedLock()->findOrFail($secretId);
+            if ($secret->status === SecretStatus::Destroyed) {
+                throw new DomainException("Rahasia {$secret->id} sudah dihancurkan.");
+            }
+            if ($secret->purpose !== $expectedPurpose || $secret->tenant_id !== $tenantId) {
+                throw new VaultIntegrityError("Rahasia {$secret->id} ber-purpose {$secret->purpose->value} milik tenant {$secret->tenant_id}; yang diminta {$expectedPurpose->value} untuk tenant {$tenantId}.");
+            }
+            $wrap = $secret->keyWrap ?? throw new VaultIntegrityError("Rahasia {$secret->id} tak punya kunci data.");
 
-        $dek = $this->unwrap($wrap, $this->loader->load());
-        try {
-            $plain = strlen($secret->nonce) === self::NONCE_BYTES && strlen($secret->ciphertext) > self::TAG_BYTES
-                ? sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
-                    $secret->ciphertext,
-                    self::secretAad($secret->tenant_id, $secret->id, $secret->purpose, $secret->key_wrap_id),
-                    $secret->nonce,
-                    $dek,
-                )
-                : false;
-        } finally {
-            sodium_memzero($dek);
-        }
+            $dek = $this->unwrap($wrap, $this->loader->load());
+            try {
+                $plain = strlen($secret->nonce) === self::NONCE_BYTES && strlen($secret->ciphertext) > self::TAG_BYTES
+                    ? sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
+                        $secret->ciphertext,
+                        self::secretAad($secret->tenant_id, $secret->id, $secret->purpose, $secret->key_wrap_id),
+                        $secret->nonce,
+                        $dek,
+                    )
+                    : false;
+            } finally {
+                sodium_memzero($dek);
+            }
 
-        if ($plain === false) {
-            throw new VaultIntegrityError("Rahasia {$secret->id} gagal dibuka: ciphertext atau ikatannya (tenant, purpose, kunci data) tidak cocok.");
-        }
+            if ($plain === false) {
+                throw new VaultIntegrityError("Rahasia {$secret->id} gagal dibuka: ciphertext atau ikatannya (tenant, purpose, kunci data) tidak cocok.");
+            }
 
-        $value = new SecretValue($plain);
-        sodium_memzero($plain);
-
-        return $value;
+            return new SecretValue($plain);
+        });
     }
 
     /** Membuktikan satu kunci data terbuka dengan kunci induk yang termuat, tanpa membuka nilai rahasianya (§2.6). */
