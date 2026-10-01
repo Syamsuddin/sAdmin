@@ -13,6 +13,7 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 
 ### Ditambahkan
 - core: `WebAuthnBoundaryTest` menegakkan aturan satu pintu ADR 0002, yaitu hanya adaptor `app/Infrastructure/WebAuthn` yang memakai pustaka WebAuthn/COSE/CBOR.
+- core: tema console light/dark per admin (F-17, M1). Pengalih tema *Ikuti sistem / Terang / Gelap* di topbar menyimpan pilihan ke `admins.theme`. Pilihan `light`/`dark` dirender server sebagai `data-bs-theme` pada `<html>` sehingga tidak berkedip saat dimuat, sedangkan `system` mengikuti `prefers-color-scheme` OS, termasuk ketika OS berganti mode tanpa muat ulang. Setiap perubahan tercatat di audit sebagai `admin.theme_change` dengan nilai lama dan baru. Pilihan yang tidak dikenal ditolak dengan pesan berformat docs/14. Halaman tamu (*Masuk*) selalu mengikuti OS.
 
 ## [0.1.0-alpha.4] — 2026-09-30
 
