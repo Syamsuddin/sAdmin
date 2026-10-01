@@ -1,0 +1,14 @@
+{
+  "description": "Hash nol di batas bawah",
+  "input": {
+    "roster_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "policy_hash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "service_pubkey": "nfawJqjGwm48Os0jcKFuk//9wAFf9b2Hkhh4gCXbAoA=",
+    "audit_pubkey": "uB83oEOm92fnyU0QX0vTEoLz7MIGgLudCb2TRhz0yGM=",
+    "server_id": "01m3r24gd00z3k173jj1zjgjs1"
+  },
+  "message": "sadmin-trust/1\n{\"audit_pubkey\":\"uB83oEOm92fnyU0QX0vTEoLz7MIGgLudCb2TRhz0yGM=\",\"policy_hash\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"roster_hash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"server_id\":\"01m3r24gd00z3k173jj1zjgjs1\",\"service_pubkey\":\"nfawJqjGwm48Os0jcKFuk//9wAFf9b2Hkhh4gCXbAoA=\"}",
+  "fingerprint": "30ee7520a2755732bfa932bdc82298e37c6c727ce1b21db5d881e867c71d16fe",
+  "display": "30ee 7520 a275 5732 bfa9 32bd c822 98e3\n7c6c 727c e1b2 1db5 d881 e867 c71d 16fe",
+  "valid": true
+}

@@ -20,6 +20,10 @@ return [
     // enrolment; wajib sama dengan SAN sertifikat server gateway (KONTRAK §2). Kosong = tambah server ditolak.
     'gateway_host' => env('SADMIN_GATEWAY_HOST'),
 
+    // Berkas katalog aksi (../catalog/CATALOG.md) untuk menyusun kebijakan awal agen (ADR 0008 §2.5). Kosong = di sebelah
+    // paket core (monorepo); install.sh (F-01) mengisinya untuk instalasi produksi.
+    'catalog_path' => env('SADMIN_CATALOG_PATH') ?: base_path('../catalog/CATALOG.md'),
+
     // Brankas (ADR 0003 §2.1). Produksi: kunci induk dari $CREDENTIALS_DIRECTORY/<credential>, dibaca saat runtime.
     'vault' => [
         'credential' => env('SADMIN_VAULT_CRED', 'sadmin-vault-master'),

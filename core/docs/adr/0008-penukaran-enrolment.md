@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk. Belum ada kode yang bergantung pada ADR ini |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-02 (keempat pertanyaan §6 dijawab setuju sesuai usulan) |
 | Tanggal | 2026-10-02 |
 | Pemutus | Pemilik produk. Ini perubahan kontrak (KONTRAK §3, §5; usulan kontrak 0.6.0) sekaligus keputusan keamanan (apa yang dipercaya agen untuk selamanya). Docs/22: gerbang manusia |
 | Lingkup | Cara core menukar token enrolment menjadi `EnrollAccept`; isi dan bentuk roster v1 dan kebijakan v1; format sidik jari kepercayaan; status server dan baris `agents` setelah enrolment; urutan pemeriksaan dan kode galat |
@@ -29,11 +29,11 @@ Seluruh langkah berjalan dalam **satu transaksi** yang menahan baris server (`SE
 3. `platform_id` harus `ubuntu-24.04` (satu-satunya platform MVP, docs/02). Lainnya → `E_PLATFORM`.
 4. CSR → `CertificateAuthority::issueAgentCertificate` (ADR 0007 §2.3). Pelanggaran → `E_CSR` dengan `reason`.
 5. Token dikosongkan (hash dan kedaluwarsa menjadi NULL), status server menjadi `offline`, baris `agents` dibuat (serial, `not_after`, sidik jari kepercayaan), dan entri audit `server.enroll` ditulis. Semua dalam transaksi yang sama.
-6. `EnrollAccept` disusun dan ditandatangani **setelah** commit. Kegagalan menyusun bingkai tidak boleh membakar token, sehingga bingkai disusun dulu dalam transaksi dan hanya dikirim setelah commit.
+6. `EnrollAccept` disusun dan ditandatangani **di dalam** transaksi, sebelum commit, dan hanya dikirim setelah commit. Kegagalan menyusun bingkai membatalkan semuanya, sehingga token tidak terbakar.
 
-Percobaan penukaran yang gagal tidak menulis audit (mencegah banjir audit oleh pihak tak berotoritas), tetapi dihitung di metrik `enroll_rejected_total{reason}` (docs/15). Pembatasan laju adalah tugas gateway.
+Percobaan penukaran yang gagal tidak menulis audit (mencegah banjir audit oleh pihak tak berotoritas). Penghitungan penolakan sebagai metrik (docs/15) dan pembatasan laju adalah tugas gateway dan slice observability, bukan slice ini. `EnrollmentRejected::reason` disediakan untuk keperluan itu.
 
-Audit `server.enroll`: aktor `agent` dengan ref `server_id`, `params_redacted` = {`serial`, `cert_expires_at`, `agent_version`, `platform_id`, `reported_hostname`, `trust_fingerprint`}. Tanpa token dan tanpa CSR.
+Audit `server.enroll`: aktor `agent` dengan ref `server_id`, `params_redacted` = {`serial`, `cert_expires_at`, `agent_version`, `platform_id`, `reported_hostname`, `roster_hash`, `policy_hash`, `trust_fingerprint`} (hash dokumen ditambahkan setelah review: pembuatan roster/kebijakan v1 tak punya entri audit sendiri, jadi audit ini yang menunjuk dokumennya). Tanpa token dan tanpa CSR.
 
 ### 2.3 Hostname yang dilaporkan
 `Enroll.hostname` **tidak** diblokir bila berbeda dari `servers.hostname`. Admin yang mengetik nama itu, dan agen melaporkan hostname VM apa adanya, sehingga selisih lazim (mis. alias DNS). Selisihnya dicatat di audit (`reported_hostname`) dan ditampilkan di detail server kelak. Identitas dipegang token + CSR, bukan hostname.
@@ -77,15 +77,21 @@ Badan: `server_id`, `cert` (PEM sertifikat klien), `roster` {`document`, `docume
 | Mengirim roster dari tabel `admin_passkeys` langsung tiap enrolment | Roster berubah diam-diam antar server; melanggar "naik monoton" dan jeda 24 jam |
 
 ## 4. Konsekuensi
-- Memungkinkan: slice implementasi `AcceptEnrollment` + tes (token tunggal-pakai di bawah paralel, CSR salah tak membakar token, sidik jari = vektor bersama, roster/kebijakan deterministik) dan vektor kontrak `trust-fingerprint` dengan oracle independen.
+- Memungkinkan: slice implementasi `AcceptEnrollment` + tes (token tunggal-pakai (dijamin kunci baris `FOR UPDATE` dan terbukti review dengan 8 proses serentak, bukan tes otomatis), CSR salah tak membakar token, sidik jari = vektor bersama, roster/kebijakan deterministik) dan vektor kontrak `trust-fingerprint` dengan oracle independen.
 - Menunda: inbox gateway, `Hello`, tampilan sidik jari di console (halaman server), perilaku edge.
 - Biaya mengubah kelak: format sidik jari dan bentuk dokumen v1 **tersemat di agen**. Mengubahnya setelah agen pertama terpasang = enrolment ulang semua agen (kontrak mayor).
 - Roster v1 melemahkan satu hal secara sadar: sebelum M2, daftar passkey di agen bisa tertinggal dari console (lihat §2.4).
 
-## 5. Penegakan
-Akan ditetapkan saat diterima: tes `AcceptEnrollment*`, vektor `kontrak/vectors/trust-fingerprint/` beserta oracle, `ForbiddenScanTest` tetap hijau (tanpa eksekusi shell), dan `VaultBoundaryTest` tetap melarang pembacaan kunci di luar `Infrastructure/Vault`.
+### Risiko yang diterima (dicatat setelah review adversarial)
+- Bingkai dikirim gateway **setelah** commit. Bila pengiriman ke agen gagal, token sudah habis dan agen tak bisa mengulang; pemulihannya (menerbitkan token baru untuk server `offline` tanpa agen terhubung, atau pensiunkan lalu daftarkan ulang) belum ada dan menjadi bagian slice gateway/pensiun server.
+- `TrustDocumentCorrupt` (dokumen diubah di luar core) gagal tertutup sebagai galat 500 tanpa alert integritas; `RaiseIntegrityAlert` dipasang di slice observability.
+- Roster dan kebijakan v1 selalu `version = 1`; bila M2 menghasilkan kondisi "tak ada dokumen aktif tetapi ada versi lain", penukaran gagal keras (QueryException) dan logikanya harus diperluas ke `max(version)+1`.
+- `ActionCatalog` menolak (fail closed) bila berkas YAML aksi muncul di `catalog/`, karena YAML menang atas tabel dan pembacanya harus diperluas lebih dulu.
 
-## 6. Pertanyaan untuk pemilik produk
+## 5. Penegakan
+Tes `AcceptEnrollmentTest` (AC-18), vektor `kontrak/vectors/trust-fingerprint/` beserta oracle independen dan `TrustFingerprintVectorsTest` (termasuk penjaga `TrustDocuments::CONTRACT` = `kontrak/VERSION`), `ForbiddenScanTest` tetap hijau (tanpa eksekusi shell), dan `VaultBoundaryTest` tetap melarang pembacaan kunci di luar `Infrastructure/Vault`.
+
+## 6. Pertanyaan untuk pemilik produk (dijawab 2026-10-02: setuju 1–4 sesuai usulan)
 1. Roster/kebijakan v1 dibuat core saat enrolment pertama dan dipercaya lewat sidik jari (§2.4–2.5), atau wajib lewat persetujuan passkey (alternatif pertama, menggeser demo enrolment ke setelah M2)?
 2. `approvals_required` dan `l3_delay_seconds` kebijakan v1 (§2.5): 1/1 dan 900 detik sudah benar?
 3. Menambahkan `ca_cert` ke `EnrollAccept` (§2.7) diterima sebagai kenaikan minor kontrak 0.6.0?

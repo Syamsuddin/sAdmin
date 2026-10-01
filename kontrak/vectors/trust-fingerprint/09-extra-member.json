@@ -1,0 +1,13 @@
+{
+  "description": "Anggota tambahan ditolak",
+  "input": {
+    "roster_hash": "1484a3ba3a1b149cff56ce4794e0a29beb8d4fee1cc3ebc6a09e0e010414845f",
+    "policy_hash": "44d9f13bd792606afd81c943d2d32bbfc57dd62893f14a18d5d10ddc69dea259",
+    "service_pubkey": "nfawJqjGwm48Os0jcKFuk//9wAFf9b2Hkhh4gCXbAoA=",
+    "audit_pubkey": "uB83oEOm92fnyU0QX0vTEoLz7MIGgLudCb2TRhz0yGM=",
+    "server_id": "01m3r24gd00z3k173jj1zjgjs1",
+    "extra": "x"
+  },
+  "valid": false,
+  "reason": "members"
+}

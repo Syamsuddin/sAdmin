@@ -80,6 +80,7 @@ class ServersPageTest extends TestCase
         Agent::query()->create([
             'tenant_id' => $online->tenant_id, 'server_id' => $online->id, 'agent_version' => '0.1.0', 'cert_serial' => 'abc',
             'cert_expires_at' => now()->addDays(7), 'roster_version' => 1, 'policy_version' => 1, 'connection' => AgentConnection::Connected,
+            'trust_fingerprint' => str_repeat('a', 64),
         ]);
         $this->server(['name' => 'db1', 'status' => ServerStatus::NeedsAttention]);
         Server::factory()->create(['name' => 'milik-tenant-lain']);

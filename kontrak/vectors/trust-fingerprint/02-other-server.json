@@ -1,0 +1,14 @@
+{
+  "description": "server_id lain menghasilkan sidik jari lain",
+  "input": {
+    "roster_hash": "1484a3ba3a1b149cff56ce4794e0a29beb8d4fee1cc3ebc6a09e0e010414845f",
+    "policy_hash": "44d9f13bd792606afd81c943d2d32bbfc57dd62893f14a18d5d10ddc69dea259",
+    "service_pubkey": "nfawJqjGwm48Os0jcKFuk//9wAFf9b2Hkhh4gCXbAoA=",
+    "audit_pubkey": "uB83oEOm92fnyU0QX0vTEoLz7MIGgLudCb2TRhz0yGM=",
+    "server_id": "01m3r24gd00z3k173jj1zjgjs2"
+  },
+  "message": "sadmin-trust/1\n{\"audit_pubkey\":\"uB83oEOm92fnyU0QX0vTEoLz7MIGgLudCb2TRhz0yGM=\",\"policy_hash\":\"44d9f13bd792606afd81c943d2d32bbfc57dd62893f14a18d5d10ddc69dea259\",\"roster_hash\":\"1484a3ba3a1b149cff56ce4794e0a29beb8d4fee1cc3ebc6a09e0e010414845f\",\"server_id\":\"01m3r24gd00z3k173jj1zjgjs2\",\"service_pubkey\":\"nfawJqjGwm48Os0jcKFuk//9wAFf9b2Hkhh4gCXbAoA=\"}",
+  "fingerprint": "2612126d53999c5c439592a11e9de6719f52ccc9150ac302579ae8044e087c2e",
+  "display": "2612 126d 5399 9c5c 4395 92a1 1e9d e671\n9f52 ccc9 150a c302 579a e804 4e08 7c2e",
+  "valid": true
+}
