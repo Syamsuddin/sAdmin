@@ -14,7 +14,7 @@
     "audit_verify": "php artisan sadmin:audit-verify",
     "ui_scan": "php artisan sadmin:ui-token-scan",
     "redaction": "php artisan test --group=redaction",
-    "test_satu": "php artisan test --filter='CertificateAuthority|AgentCertificate'",
+    "test_satu": "php artisan test --filter='RegisterServer|IssueEnrollmentToken|ServerSchema|ServersPage|EnrollServerPage'",
     "vault_check": "php artisan sadmin:vault-check"
   },
   "sesi": [
@@ -80,14 +80,21 @@
       "step": 7,
       "detik": 4373,
       "tok_est": 91799
+    },
+    {
+      "mulai": "2026-10-02T00:28:47+08:00",
+      "selesai": null,
+      "step": 7,
+      "detik": 2513,
+      "tok_est": 46408
     }
   ],
   "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
-    "sidik": "2aefeaca63a09770",
+    "sidik": "ae5e6cc15a108997",
     "dokumen": 27,
-    "disegel": "2026-10-01T22:02:22+08:00",
+    "disegel": "2026-10-02T00:28:47+08:00",
     "riwayat": [
       {
         "dari": "60b7da4ac5ed8e44",
@@ -123,9 +130,14 @@
         "dari": "cda56be612d2e065",
         "ke": "2aefeaca63a09770",
         "pada": "2026-10-01T22:02:22+08:00"
+      },
+      {
+        "dari": "2aefeaca63a09770",
+        "ke": "ae5e6cc15a108997",
+        "pada": "2026-10-02T00:28:47+08:00"
       }
     ],
-    "sidik_sebelumnya": "cda56be612d2e065"
+    "sidik_sebelumnya": "2aefeaca63a09770"
   },
   "riwayat_fitur": [
     {
@@ -2045,13 +2057,230 @@
         "Saran review: suite PHP 8.3 sebagai bagian CI / docs/10 dev env — perlu keputusan pemilik"
       ],
       "selesai": "2026-10-02T00:01:15+08:00"
+    },
+    {
+      "fitur": "F-02c Tambah server & token enrolment",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-10-02T00:31:46+08:00",
+      "rencana": [
+        "database/migrations/2026_10_02_000100_create_servers_table.php",
+        "database/migrations/2026_10_02_000200_create_agents_table.php",
+        "app/Models/Server.php",
+        "app/Models/Agent.php",
+        "database/factories/ServerFactory.php",
+        "app/Domain/Fleet/Data/ServerStatus.php",
+        "app/Domain/Fleet/Data/AgentConnection.php",
+        "app/Domain/Fleet/Data/EnrollmentToken.php",
+        "app/Domain/Fleet/Data/EnrollmentTarget.php",
+        "app/Domain/Fleet/Data/ServerRegistrationRejected.php",
+        "app/Domain/Fleet/Actions/RegisterServer.php",
+        "app/Domain/Fleet/Actions/IssueEnrollmentToken.php",
+        "app/Domain/Fleet/Services/EnrollmentInstructions.php",
+        "app/Livewire/Servers/Index.php",
+        "app/Livewire/Servers/Enroll.php",
+        "resources/views/livewire/servers/index.blade.php",
+        "resources/views/livewire/servers/index-placeholder.blade.php",
+        "resources/views/livewire/servers/enroll.blade.php",
+        "resources/views/components/ui/status-badge.blade.php",
+        "resources/icons/tabler/server.svg",
+        "resources/icons/tabler/plus.svg",
+        "resources/icons/tabler/terminal.svg",
+        "resources/css/app.css",
+        "resources/views/layouts/app.blade.php",
+        "routes/web.php",
+        "lang/id/errors.php",
+        "config/sadmin.php",
+        ".env.example",
+        "tests/Feature/Fleet/ServerSchemaTest.php",
+        "tests/Feature/Fleet/RegisterServerTest.php",
+        "tests/Feature/Fleet/IssueEnrollmentTokenTest.php",
+        "tests/Feature/Fleet/ServersPageTest.php",
+        "tests/Feature/Fleet/EnrollServerPageTest.php",
+        "docs/07_DATA_MODEL.md",
+        "docs/10_DEV_ENV.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md",
+        "../CHANGELOG.md",
+        "docs/_CODING_LEDGER.json",
+        "docs/_TOKEN_LEDGER.json"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Skema/migrasi",
+          "mulai": "2026-10-02T00:31:50+08:00",
+          "selesai": "2026-10-02T00:32:30+08:00",
+          "detik": 40,
+          "tok_est": 7646,
+          "muat": [
+            "docs/07_DATA_MODEL.md",
+            "database/migrations/2026_10_02_000100_create_servers_table.php",
+            "database/migrations/2026_10_02_000200_create_agents_table.php"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Model/akses data",
+          "mulai": "2026-10-02T00:32:30+08:00",
+          "selesai": "2026-10-02T00:32:58+08:00",
+          "detik": 29,
+          "tok_est": 1345,
+          "muat": [
+            "app/Models/Server.php",
+            "app/Models/Agent.php",
+            "app/Domain/Fleet/Data/ServerStatus.php",
+            "app/Domain/Fleet/Data/AgentConnection.php",
+            "database/factories/ServerFactory.php"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Service/logika domain",
+          "mulai": "2026-10-02T00:32:58+08:00",
+          "selesai": "2026-10-02T00:34:59+08:00",
+          "detik": 121,
+          "tok_est": 5326,
+          "muat": [
+            "app/Domain/Fleet/Actions/RegisterServer.php",
+            "app/Domain/Fleet/Actions/IssueEnrollmentToken.php",
+            "app/Domain/Fleet/Services/EnrollmentInstructions.php",
+            "app/Domain/Fleet/Data/EnrollmentToken.php",
+            "app/Domain/Fleet/Data/EnrollmentTarget.php",
+            "app/Domain/Fleet/Data/ServerRegistrationRejected.php",
+            "config/sadmin.php",
+            "app/Domain/Audit/Actions/AppendAuditEntry.php",
+            "app/Domain/Fleet/Services/CertificateAuthority.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Endpoint/rute",
+          "mulai": "2026-10-02T00:34:59+08:00",
+          "selesai": "2026-10-02T00:35:14+08:00",
+          "detik": 15,
+          "tok_est": 391,
+          "muat": [
+            "routes/web.php"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "UI + empat state",
+          "mulai": "2026-10-02T00:35:14+08:00",
+          "selesai": "2026-10-02T00:38:00+08:00",
+          "detik": 167,
+          "tok_est": 9922,
+          "muat": [
+            "app/Livewire/Servers/Index.php",
+            "app/Livewire/Servers/Enroll.php",
+            "app/Livewire/Concerns/FormatsInstitutionTime.php",
+            "resources/views/livewire/servers/index.blade.php",
+            "resources/views/livewire/servers/index-placeholder.blade.php",
+            "resources/views/livewire/servers/enroll.blade.php",
+            "resources/views/components/ui/status-badge.blade.php",
+            "resources/views/components/ui/field/text.blade.php",
+            "resources/css/app.css",
+            "resources/views/layouts/app.blade.php",
+            "lang/id/errors.php",
+            "docs/26_UI_CONVENTIONS.md"
+          ]
+        },
+        {
+          "no": 6,
+          "nama": "Tes",
+          "mulai": "2026-10-02T00:38:00+08:00",
+          "selesai": "2026-10-02T00:48:36+08:00",
+          "detik": 636,
+          "tok_est": 12605,
+          "muat": [
+            "tests/Feature/Fleet/RegisterServerTest.php",
+            "tests/Feature/Fleet/IssueEnrollmentTokenTest.php",
+            "tests/Feature/Fleet/ServerSchemaTest.php",
+            "tests/Feature/Fleet/ServersPageTest.php",
+            "tests/Feature/Fleet/EnrollServerPageTest.php",
+            "tests/Support/InteractsWithPasskeys.php",
+            "tests/Feature/Identity/PasskeysPageTest.php"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Gerbang fitur",
+          "mulai": "2026-10-02T00:48:36+08:00",
+          "selesai": "2026-10-02T01:13:41+08:00",
+          "detik": 1505,
+          "tok_est": 9173,
+          "muat": [
+            "docs/23_ACCEPTANCE_CRITERIA.md",
+            "docs/_archive/23-tambah-server.md",
+            "docs/10_DEV_ENV.md",
+            "docs/07_DATA_MODEL.md"
+          ]
+        }
+      ],
+      "detik": 2513,
+      "tok_est": 46408,
+      "deviasi": [
+        "app/Livewire/Concerns/FormatsInstitutionTime.php — di luar rencana: format waktu zona instansi untuk dua komponen baru; Settings\\Passkeys masih menyimpan peta zona sendiri (duplikasi, lihat ditunda)",
+        "resources/views/components/ui/field/text.blade.php — di luar rencana: galat per field + aria-describedby (docs/14), dibutuhkan formulir pertama yang punya validasi",
+        "resources/views/livewire/partials/error-state.blade.php — di luar rencana: varian retry 'method' (wire:click=retry) untuk komponen yang menyimpan kegagalan di properti terkunci (review S-1)",
+        "Navigasi sementara di topbar, bukan sidebar docs/26 — sidebar menunggu keputusan pemilik soal lebar sidebar ringkas",
+        "Beranda / dialihkan ke /server (sebelumnya /pengaturan/passkey)",
+        "Servers\\Enroll hanya menampilkan perintah enroll, tanpa run server.onboard dan tanpa perintah unduh + sha256sum (CAPSULES §4 adalah kapsul M3; rilis biner agen belum ada)"
+      ],
+      "warn_dilewati": [
+        "S1: kriteria slice ditulis sebagai AC-17 (kini diarsipkan ke docs/_archive/23-tambah-server.md), bukan blok bernama F-02c; dibuktikan 119 tes fitur + 8 tes redaksi di PHP 8.4 dan 8.3",
+        "S6: diperiksa manual — Domain/Fleet/{Actions,Services,Data}, Livewire Servers\\{Index,Enroll} tipis, rute di middleware auth, scope tenant di Action dan mount, forbidden-scan & ui-token-scan bersih",
+        "S7: hanya artefak ledger; deviasi nyata 3 berkas, lihat deviasi",
+        "S8 (run pertama): heuristik state; Index punya empat state (placeholder terpisah), Enroll punya gagal/sukses/memuat, status-badge bukan halaman ber-data",
+        "Suite paralel 8.4+8.3 di satu working tree bentrok di ForbiddenScanTest (menulis bootstrap/cache, public/storage); berurutan 725/725 di kedua versi"
+      ],
+      "asumsi": [
+        "SADMIN_GATEWAY_HOST = host --gateway (nama DNS huruf kecil atau IPv4 publik), port tetap 8443 (D-06); tak ada dokumen yang menetapkan sumbernya",
+        "Token enrolment = 32 byte acak dalam hex (64 karakter) agar aman di shell dan tak terbaca sebagai flag; KONTRAK §5 hanya menyebut sekali pakai 15 menit",
+        "Kedaluwarsa token dibulatkan ke bawah ke detik",
+        "Hostname server diisi admin saat pendaftaran (docs/07 NOT NULL); hostname laporan agen di Enroll belum dibandingkan",
+        "Nama server = label DNS huruf kecil 1–63; nama retired tetap terpakai (UNIQUE tenant_id,name)",
+        "Batas Mode Tunggal dihitung dari server berstatus selain retired, semua ownership",
+        "Advisory lock 7301007 untuk RegisterServer",
+        "Status awal servers tanpa default kolom (selalu diisi Action)"
+      ],
+      "dokumen_diperbarui": [
+        "docs/07_DATA_MODEL.md (CHECK & indeks servers/agents, FK alerts.server_id)",
+        "docs/10_DEV_ENV.md (SADMIN_GATEWAY_HOST)",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-17, lalu diarsipkan)",
+        "docs/_archive/23-tambah-server.md",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "Indeks servers (tenant_id, name) membuat baris ber-created_at sama keluar urut nama; tes urutan harus memakai nama yang berlawanan arah dengan ULID",
+        "filter_var FILTER_FLAG_NO_RES_RANGE tidak menolak multicast; label hostname 0x… dibaca inet_aton sebagai IPv4",
+        "Symfony VarDumper (dump/dd) dan var_export membuka properti privat walau ada __debugInfo",
+        "Tes yang memajukan jam (travelTo) wajib memakai now()->getTimestamp() untuk STARTED_AT sesi, bukan time()",
+        "Livewire Locked property + #[Locked] errorReason: tombol Coba lagi wajib memanggil method yang meresetnya"
+      ],
+      "ditunda": [
+        "Enroll→EnrollAccept di core (penukaran token sekali pakai, sertifikat dari CertificateAuthority, baris agents, format roster/kebijakan/sidik jari kepercayaan): butuh ADR + kontrak; slice enrolment berikutnya",
+        "Inbox gateway UDS + HMAC (routes/internal.php): slice gateway",
+        "Servers\\Show dan data inventaris dari agen (server.inventory, Hello/Heartbeat): slice inventaris",
+        "Pensiunkan/batalkan pendaftaran server enrolling (status retired)",
+        "Pemblokiran Enroll bila hostname laporan agen berbeda: keputusan di slice enrolment",
+        "Perintah unduh biner agen + sha256sum (CAPSULES §4) dan run server.onboard: rilis edge / kapsul M3",
+        "SAN iPAddress sertifikat gateway bila SADMIN_GATEWAY_HOST berupa IPv4: slice gateway",
+        "Satukan peta zona WIB/WITA/WIT (Settings\\Passkeys memakai trait FormatsInstitutionTime)",
+        "Teks tindakan gateway_unset: sebut config:cache/muat ulang FPM bila install.sh memakai cache config (F-01)",
+        "VaultIntegrityError saat render Enroll = halaman 500 tanpa alert integritas (docs/14): slice Alerts",
+        "Tombol salin perintah (UX)",
+        "Uji browser nyata alur passkey→tambah server (snapshot light/dark/375 px sudah diperiksa)",
+        "Keputusan sidebar docs/26 (lebar sidebar ringkas) — pemilik produk"
+      ],
+      "selesai": "2026-10-02T01:13:41+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 16373,
-    "tok_est": 619267,
+    "detik": 18886,
+    "tok_est": 665675,
     "tok_terukur": 0,
-    "step": 68,
-    "fitur": 11
+    "step": 75,
+    "fitur": 12
   }
 }
