@@ -147,7 +147,19 @@ class StoreSecretTest extends TestCase
     {
         foreach (SecretPurpose::cases() as $purpose) {
             $secret = $this->store('nilai-'.$purpose->value, $purpose);
-            $this->assertSame('nilai-'.$purpose->value, app(Vault::class)->reveal($secret->id, $purpose, $this->tenant->id)->expose());
+            $this->assertTrue(app(Vault::class)->matches($secret->id, $purpose, $this->tenant->id, new SecretValue('nilai-'.$purpose->value)));
+
+            if (in_array($purpose, [SecretPurpose::AuditKey, SecretPurpose::ServiceKey], true)) {
+                // Seed Ed25519 hanya dipakai di dalam brankas (ADR 0004 §2.1).
+                try {
+                    app(Vault::class)->reveal($secret->id, $purpose, $this->tenant->id);
+                    $this->fail("reveal() seharusnya menolak {$purpose->value}.");
+                } catch (InvalidArgumentException $e) {
+                    $this->assertStringContainsString('tak pernah dibuka keluar brankas', $e->getMessage());
+                }
+            } else {
+                $this->assertSame('nilai-'.$purpose->value, app(Vault::class)->reveal($secret->id, $purpose, $this->tenant->id)->expose());
+            }
         }
 
         $this->assertSame(count(SecretPurpose::cases()), Secret::query()->count());

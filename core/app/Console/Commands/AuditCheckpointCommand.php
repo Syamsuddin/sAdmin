@@ -9,6 +9,7 @@ use App\Infrastructure\Vault\VaultIntegrityError;
 use App\Infrastructure\Vault\VaultUnavailable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use UnexpectedValueException;
 
 class AuditCheckpointCommand extends Command
 {
@@ -24,6 +25,9 @@ class AuditCheckpointCommand extends Command
             return $this->failed('brankas tak tersedia: '.$e->getMessage(), critical: false);
         } catch (VaultIntegrityError $e) {
             return $this->failed('kunci audit di brankas gagal dibuka: '.$e->getMessage(), critical: true);
+        } catch (UnexpectedValueException $e) {
+            // Tertulis ⇒ terverifikasi gagal (ADR 0004 §2.4 no. 7): kelas Integritas docs/14.
+            return $this->failed($e->getMessage(), critical: true);
         }
 
         return match ($result->status) {

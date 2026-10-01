@@ -45,8 +45,9 @@ Bingkai WebSocket: satu pesan JSON teks per bingkai: `{"type": "<NamaPesan>", "i
 Tanda tangan kunci audit (`CheckpointAnchor.signature`), normatif:
 - Algoritme Ed25519 murni (RFC 8032, bukan Ed25519ph/ctx). Satu kunci audit per tenant, sehingga kunci itu sendiri yang mengikat checkpoint ke tenant.
 - Pesan yang ditandatangani = byte ASCII `sadmin-audit-checkpoint/1`, satu byte LF (`0x0A`), lalu byte UTF-8 hasil JCS objek **tepat tiga** anggota: `seq` (integer ≥ 1), `hash` (`hash` entri audit ber-`seq` itu, 64 hex huruf kecil), dan `created_at` (RFC 3339 UTC berakhiran `Z`, tepat 6 digit mikrodetik: `YYYY-MM-DDTHH:MM:SS.ffffffZ`). `signature` tidak ikut.
-- `signature` = 64 byte tanda tangan, dikodekan base64 standar berpadding (RFC 4648 §4, 88 karakter). Kunci publik audit (mis. `audit_pubkey` di `EnrollAccept`) = 32 byte mentah, base64 standar berpadding (44 karakter). Base64 yang tak sah atau panjang byte yang salah = tanda tangan tidak sah.
-- Vektor bersama `kontrak/vectors/checkpoint/*.json`: `seed_hex` → `public_key`; `checkpoint` → `message` → `signature`; `valid` = hasil verifikasi yang wajib. Alasan dan aturan penyimpanan di core: `core/docs/adr/0004-checkpoint-audit.md`.
+- `signature` = 64 byte tanda tangan, dikodekan base64 standar berpadding (RFC 4648 §4, 88 karakter). Kunci publik audit (mis. `audit_pubkey` di `EnrollAccept`) = 32 byte mentah, base64 standar berpadding (44 karakter).
+- Pengodean base64 wajib **kanonik**: bit sisa karakter terakhir bernilai nol (RFC 4648 §3.5), sehingga satu tanda tangan hanya punya satu teks. Verifikator menolak teks yang tak kanonik meski byte hasil dekodenya sama (Go: `base64.StdEncoding.Strict()`). Base64 yang tak sah, tak kanonik, atau panjang byte yang salah = tanda tangan tidak sah.
+- Vektor bersama `kontrak/vectors/checkpoint/*.json`: `seed_hex` → `public_key`; `checkpoint` → `message` → `signature`; `valid` = hasil verifikasi yang wajib. Vektor dihasilkan oracle independen `kontrak/vectors/checkpoint/oracle.py` (pustaka Python `cryptography`). Alasan dan aturan penyimpanan di core: `core/docs/adr/0004-checkpoint-audit.md`.
 
 ## 4. Rencana (yang ditandatangani passkey)
 Semua aksi **L2/L3** hanya berjalan di bawah sebuah `Plan`; aksi L2/L3 tunggal dari console = rencana satu langkah. Aksi L0/L1 cukup tanda tangan layanan (`plan_hash` = null).

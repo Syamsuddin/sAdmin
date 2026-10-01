@@ -3,8 +3,13 @@
 namespace Tests\Feature\Audit;
 
 use App\Domain\Audit\Services\AuditChainVerifier;
+use App\Domain\Audit\Services\AuditCheckpointVerifier;
+use App\Domain\Audit\Services\AuditHasher;
 use App\Domain\Audit\Services\CheckpointSigner;
 use App\Infrastructure\Vault\Ed25519;
+use Carbon\CarbonImmutable;
+use Closure;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -163,6 +168,109 @@ class AuditCheckpointTamperTest extends TestCase
         $this->artisan('sadmin:audit-verify')
             ->expectsOutputToContain('Checkpoint tak dapat diperiksa: brankas tak tersedia')
             ->assertExitCode(2);
+    }
+
+    /** @return iterable<string, array{Closure(self): void}> */
+    public static function vaultMadeUnavailable(): iterable
+    {
+        yield 'tanpa kunci induk' => [fn (self $test) => $test->withoutVaultKey()];
+        yield 'versi kunci induk pada key_wraps diubah' => [fn () => DB::table('key_wraps')->update(['master_key_version' => 2])];
+    }
+
+    /** Brankas yang dibuat tak tersedia tak boleh menyamarkan rantai terpotong menjadi exit 2 (review F-04b #1). */
+    #[DataProvider('vaultMadeUnavailable')]
+    public function test_truncation_is_still_an_integrity_failure_when_the_vault_is_unavailable(Closure $makeUnavailable): void
+    {
+        [, , $third] = $this->checkpointSeqs;
+        $this->tamperEntries(fn () => DB::table('audit_entries')->where('seq', '>', $third - 5)->delete());
+        $makeUnavailable($this);
+        Log::shouldReceive('error')->never();
+        $this->expectCheckpointMismatch($third, 'ujung rantai terpotong', 0);
+
+        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
+    }
+
+    public function test_rewrite_is_still_an_integrity_failure_when_the_vault_is_unavailable(): void
+    {
+        [$first] = $this->checkpointSeqs;
+        $this->rewriteChainFrom($first - 1, 'outcome', 'failed');
+        $this->withoutVaultKey();
+        $this->expectCheckpointMismatch($first, 'rantai ditulis ulang', 0);
+
+        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
+    }
+
+    /** Checkpoint yang lahir saat rantai sedang ditelusuri bukan tanda rantai terpotong (review F-04b #2). */
+    public function test_checkpoints_created_after_the_chain_walk_began_are_out_of_scope(): void
+    {
+        $verifier = app(AuditCheckpointVerifier::class);
+        $upToSeq = $verifier->latestSeq();
+        $head = app(AuditChainVerifier::class)->verify()->head;
+
+        $this->appendEntries(5);
+        $newer = (int) $this->checkpoint()->seq;
+        $this->assertGreaterThan($head->seq, $newer);
+
+        $this->assertTrue($verifier->verify($head, $upToSeq)->intact);
+        $this->assertSame(3, $verifier->verify($head, $upToSeq)->checked);
+        $this->assertSame($newer, $verifier->verify($head, $verifier->latestSeq())->brokenAtSeq, 'Tanpa batas, checkpoint baru terbaca sebagai rantai terpotong.');
+    }
+
+    /** Interleaving nyata di level perintah: entri dan checkpoint baru di-commit tepat setelah rantai dibaca. */
+    public function test_checkpoint_committed_during_verification_is_not_a_false_alarm(): void
+    {
+        $injected = false;
+        DB::listen(function (QueryExecuted $query) use (&$injected): void {
+            if (! $injected && str_contains($query->sql, 'from "audit_entries" where "seq" > ? and "seq" is not null order by "seq" asc limit 500')) {
+                $injected = true;
+                $this->appendEntries(5);
+                $this->checkpoint();
+            }
+        });
+        Log::shouldReceive('critical')->never();
+
+        $this->artisan('sadmin:audit-verify')
+            ->expectsOutputToContain('Checkpoint utuh: 3 checkpoint sah')
+            ->assertExitCode(0);
+
+        $this->assertTrue($injected, 'Prasyarat: checkpoint baru benar-benar disisipkan di tengah verifikasi.');
+        $this->assertSame(4, DB::table('audit_checkpoints')->count());
+    }
+
+    public function test_unparseable_checkpoint_time_is_an_integrity_failure_not_a_pass(): void
+    {
+        [$first, $second] = $this->checkpointSeqs;
+        $this->tamperCheckpoints(fn () => DB::table('audit_checkpoints')->where('seq', $second)->update(['created_at' => 'infinity']));
+        $this->expectCheckpointMismatch($second, 'checkpoint tak dapat diurai: InvalidFormatException', $first);
+
+        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
+    }
+
+    public function test_all_checkpoints_resigned_with_an_attacker_key_are_detected(): void
+    {
+        [$first] = $this->checkpointSeqs;
+        $attacker = Ed25519::generateSeed();
+        $this->tamperCheckpoints(function () use ($attacker): void {
+            foreach (DB::table('audit_checkpoints')->get() as $row) {
+                $createdAt = AuditHasher::formatTime(CarbonImmutable::parse($row->created_at));
+                $signature = Ed25519::encode(Ed25519::sign($attacker, CheckpointSigner::message((int) $row->seq, $row->hash, $createdAt)));
+                DB::table('audit_checkpoints')->where('seq', $row->seq)->update(['signature' => $signature]);
+            }
+            // Kunci publik yang tercatat di audit bukan akar kepercayaan (ADR 0004 §2.1): menggantinya pun percuma.
+        });
+        $this->expectCheckpointMismatch($first, 'tanda tangan checkpoint tidak sah', 0);
+
+        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
+    }
+
+    public function test_checkpoint_row_without_tenant_is_an_integrity_failure_not_a_crash(): void
+    {
+        [$first, $second] = $this->checkpointSeqs;
+        DB::statement('ALTER TABLE audit_checkpoints ALTER COLUMN tenant_id DROP NOT NULL');
+        $this->tamperCheckpoints(fn () => DB::table('audit_checkpoints')->where('seq', $second)->update(['tenant_id' => null]));
+        $this->expectCheckpointMismatch($second, 'baris checkpoint tak lengkap', $first);
+
+        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
     }
 
     public function test_chain_without_checkpoints_verifies_without_the_vault(): void

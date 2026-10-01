@@ -31,7 +31,8 @@ class VaultBoundaryTest extends TestCase
             if (str_starts_with($path, self::VAULT)) {
                 continue;
             }
-            if (preg_match('/sodium_crypto_aead_|sodium_crypto_sign_|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
+            // Ed25519::sign/publicKey dan expose() membuka nilai/seed: hanya brankas yang boleh (ADR 0004 §2.1, docs/12).
+            if (preg_match('/sodium_crypto_aead_|sodium_crypto_sign_|Ed25519::(?:sign|publicKey)\s*\(|->expose\s*\(|CREDENTIALS_DIRECTORY|sadmin\.vault\./i', $source) === 1) {
                 $offenders[] = $path;
             }
         }

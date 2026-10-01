@@ -12,6 +12,7 @@ use App\Domain\Audit\Data\AuditOutcome;
 use App\Domain\Audit\Data\CheckpointResult;
 use App\Domain\Audit\Services\AuditHasher;
 use App\Models\Institution;
+use App\Models\Secret;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
@@ -50,6 +51,28 @@ trait InteractsWithAuditChain
     protected function initAuditKey(): string
     {
         return app(InitializeAuditKey::class)->handle()['publicKey'];
+    }
+
+    /**
+     * Seed kunci audit aktif, dibuka mandiri dari teks ADR 0003 §2.2–2.3 dengan kunci induk uji. Brankas sendiri
+     * menolak mengembalikan seed (ADR 0004 §2.1), jadi tes redaksi butuh jalur di luarnya.
+     */
+    protected function auditSeed(): string
+    {
+        $secret = Secret::query()->with('keyWrap')->where('purpose', 'audit_key')->where('status', 'active')->sole();
+        $wrapped = (string) $secret->keyWrap?->wrapped_dek;
+        $kek = (string) file_get_contents((string) config('sadmin.vault.dev_key_file'));
+
+        $dek = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
+            substr($wrapped, 24), "sadmin-vault/1/key_wrap/{$secret->tenant_id}/{$secret->key_wrap_id}/1", substr($wrapped, 0, 24), $kek,
+        );
+        $this->assertIsString($dek, 'Kunci data kunci audit tak terbuka dengan format ADR 0003.');
+        $seed = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(
+            $secret->ciphertext, "sadmin-vault/1/secret/{$secret->tenant_id}/{$secret->id}/audit_key/{$secret->key_wrap_id}", $secret->nonce, $dek,
+        );
+        $this->assertIsString($seed, 'Seed kunci audit tak terbuka dengan format ADR 0003.');
+
+        return $seed;
     }
 
     protected function checkpoint(bool $onlyIfDue = false): CheckpointResult

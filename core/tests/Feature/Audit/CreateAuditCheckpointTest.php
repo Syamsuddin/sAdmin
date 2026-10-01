@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Audit;
 
+use App\Domain\Audit\Actions\CreateAuditCheckpoint;
 use App\Domain\Audit\Data\CheckpointStatus;
 use App\Domain\Audit\Services\AuditHasher;
 use App\Domain\Audit\Services\CheckpointSigner;
@@ -226,7 +227,7 @@ class CreateAuditCheckpointTest extends TestCase
         $last = $this->checkpoint()->seq;
         $this->tamperCheckpoints(fn () => DB::table('audit_checkpoints')->update(['signature' => Ed25519::encode(str_repeat("\x07", 64))]));
         $this->appendEntries(1);
-        $this->expectAuditMismatch((int) $last, "tanda tangan checkpoint seq {$last} tidak sah");
+        $this->expectAuditMismatch((int) $last, "checkpoint seq {$last}: tanda tangan checkpoint tidak sah");
 
         $this->artisan('sadmin:audit-checkpoint')->assertExitCode(1);
 
@@ -288,9 +289,43 @@ class CreateAuditCheckpointTest extends TestCase
         $this->artisan('sadmin:audit-checkpoint')->assertExitCode(1);
     }
 
-    public function test_checkpoint_that_does_not_verify_after_writing_is_rolled_back(): void
+    public function test_concurrent_creators_are_serialized_by_the_advisory_lock(): void
     {
         $this->appendEntries(2);
+        config(['database.connections.pgsql_kunci' => config('database.connections.pgsql')]);
+        $other = DB::connection('pgsql_kunci');
+        $other->select('SELECT pg_advisory_lock(?)', [CreateAuditCheckpoint::LOCK_KEY]);
+        DB::statement("SET lock_timeout = '200ms'");
+
+        try {
+            $this->checkpoint();
+            $this->fail('Pembuatan checkpoint seharusnya menunggu kunci advisory yang dipegang koneksi lain.');
+        } catch (QueryException $e) {
+            $this->assertStringContainsString('lock timeout', $e->getMessage());
+        } finally {
+            DB::statement('RESET lock_timeout');
+            $other->select('SELECT pg_advisory_unlock(?)', [CreateAuditCheckpoint::LOCK_KEY]);
+            $other->disconnect();
+        }
+
+        $this->assertSame(0, $this->checkpoints());
+    }
+
+    public function test_checkpoint_that_does_not_verify_after_writing_is_rolled_back_and_logged_critical(): void
+    {
+        $this->appendEntries(2);
+        $this->corruptCheckpointsOnInsert();
+        Log::shouldReceive('critical')->once()->withArgs(
+            fn (string $message, array $context): bool => $message === 'audit_checkpoint_failed' && str_contains($context['reason'], 'pembuatan dibatalkan'),
+        );
+
+        $this->artisan('sadmin:audit-checkpoint')->assertExitCode(1);
+
+        $this->assertSame(0, $this->checkpoints());
+    }
+
+    private function corruptCheckpointsOnInsert(): void
+    {
         $other = Ed25519::encode(str_repeat("\x09", 64));
         DB::unprepared(<<<SQL
             CREATE FUNCTION uji_ubah_checkpoint() RETURNS trigger LANGUAGE plpgsql AS \$\$
@@ -299,6 +334,12 @@ class CreateAuditCheckpointTest extends TestCase
             CREATE TRIGGER uji_ubah_checkpoint BEFORE INSERT ON audit_checkpoints
                 FOR EACH ROW EXECUTE FUNCTION uji_ubah_checkpoint();
             SQL);
+    }
+
+    public function test_checkpoint_that_does_not_verify_after_writing_is_rolled_back(): void
+    {
+        $this->appendEntries(2);
+        $this->corruptCheckpointsOnInsert();
 
         try {
             $this->checkpoint();

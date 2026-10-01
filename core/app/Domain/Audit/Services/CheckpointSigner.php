@@ -62,17 +62,19 @@ final class CheckpointSigner
     }
 
     /**
-     * Tanda tangan satu baris audit_checkpoints sah. Baris hasil manipulasi apa pun (waktu atau teks tak terurai)
-     * berarti tak sah, bukan crash; pemanggil mencatatnya sebagai audit_mismatch.
+     * Null bila tanda tangan satu baris audit_checkpoints sah; selain itu alasannya. Baris hasil manipulasi apa pun
+     * (waktu atau teks tak terurai) berakhir sebagai alasan bernama kelas galatnya, bukan crash; pemanggil
+     * mencatatnya sebagai audit_mismatch.
      */
-    public static function verifyRow(string $publicKey, stdClass $row): bool
+    public static function rowMismatch(string $publicKey, stdClass $row): ?string
     {
         try {
             $createdAt = AuditHasher::formatTime(CarbonImmutable::parse($row->created_at));
-
-            return self::verify($publicKey, (int) $row->seq, (string) $row->hash, $createdAt, (string) $row->signature);
-        } catch (Throwable) {
-            return false;
+            $valid = self::verify($publicKey, (int) $row->seq, (string) $row->hash, $createdAt, (string) $row->signature);
+        } catch (Throwable $e) {
+            return 'checkpoint tak dapat diurai: '.class_basename($e);
         }
+
+        return $valid ? null : 'tanda tangan checkpoint tidak sah';
     }
 }

@@ -375,8 +375,8 @@ Trigger menolak `DELETE`/`TRUNCATE` dan `UPDATE` selain penambahan `anchored_to`
 | nonce | bytea | NOT NULL | |
 | key_wrap_id | char(26) | FK→key_wraps.id, UNIQUE | satu kunci data per rahasia (1:1, ADR 0003) |
 | status | text | CHECK IN ('active','rotated','destroyed') | destroyed = ciphertext ditimpa nol, baris tetap |
-Indeks unik parsial `secrets_one_active_audit_key (tenant_id) WHERE purpose='audit_key' AND status='active'`: tepat satu kunci audit aktif per tenant (ADR 0004).
 | created_at / updated_at | timestamptz | | |
+Indeks unik parsial `secrets_one_active_audit_key (tenant_id) WHERE purpose='audit_key' AND status='active'`: tepat satu kunci audit aktif per tenant (ADR 0004).
 
 ### key_wraps
 | Kolom | Tipe | Constraint | Catatan |

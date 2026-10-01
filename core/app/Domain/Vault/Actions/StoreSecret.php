@@ -52,7 +52,7 @@ final class StoreSecret
             ]);
 
             // Invarian "tertulis ⇒ terbuka": rahasia yang tersimpan tapi tak terbuka hilang tanpa jejak. Batalkan di sini.
-            if (! $this->vault->reveal($secretId, $purpose, $tenantId)->equals($value)) {
+            if (! $this->vault->matches($secretId, $purpose, $tenantId, $value)) {
                 throw new UnexpectedValueException('Rahasia tak terbaca ulang identik; penyimpanan dibatalkan.');
             }
 

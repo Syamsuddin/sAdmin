@@ -28,11 +28,11 @@ Begitu checkpoint pertama dijangkarkan ke agen (`CheckpointAnchor`), rincian ini
 - Setiap tenant punya **tepat satu** kunci audit aktif. Ini dijaga indeks unik parsial `secrets_one_active_audit_key` pada `secrets (tenant_id) WHERE purpose = 'audit_key' AND status = 'active'`.
 - Kunci audit hanya dibuat oleh `php artisan sadmin:audit-key-init`, yang kelak dipanggil `install.sh` (F-01):
   1. instansi wajib sudah diinisialisasi, karena kunci terikat ke tenant instansi;
-  2. bila sudah ada kunci audit aktif, perintah menolak. Mengganti kunci audit adalah rotasi, yang butuh gerbang manusia (docs/22) dan ADR baru;
+  2. bila tenant itu **pernah** punya baris `audit_key` (status apa pun, termasuk `destroyed`) atau `audit_checkpoints` sudah berisi, perintah menolak. Kunci baru dalam keadaan itu adalah rotasi de facto, karena checkpoint lama tak lagi terverifikasi; rotasi butuh gerbang manusia (docs/22) dan ADR baru;
   3. dalam satu transaksi: seed dibuat dengan CSPRNG lalu disimpan lewat brankas (entri audit `secret.store`), kemudian entri audit `audit.key_initialize` ditulis (aktor `local_root`, target `secret:<id>`, `params_redacted` = `{"public_key": "<base64>"}`);
   4. perintah mencetak kunci publik (base64 standar, 44 karakter). Admin mencatatnya di kit pemulihan dan menyerahkannya kepada auditor.
 - Core **tidak pernah** membuat kunci audit secara implisit, misalnya saat checkpoint pertama. Dengan begitu, kunci yang hilang atau dihancurkan tidak diam-diam terganti kunci baru.
-- Seed hanya dibuka di dalam `App\Infrastructure\Vault` (`Vault::signEd25519()` dan `Vault::ed25519PublicKey()`). Kode domain tidak pernah memegang byte seed. Fungsi `sodium_crypto_sign_*` hanya dipanggil di `app/Infrastructure/Vault`.
+- Seed hanya dibuka di dalam `App\Infrastructure\Vault` (`Vault::signEd25519()` dan `Vault::ed25519PublicKey()`). `Vault::reveal()` menolak purpose `audit_key` dan `service_key` (ADR 0003 §2.5), sehingga kode domain tidak pernah memegang byte seed; seed baru dibuat `Ed25519::generateSeed()` sebagai objek `SecretValue` yang tak bisa dibaca di luar brankas. Fungsi `sodium_crypto_sign_*`, `Ed25519::sign()`/`publicKey()`, dan `SecretValue::expose()` hanya dipanggil di `app/Infrastructure/Vault`.
 - Di dalam core, akar kepercayaan verifikasi adalah kunci publik yang **diturunkan dari seed di brankas**, bukan kunci publik yang tercatat di DB. Memalsukan checkpoint menuntut kunci induk brankas, bukan sekadar akses tulis ke DB. Di luar core, akar kepercayaannya adalah salinan kunci publik di kit pemulihan dan di agen (`audit_pubkey`).
 
 ### 2.2 Format tanda tangan
@@ -70,21 +70,24 @@ Aturan tambahan:
 - Membuat checkpoint **tidak** menulis entri audit. Checkpoint adalah artefak audit itu sendiri. Bila setiap checkpoint menulis entri, rantai tak pernah sepi dan setiap checkpoint memicu checkpoint berikutnya.
 - Penjadwal menjalankan `sadmin:audit-checkpoint --if-due` tiap menit. Janji "tiap 15 menit atau 100 entri" docs/21 dipenuhi dengan resolusi satu menit.
 - Checkpoint tidak dibuat di dalam transaksi `AppendAuditEntry`, supaya brankas dan penandatanganan tidak masuk jalur tulis audit. Brankas yang tidak tersedia tidak boleh menggagalkan login atau aksi lain.
-- Bila instansi belum diinisialisasi, kunci audit belum ada, atau brankas tidak tersedia, perintah gagal (exit 1, log `error` `audit_checkpoint_failed`) tanpa membuat checkpoint. Bila kunci audit di brankas gagal dibuka (`VaultIntegrityError`), log yang sama ditulis sebagai `critical` (kelas *Integritas* docs/14).
+- Bila instansi belum diinisialisasi, kunci audit belum ada, atau brankas tidak tersedia, perintah gagal (exit 1, log `error` `audit_checkpoint_failed`) tanpa membuat checkpoint. Bila kunci audit di brankas gagal dibuka (`VaultIntegrityError`) atau langkah 7 gagal, log yang sama ditulis sebagai `critical` (kelas *Integritas* docs/14).
 
 ### 2.5 Verifikasi
-`php artisan sadmin:audit-verify` lebih dulu memeriksa rantai persis seperti ADR 0001 §2.7. Bila rantai utuh, checkpoint diperiksa urut `seq` dan berhenti di pelanggaran pertama:
+`php artisan sadmin:audit-verify` lebih dulu mencatat `seq` checkpoint terbesar yang ada saat itu sebagai batas, lalu memeriksa rantai persis seperti ADR 0001 §2.7. Bila rantai utuh, checkpoint ber-`seq` ≤ batas diperiksa urut `seq` dan berhenti di pelanggaran pertama. Batas itu mencegah alarm palsu: checkpoint yang lahir saat rantai sedang ditelusuri boleh melampaui ujung rantai yang dipegang verifikator.
 
 | Urutan | Pemeriksaan | Bila gagal |
 |---|---|---|
-| 1 | Kunci audit aktif milik tenant checkpoint ada | "kunci audit aktif tenant tidak ada padahal checkpoint ada" |
-| 2 | Tanda tangan sah atas (`seq`, `hash`, `created_at`) | "tanda tangan checkpoint tidak sah" |
+| 0 | `tenant_id` dan `hash` tidak kosong | "baris checkpoint tak lengkap" |
+| 1 | Kunci audit aktif milik tenant checkpoint ada, dan brankas bisa membukanya | "kunci audit aktif tenant tidak ada padahal checkpoint ada" / "kunci audit di brankas gagal dibuka" (`VaultIntegrityError`) |
+| 2 | Tanda tangan sah atas (`seq`, `hash`, `created_at`) | "tanda tangan checkpoint tidak sah" / "checkpoint tak dapat diurai: <kelas galat>" |
 | 3 | `seq` ≤ ujung rantai | "rantai berakhir sebelum checkpoint (ujung rantai terpotong)" |
 | 4 | `hash` = `hash` entri ber-`seq` itu | "hash entri berbeda dengan checkpoint (rantai ditulis ulang)" |
 
+Bila brankas tidak tersedia (`VaultUnavailable`) saat langkah 1, langkah 1–2 dilewati untuk sisa checkpoint, tetapi langkah 0, 3, dan 4 **tetap** dijalankan untuk semua checkpoint. Ketiganya tak butuh kunci, jadi penyerang yang membuat brankas tak tersedia (mis. mengubah `key_wraps.master_key_version`) tak bisa menyamarkan rantai terpotong atau ditulis ulang menjadi exit 2.
+
 - **Exit 0:** rantai utuh dan semua checkpoint sah, atau rantai utuh dan belum ada checkpoint. Keluaran menyebut jumlah checkpoint, `seq` checkpoint terakhir, dan jumlah entri sesudahnya yang belum tercakup.
 - **Exit 1:** rantai atau checkpoint rusak. Log `critical` `audit_mismatch` berisi `reason`, `last_intact_seq`, serta `broken_at_seq` (rantai) atau `checkpoint_seq` (checkpoint). Kelas *Integritas* docs/14.
-- **Exit 2:** rantai utuh, tetapi checkpoint tidak dapat diperiksa karena brankas tidak tersedia. Log `error` `audit_verify_incomplete`. Kelas *Galat infrastruktur core* docs/14.
+- **Exit 2:** rantai utuh dan pemeriksaan 0, 3, 4 lolos untuk semua checkpoint, tetapi tanda tangan tidak dapat diperiksa karena brankas tidak tersedia. Log `error` `audit_verify_incomplete`. Kelas *Galat infrastruktur core* docs/14.
 - Brankas hanya dimuat bila ada checkpoint. Rantai tanpa checkpoint tetap bisa diverifikasi tanpa kunci induk.
 - Seperti ADR 0001 §2.7, alasan yang tampil maupun tercatat tidak pernah menggemakan isi entri.
 
@@ -118,12 +121,13 @@ Aturan tambahan:
 ## 5. Penegakan
 | Klausul | Dijaga oleh |
 |---|---|
-| 2.1 satu kunci aktif, pembuatan eksplisit, kunci tidak bocor | `InitializeAuditKeyTest` (termasuk grup `redaction`), indeks `secrets_one_active_audit_key` |
-| 2.1 satu pintu `sodium_crypto_sign_*` | `VaultBoundaryTest` |
-| 2.2 format tanda tangan | `CheckpointSignatureVectorsTest` (suite Contract), `Ed25519Test` (vektor RFC 8032) |
-| 2.3 trigger, FK, CHECK | `CreateAuditCheckpointTest` |
-| 2.4 jatuh tempo, pembuktian segmen, tertulis ⇒ terverifikasi, gagal tertutup | `CreateAuditCheckpointTest` |
-| 2.5 verifikasi dan kode exit | `AuditCheckpointTamperTest` |
+| 2.1 satu kunci aktif, pembuatan eksplisit sekali seumur instalasi, kunci lintas tenant, kunci tidak bocor (konsol, log, audit, baris) | `InitializeAuditKeyTest` (termasuk grup `redaction`), indeks `secrets_one_active_audit_key` |
+| 2.1 seed tak keluar brankas (`reveal()` menolak, satu pintu `sodium_crypto_sign_*`, `Ed25519::sign`/`publicKey`, `expose()`) | `VaultBoundaryTest`, `StoreSecretTest::test_every_purpose_of_the_data_model_is_accepted` |
+| 2.2 format tanda tangan, base64 kanonik | `CheckpointSignatureVectorsTest` (suite Contract), `Ed25519Test` (vektor RFC 8032) |
+| 2.3 trigger, CHECK | `CreateAuditCheckpointTest` |
+| 2.4 kunci advisory, jatuh tempo, pembuktian segmen, tertulis ⇒ terverifikasi, gagal tertutup | `CreateAuditCheckpointTest` |
+| 2.5 batas checkpoint, pemeriksaan struktural tanpa brankas, verifikasi dan kode exit, akar kepercayaan | `AuditCheckpointTamperTest` |
 
 ## 6. Riwayat
 - 2026-10-01: diusulkan bersama slice F-04b Checkpoint audit (M1).
+- 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi, 2 sedang, 7 rendah). Perubahannya: verify memakai batas checkpoint yang dibaca sebelum rantai ditelusuri; pemeriksaan struktural tetap berjalan saat brankas tak tersedia; baris checkpoint tak lengkap jadi galat integritas; `audit-key-init` menolak bila kunci pernah ada atau checkpoint sudah ada; `reveal()` menolak seed Ed25519; kegagalan baca-ulang checkpoint dicatat `critical`; KONTRAK §3 mewajibkan base64 kanonik (vektor 04). Format pesan yang ditandatangani dan vektor 01–03 tidak berubah.

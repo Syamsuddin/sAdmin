@@ -48,7 +48,7 @@ final class CreateAuditCheckpoint
                 return CheckpointResult::refused($lastSeq, $lastSeq, "rantai berakhir di seq {$tipSeq} sebelum checkpoint seq {$lastSeq} (ujung rantai terpotong)");
             }
             if ($tip === null || $tipSeq === $lastSeq) {
-                if ($last !== null && $tip !== null && ! hash_equals($last->hash, $tip->hash)) {
+                if ($last !== null && $tip !== null && ! hash_equals((string) $last->hash, $tip->hash)) {
                     return CheckpointResult::refused($lastSeq, $tipSeq, "hash entri seq {$tipSeq} berbeda dengan checkpoint (rantai ditulis ulang)");
                 }
 
@@ -97,7 +97,7 @@ final class CreateAuditCheckpoint
             // Invarian "tertulis ⇒ terverifikasi": checkpoint yang tak lolos verifikasi akan membuat verify merah
             // selamanya, dan barisnya tak bisa dihapus (trigger). Batalkan di sini.
             $stored = DB::table('audit_checkpoints')->where('seq', $head->seq)->first();
-            if ($stored === null || ! hash_equals($head->hash, $stored->hash) || ! CheckpointSigner::verifyRow($publicKey, $stored)) {
+            if ($stored === null || ! hash_equals($head->hash, $stored->hash) || CheckpointSigner::rowMismatch($publicKey, $stored) !== null) {
                 throw new UnexpectedValueException('Checkpoint tak terbaca ulang dengan tanda tangan sah; pembuatan dibatalkan.');
             }
 
@@ -116,15 +116,16 @@ final class CreateAuditCheckpoint
     private function anchorMismatch(stdClass $last, string $publicKey): ?string
     {
         $seq = (int) $last->seq;
-        if (! CheckpointSigner::verifyRow($publicKey, $last)) {
-            return "tanda tangan checkpoint seq {$seq} tidak sah";
+        $reason = CheckpointSigner::rowMismatch($publicKey, $last);
+        if ($reason !== null) {
+            return "checkpoint seq {$seq}: {$reason}";
         }
 
         $entry = DB::table('audit_entries')->where('seq', $seq)->first();
         if ($entry === null) {
             return "entri seq {$seq} yang dicakup checkpoint hilang";
         }
-        if (! hash_equals($last->hash, $entry->hash)) {
+        if (! hash_equals((string) $last->hash, $entry->hash)) {
             return "hash entri seq {$seq} berbeda dengan checkpoint (rantai ditulis ulang)";
         }
 

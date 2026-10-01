@@ -19,6 +19,9 @@ class AuditVerifyCommand extends Command
 
     public function handle(AuditChainVerifier $verifier, AuditCheckpointVerifier $checkpoints): int
     {
+        // Batas checkpoint dibaca sebelum rantai ditelusuri (ADR 0004 §2.5): checkpoint yang lahir di tengah
+        // verifikasi tak boleh terbaca sebagai rantai terpotong.
+        $upToSeq = $checkpoints->latestSeq();
         $chain = $verifier->verify();
 
         if (! $chain->intact) {
@@ -27,7 +30,7 @@ class AuditVerifyCommand extends Command
 
         $this->info("Rantai audit utuh: {$chain->checked} entri, head seq {$chain->head->seq} hash {$chain->head->hash}.");
 
-        $result = $checkpoints->verify($chain->head);
+        $result = $checkpoints->verify($chain->head, $upToSeq);
 
         if ($result->intact) {
             if ($result->lastValidSeq === null) {

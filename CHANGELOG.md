@@ -9,7 +9,7 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 ### Diubah
 - core: ADR 0001 (format hash rantai audit) disusun ulang menjadi spesifikasi normatif yang lengkap: tabel dua belas anggota badan entri, kanonisasi, rumus hash, penyimpanan, penulisan, algoritme verifikasi, vektor emas, alternatif yang ditolak, konsekuensi, dan tes penegak. Spesifikasinya diuji dengan implementasi independen yang ditulis hanya dari teks ADR, dan hasilnya sama persis dengan vektor emas. Isi normatif tidak berubah. ADR ini kemudian **diterima** pemilik produk, sehingga format rantai audit kini mengikat: mengubahnya wajib lewat gerbang manusia (docs/22).
 - core: `docs/adr/README.md` berisi indeks dan templat ADR; ADR 0002 diselaraskan dengan templat itu.
-- kontrak 0.3.0: KONTRAK §3 kini merinci isi yang ditandatangani kunci audit (`CheckpointAnchor.signature`): Ed25519 murni atas awalan `sadmin-audit-checkpoint/1` dan JCS `{created_at, hash, seq}`, dengan pengodean base64 standar. Vektor bersama ada di `kontrak/vectors/checkpoint/`. Format ini diusulkan di ADR 0004 (masih **diusulkan**). Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
+- kontrak 0.3.0: KONTRAK §3 kini merinci isi yang ditandatangani kunci audit (`CheckpointAnchor.signature`): Ed25519 murni atas awalan `sadmin-audit-checkpoint/1` dan JCS `{created_at, hash, seq}`, dengan pengodean base64 standar. Pengodean base64 wajib kanonik (bit sisa nol). Vektor bersama beserta oracle independennya ada di `kontrak/vectors/checkpoint/`. Format ini diusulkan di ADR 0004 (masih **diusulkan**). Selama 0.x, kenaikan minor bersifat memutus, tetapi belum ada implementasi agen yang terdampak.
 - Roadmap M1: Subresource Integrity aset console dijadwalkan di slice `install.sh` (F-01), sesuai keputusan pemilik produk.
 
 ### Ditambahkan
@@ -19,6 +19,7 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 - core: `php artisan sadmin:vault-check` membuktikan bahwa kunci induk yang termuat bisa membuka semua kunci data rahasia aktif, tanpa membuka nilai rahasianya. Perintah ini dipakai `install.sh` dan pemulihan.
 - core: checkpoint audit bertanda tangan (F-04 bagian kedua, M1). `php artisan sadmin:audit-key-init` membuat kunci audit Ed25519 instansi sekali: *seed*-nya hanya disimpan di brankas, kunci publiknya dicetak untuk kit pemulihan dan dicatat di audit (`audit.key_initialize`). `php artisan sadmin:audit-checkpoint` menandatangani ujung rantai audit. Penjadwal menjalankannya tiap menit dengan `--if-due`, sehingga checkpoint dibuat tiap 15 menit atau 100 entri. Sebelum menandatangani, segmen sejak checkpoint terakhir dibuktikan utuh lebih dulu, jadi checkpoint tak pernah mengesahkan rantai yang sudah diubah. Baris `audit_checkpoints` dijaga trigger: hanya `anchored_to` yang boleh bertambah.
 - core: `sadmin:audit-verify` kini juga memeriksa checkpoint, sehingga dua serangan yang sebelumnya lolos kini terdeteksi: pemotongan ujung rantai dan penulisan ulang rantai dari suatu titik dengan hash dihitung ulang. Kode exit: 0 utuh, 1 rusak (`audit_mismatch`), 2 checkpoint tak dapat diperiksa karena brankas tak tersedia. Rantai tanpa checkpoint tetap terverifikasi tanpa kunci induk.
+- core: seed kunci Ed25519 (`audit_key`, `service_key`) kini tak pernah keluar dari brankas: `Vault::reveal()` menolaknya, dan pembacaan ulang saat menyimpan rahasia memakai `Vault::matches()` yang membandingkan nilai di dalam brankas (ADR 0003 §2.5).
 
 ### Catatan migrasi
 - Migrasi baru, keduanya non-destruktif: `key_wraps` dan `secrets` (`secrets.key_wrap_id` UNIQUE, satu kunci data per rahasia).
@@ -29,6 +30,7 @@ Tag pra-rilis (`-alpha.N`) menandai kemajuan pengembangan dan **bukan rilis**. T
 - Kit pemulihan wajib memuat salinan kunci induk, karena kunci yang tersegel TPM2 tidak bisa dibawa ke VM baru (ADR 0003 §4).
 - Checkpoint belum dijangkarkan ke luar DB core (`anchored_to` masih kosong). Jangkar ke agen, offsite, dan digest harian menunggu paket edge, backup offsite, dan notifikasi. Sampai saat itu, penghapusan checkpoint bersama pemotongan rantai oleh superuser, serta penyerang yang memegang kunci induk, belum terdeteksi (ADR 0004 §4).
 - Alert `audit_mismatch` ke kanal notifikasi belum ada; verify dan checkpoint baru menulis log `critical`.
+- Sebelum `sadmin:audit-key-init` dijalankan, penjadwal mencatat log `error` `audit_checkpoint_failed` tiap menit. `install.sh` (F-01) akan membuat kunci audit sebelum mengaktifkan penjadwal.
 
 ## [0.1.0-alpha.4] — 2026-09-30
 

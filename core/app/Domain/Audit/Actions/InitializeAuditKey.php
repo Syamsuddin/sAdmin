@@ -10,12 +10,13 @@ use App\Domain\Vault\Actions\StoreSecret;
 use App\Domain\Vault\Data\SecretPurpose;
 use App\Infrastructure\Vault\Ed25519;
 use App\Models\Institution;
+use App\Models\Secret;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Membuat kunci audit Ed25519 instansi sekali (ADR 0004 §2.1): seed hanya di brankas, kunci publik tercatat di audit
- * dan dikembalikan untuk kit pemulihan. Mengganti kunci aktif = rotasi, yang butuh gerbang manusia (docs/22).
+ * Membuat kunci audit Ed25519 instansi sekali seumur instalasi (ADR 0004 §2.1): seed hanya di brankas, kunci publik
+ * tercatat di audit dan dikembalikan untuk kit pemulihan. Kunci baru sesudahnya = rotasi, gerbang manusia (docs/22).
  */
 final class InitializeAuditKey
 {
@@ -38,8 +39,14 @@ final class InitializeAuditKey
         return DB::transaction(function () use ($tenantId): array {
             DB::select('SELECT pg_advisory_xact_lock(?)', [self::LOCK_KEY]);
 
-            if ($this->signer->activeKeyId($tenantId) !== null) {
-                throw new DomainException('Kunci audit aktif sudah ada. Menggantinya adalah rotasi kunci audit: butuh gerbang manusia (docs/22) dan ADR baru.');
+            // Kunci yang pernah ada (status apa pun) atau checkpoint yang sudah ditandatangani berarti kunci baru =
+            // rotasi de facto: checkpoint lama tak lagi terverifikasi. Rotasi butuh gerbang manusia (docs/22).
+            $everCreated = Secret::query()
+                ->where('tenant_id', $tenantId)
+                ->where('purpose', SecretPurpose::AuditKey->value)
+                ->exists();
+            if ($everCreated || DB::table('audit_checkpoints')->exists()) {
+                throw new DomainException('Kunci audit sudah pernah dibuat atau checkpoint sudah ada. Membuat kunci baru adalah rotasi kunci audit: butuh gerbang manusia (docs/22) dan ADR baru.');
             }
 
             $secret = $this->store->handle($tenantId, SecretPurpose::AuditKey, Ed25519::generateSeed(), ActorType::LocalRoot, null);

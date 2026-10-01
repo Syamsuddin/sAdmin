@@ -125,13 +125,13 @@ class VaultTamperTest extends TestCase
 
     public function test_caller_expecting_another_purpose_or_tenant_is_refused(): void
     {
-        $secret = $this->store('kunci-audit', SecretPurpose::AuditKey);
+        $secret = $this->store('kunci-hmac', SecretPurpose::GatewayHmac);
         $other = Tenant::factory()->create();
 
         // Penunjuk di tabel perujuk ditukar ke rahasia lain: nilai tak boleh dipakai untuk keperluan yang salah.
         $this->assertRevealFails($secret, purpose: SecretPurpose::AiApiKey);
         $this->assertRevealFails($secret, tenantId: $other->id);
-        $this->assertSame('kunci-audit', $this->reveal($secret));
+        $this->assertSame('kunci-hmac', $this->reveal($secret));
     }
 
     public function test_moving_a_secret_to_another_tenant_fails(): void

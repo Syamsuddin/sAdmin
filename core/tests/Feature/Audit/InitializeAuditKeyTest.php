@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Audit;
 
+use App\Domain\Audit\Actions\InitializeAuditKey;
 use App\Domain\Audit\Data\ActorType;
 use App\Domain\Vault\Actions\DestroySecret;
 use App\Domain\Vault\Actions\StoreSecret;
@@ -11,9 +12,12 @@ use App\Infrastructure\Vault\SecretValue;
 use App\Infrastructure\Vault\Vault;
 use App\Models\Institution;
 use App\Models\Secret;
+use App\Models\Tenant;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Group;
 use Tests\Support\InteractsWithAuditChain;
@@ -38,7 +42,7 @@ class InitializeAuditKeyTest extends TestCase
 
         $secret = Secret::query()->where('purpose', SecretPurpose::AuditKey->value)->sole();
         $this->assertSame($this->auditTenantId, $secret->tenant_id);
-        $this->assertSame(32, strlen(app(Vault::class)->reveal($secret->id, SecretPurpose::AuditKey, $this->auditTenantId)->expose()));
+        $this->assertSame(32, strlen($this->auditSeed()));
 
         $entries = DB::table('audit_entries')->orderBy('seq')->get();
         $this->assertSame(['secret.store', 'audit.key_initialize'], $entries->pluck('action_key')->all());
@@ -48,6 +52,7 @@ class InitializeAuditKeyTest extends TestCase
         $recorded = json_decode($entries[1]->params_redacted, true, 512, JSON_THROW_ON_ERROR)['public_key'];
         $derived = app(Vault::class)->ed25519PublicKey($secret->id, SecretPurpose::AuditKey, $this->auditTenantId);
         $this->assertSame(Ed25519::encode($derived), $recorded);
+        $this->assertSame(Ed25519::encode(sodium_crypto_sign_publickey(sodium_crypto_sign_seed_keypair($this->auditSeed()))), $recorded);
         $this->assertSame(44, strlen($recorded));
     }
 
@@ -71,6 +76,58 @@ class InitializeAuditKeyTest extends TestCase
 
         $this->assertSame(1, $this->auditKeys());
         $this->assertSame(2, DB::table('audit_entries')->count());
+    }
+
+    public function test_concurrent_initializations_are_serialized_by_the_advisory_lock(): void
+    {
+        config(['database.connections.pgsql_kunci' => config('database.connections.pgsql')]);
+        $other = DB::connection('pgsql_kunci');
+        $other->select('SELECT pg_advisory_lock(?)', [InitializeAuditKey::LOCK_KEY]);
+        DB::statement("SET lock_timeout = '200ms'");
+
+        try {
+            $this->initAuditKey();
+            $this->fail('Pembuatan kunci seharusnya menunggu kunci advisory yang dipegang koneksi lain.');
+        } catch (QueryException $e) {
+            $this->assertStringContainsString('lock timeout', $e->getMessage());
+        } finally {
+            DB::statement('RESET lock_timeout');
+            $other->select('SELECT pg_advisory_unlock(?)', [InitializeAuditKey::LOCK_KEY]);
+            $other->disconnect();
+        }
+
+        $this->assertSame(0, $this->auditKeys());
+    }
+
+    public function test_key_of_another_tenant_neither_blocks_nor_signs_for_this_institution(): void
+    {
+        // ULID terkecil dan terbesar: kueri tanpa filter tenant mengambil kunci asing apa pun urutan pindainya.
+        foreach (['0000000000000000000000000a', '7zzzzzzzzzzzzzzzzzzzzzzzzz'] as $id) {
+            $foreign = Tenant::factory()->create(['id' => $id]);
+            app(StoreSecret::class)->handle($foreign->id, SecretPurpose::AuditKey, Ed25519::generateSeed(), ActorType::LocalRoot, null);
+        }
+
+        $this->artisan('sadmin:audit-key-init')->assertExitCode(0);
+        $this->appendEntries(3);
+        $this->artisan('sadmin:audit-checkpoint')->assertExitCode(0);
+        $this->artisan('sadmin:audit-verify')->expectsOutputToContain('Checkpoint utuh: 1 checkpoint sah')->assertExitCode(0);
+    }
+
+    public function test_vault_integrity_failure_while_storing_is_logged_critical(): void
+    {
+        DB::unprepared(<<<'SQL'
+            CREATE FUNCTION uji_rusak_rahasia() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN NEW.ciphertext := decode(repeat('00', length(NEW.ciphertext)), 'hex'); RETURN NEW; END
+            $$;
+            CREATE TRIGGER uji_rusak_rahasia BEFORE INSERT ON secrets FOR EACH ROW EXECUTE FUNCTION uji_rusak_rahasia();
+            SQL);
+        Log::shouldReceive('critical')->once()->withArgs(fn (string $message): bool => $message === 'audit_key_init_failed');
+
+        $this->artisan('sadmin:audit-key-init')
+            ->expectsOutputToContain('insiden integritas')
+            ->assertExitCode(1);
+
+        $this->assertSame(0, $this->auditKeys());
     }
 
     public function test_refuses_before_the_institution_exists(): void
@@ -115,15 +172,31 @@ class InitializeAuditKeyTest extends TestCase
         $this->assertSame(2, $this->auditKeys());
     }
 
-    public function test_a_destroyed_key_no_longer_counts_as_active(): void
+    public function test_a_destroyed_key_is_not_silently_replaced_because_that_is_rotation(): void
     {
         $this->initAuditKey();
         $old = Secret::query()->where('purpose', SecretPurpose::AuditKey->value)->sole();
         app(DestroySecret::class)->handle($old->id, ActorType::LocalRoot, null);
 
-        $this->artisan('sadmin:audit-key-init')->assertExitCode(0);
+        $this->artisan('sadmin:audit-key-init')
+            ->expectsOutputToContain('rotasi kunci audit')
+            ->assertExitCode(1);
 
-        $this->assertSame(1, Secret::query()->where('purpose', SecretPurpose::AuditKey->value)->where('status', 'active')->count());
+        $this->assertSame(0, Secret::query()->where('purpose', SecretPurpose::AuditKey->value)->where('status', 'active')->count());
+    }
+
+    public function test_existing_checkpoints_block_a_new_key_even_when_the_key_rows_are_gone(): void
+    {
+        $this->initAuditKey();
+        $this->appendEntries(1);
+        $this->checkpoint();
+        DB::table('secrets')->where('purpose', SecretPurpose::AuditKey->value)->delete();
+
+        $this->artisan('sadmin:audit-key-init')
+            ->expectsOutputToContain('checkpoint sudah ada')
+            ->assertExitCode(1);
+
+        $this->assertSame(0, $this->auditKeys());
     }
 
     public function test_vault_signs_only_with_ed25519_key_purposes(): void
@@ -136,23 +209,30 @@ class InitializeAuditKeyTest extends TestCase
     }
 
     #[Group('redaction')]
-    public function test_seed_never_leaks_to_audit_log_output_or_rows(): void
+    public function test_seed_never_leaks_to_console_log_audit_or_rows(): void
     {
         $logFile = (string) tempnam(sys_get_temp_dir(), 'sadmin-redaction-');
         config(['logging.default' => 'single', 'logging.channels.single.path' => $logFile, 'logging.channels.single.level' => 'debug']);
 
-        $this->artisan('sadmin:audit-key-init')->assertExitCode(0);
-        $secret = Secret::query()->where('purpose', SecretPurpose::AuditKey->value)->sole();
-        $seed = app(Vault::class)->reveal($secret->id, SecretPurpose::AuditKey, $this->auditTenantId)->expose();
+        $output = '';
+        $run = function (string $command, int $exit) use (&$output): void {
+            $this->assertSame($exit, Artisan::call($command), $command);
+            $output .= Artisan::output();
+        };
+
+        $run('sadmin:audit-key-init', 0);
+        $seed = $this->auditSeed();
 
         $this->appendEntries(3);
-        $this->artisan('sadmin:audit-checkpoint')->assertExitCode(0);
+        $run('sadmin:audit-checkpoint', 0);
+        $run('sadmin:audit-verify', 0);
         $this->tamperCheckpoints(fn () => DB::table('audit_checkpoints')->update(['signature' => Ed25519::encode(str_repeat("\0", 64))]));
-        $this->artisan('sadmin:audit-verify')->assertExitCode(1);
+        $run('sadmin:audit-verify', 1);
         $this->appendEntries(1);
-        $this->artisan('sadmin:audit-checkpoint')->assertExitCode(1);
+        $run('sadmin:audit-checkpoint', 1);
 
         $haystacks = [
+            'keluaran konsol' => $output,
             'log' => (string) file_get_contents($logFile),
             'audit_entries' => implode("\n", array_column(DB::select('SELECT row_to_json(t)::text AS j FROM audit_entries t'), 'j')),
             'audit_checkpoints' => implode("\n", array_column(DB::select('SELECT row_to_json(t)::text AS j FROM audit_checkpoints t'), 'j')),
@@ -161,6 +241,7 @@ class InitializeAuditKeyTest extends TestCase
         @unlink($logFile);
 
         $this->assertStringContainsString('audit_mismatch', $haystacks['log'], 'Log tes harus benar-benar tertulis.');
+        $this->assertStringContainsString('Kunci publik audit', $haystacks['keluaran konsol'], 'Keluaran konsol harus benar-benar tertangkap.');
         foreach ($haystacks as $where => $text) {
             foreach (['hex' => bin2hex($seed), 'base64' => base64_encode($seed), 'base64url' => rtrim(strtr(base64_encode($seed), '+/', '-_'), '=')] as $form => $needle) {
                 $this->assertStringNotContainsString($needle, $text, "Seed kunci audit ({$form}) bocor ke {$where}.");
