@@ -94,6 +94,16 @@
       "chars": 46370,
       "cpt": 3.5,
       "est_tokens": 13249
+    },
+    {
+      "ts": "2026-10-01T21:49:17+08:00",
+      "type": "task",
+      "task": "F-02a Kunci layanan + sig",
+      "route": "Fitur baru (vertical slice)",
+      "files": 8,
+      "chars": 47376,
+      "cpt": 3.5,
+      "est_tokens": 13536
     }
   ],
   "measured_sessions": {

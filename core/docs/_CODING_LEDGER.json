@@ -70,16 +70,12 @@
     {
       "mulai": "2026-10-01T21:05:49+08:00",
       "selesai": null,
-      "step": 6,
-      "detik": 737,
-      "tok_est": 57217
+      "step": 7,
+      "detik": 1063,
+      "tok_est": 88887
     }
   ],
-  "step_berjalan": {
-    "no": 7,
-    "nama": "Gerbang fitur",
-    "mulai": "2026-10-01T21:27:51+08:00"
-  },
+  "step_berjalan": null,
   "blueprint": {
     "sidik_awal": "60b7da4ac5ed8e44",
     "sidik": "cda56be612d2e065",
@@ -1650,128 +1646,192 @@
         "Uji soket SMTP nyata (server palsu) di suite; kini transkrip diuji dengan fixture"
       ],
       "selesai": "2026-10-01T20:29:55+08:00"
+    },
+    {
+      "fitur": "F-02a Kunci layanan + sig",
+      "rute": "Fitur baru (vertical slice)",
+      "mulai": "2026-10-01T21:13:57+08:00",
+      "rencana": [
+        "../kontrak/KONTRAK.md",
+        "../kontrak/VERSION",
+        "../kontrak/vectors/service-sig/oracle.py",
+        "../kontrak/vectors/service-sig/*.json",
+        "docs/adr/0006-tanda-tangan-layanan.md",
+        "docs/adr/README.md",
+        "docs/07_DATA_MODEL.md",
+        "docs/11_COMMANDS.md",
+        "docs/23_ACCEPTANCE_CRITERIA.md",
+        "../CHANGELOG.md",
+        "database/migrations/2026_10_01_000800_add_single_active_service_key_index_to_secrets.php",
+        "app/Domain/Execution/Dispatch/ServiceSigner.php",
+        "app/Domain/Execution/Actions/InitializeServiceKey.php",
+        "app/Console/Commands/ServiceKeyInitCommand.php",
+        "tests/Contract/ServiceSignatureVectorsTest.php",
+        "tests/Feature/Execution/InitializeServiceKeyTest.php",
+        "tests/Feature/Execution/ServiceSignerTest.php"
+      ],
+      "total_step": 0,
+      "step": [
+        {
+          "no": 1,
+          "nama": "Kontrak 0.4.0 + ADR 0006",
+          "mulai": "2026-10-01T21:14:22+08:00",
+          "selesai": "2026-10-01T21:17:55+08:00",
+          "detik": 214,
+          "tok_est": 15067,
+          "muat": [
+            "../kontrak/KONTRAK.md",
+            "docs/adr/0006-tanda-tangan-layanan.md",
+            "docs/adr/0004-checkpoint-audit.md",
+            "docs/21_SECURITY_RULES.md",
+            "docs/22_CHANGE_POLICY.md",
+            "docs/adr/README.md"
+          ]
+        },
+        {
+          "no": 2,
+          "nama": "Skema: indeks satu kunci layanan aktif",
+          "mulai": "2026-10-01T21:18:04+08:00",
+          "selesai": "2026-10-01T21:18:26+08:00",
+          "detik": 22,
+          "tok_est": 6421,
+          "muat": [
+            "database/migrations/2026_10_01_000800_add_single_active_service_key_index_to_secrets.php",
+            "docs/07_DATA_MODEL.md"
+          ]
+        },
+        {
+          "no": 3,
+          "nama": "Service: ServiceSigner + InitializeServiceKey",
+          "mulai": "2026-10-01T21:18:26+08:00",
+          "selesai": "2026-10-01T21:19:57+08:00",
+          "detik": 92,
+          "tok_est": 9800,
+          "muat": [
+            "app/Domain/Execution/Dispatch/ServiceSigner.php",
+            "app/Domain/Execution/Actions/InitializeServiceKey.php",
+            "app/Domain/Audit/Actions/InitializeAuditKey.php",
+            "app/Domain/Audit/Services/CheckpointSigner.php",
+            "app/Infrastructure/Vault/Vault.php",
+            "app/Infrastructure/Vault/Ed25519.php",
+            "app/Infrastructure/Jcs/Jcs.php"
+          ]
+        },
+        {
+          "no": 4,
+          "nama": "Endpoint: perintah sadmin:service-key-init",
+          "mulai": "2026-10-01T21:19:57+08:00",
+          "selesai": "2026-10-01T21:19:57+08:00",
+          "detik": 1,
+          "tok_est": 1095,
+          "muat": [
+            "app/Console/Commands/ServiceKeyInitCommand.php",
+            "app/Console/Commands/AuditKeyInitCommand.php"
+          ]
+        },
+        {
+          "no": 5,
+          "nama": "UI",
+          "mulai": "2026-10-01T21:21:05+08:00",
+          "selesai": "2026-10-01T21:21:05+08:00",
+          "detik": 1,
+          "tok_est": 0,
+          "muat": []
+        },
+        {
+          "no": 6,
+          "nama": "Tes: kontrak + fitur + redaksi",
+          "mulai": "2026-10-01T21:21:05+08:00",
+          "selesai": "2026-10-01T21:27:51+08:00",
+          "detik": 407,
+          "tok_est": 24834,
+          "muat": [
+            "tests/Contract/ServiceSignatureVectorsTest.php",
+            "tests/Feature/Execution/InitializeServiceKeyTest.php",
+            "tests/Feature/Execution/ServiceSignerTest.php",
+            "tests/Feature/Audit/InitializeAuditKeyTest.php",
+            "tests/Support/InteractsWithVault.php",
+            "tests/Feature/VaultBoundaryTest.php",
+            "../kontrak/vectors/service-sig/01-envelope-l0-empty-params.json",
+            "docs/11_COMMANDS.md",
+            "docs/23_ACCEPTANCE_CRITERIA.md",
+            "../CHANGELOG.md"
+          ]
+        },
+        {
+          "no": 7,
+          "nama": "Tambal temuan review adversarial",
+          "mulai": "2026-10-01T21:43:30+08:00",
+          "selesai": "2026-10-01T21:48:56+08:00",
+          "detik": 326,
+          "tok_est": 31670,
+          "muat": [
+            "app/Domain/Execution/Dispatch/ServiceSigner.php",
+            "tests/Feature/Execution/ServiceSignerTest.php",
+            "tests/Contract/ServiceSignatureVectorsTest.php",
+            "../kontrak/KONTRAK.md",
+            "docs/adr/0006-tanda-tangan-layanan.md",
+            "../kontrak/vectors/service-sig/oracle.py",
+            "../CHANGELOG.md"
+          ]
+        }
+      ],
+      "detik": 1063,
+      "tok_est": 88887,
+      "deviasi": [
+        "Gerbang langkah ke-8 Tambal temuan review adversarial di luar 7 step baku",
+        "Oracle service-sig diubah pascareview (ULID huruf kecil per KONTRAK §8, satu deskripsi vektor 10) oleh agen utama, bukan penulis oracle independen; aturan JCS/sig oracle tak disentuh dan swa-periksa jcs tetap 13/13",
+        "KONTRAK §8 (ULID huruf kecil) berubah di slice ini meski bukan bagian sig: divergensi PHP vs oracle ditemukan review; mengikuti kode (ID core selalu huruf kecil, ADR 0003 §2.2)",
+        "Helper serviceSeed() diduplikasi di InitializeServiceKeyTest alih-alih menggeneralisasi auditSeed() di tests/Support (di luar rencana)"
+      ],
+      "warn_dilewati": [
+        "S1: kriteria kunci layanan berupa butir di blok bersama AC-01 (F-01 masih aktif); dibuktikan 54 tes ServiceSigner/InitializeServiceKey/ServiceSignature + Contract 78 + redaksi 6",
+        "S6: diperiksa manual (letak docs/12, guardrail docs/20) + review adversarial subagen (0 kritis, 0 tinggi; 5 sedang + 5 rendah: 6 ditambal dengan tes regresi merah-dulu, 4 ditunda beralasan)",
+        "S7: path berawalan core/ vs rencana relatif; tak ada berkas nyata di luar rencana",
+        "Mutan M10 (hapus verifikasi sendiri di frame()) hidup: cabang pertahanan berlapis tak terjangkau tanpa regresi/galat perangkat (ADR 0006 §5); 20 dari 21 mutan mati",
+        "make contract-test belum ada; diganti php artisan test --testsuite=Contract"
+      ],
+      "asumsi": [
+        "Kunci layanan per tenant (MVP satu tenant) seperti kunci audit; agen menyematkan satu service_pubkey",
+        "Membuat kunci layanan menulis audit (secret.store + service.key_initialize) karena mengubah state, berbeda dari checkpoint",
+        "Advisory lock 7301004 (ruang kunci satu-bigint; 7301005 Alerts memakai bentuk dua-int yang tak tumpang tindih)",
+        "Badan non-Envelope boleh memuat anggota bernama secret_values dan ikut ditandatangani; skema pesan kelak yang menolak",
+        "ULID huruf kecil untuk semua ID protokol; agen menolak huruf besar/campuran (E_SCHEMA)"
+      ],
+      "dokumen_diperbarui": [
+        "../kontrak/KONTRAK.md (§2, §3 tanda tangan kunci layanan, §5 rujukan, §8 ULID huruf kecil) dan ../kontrak/VERSION 0.4.0",
+        "../kontrak/vectors/service-sig (12 vektor + oracle.py)",
+        "docs/adr/0006-tanda-tangan-layanan.md (baru, Diusulkan; direvisi pascareview)",
+        "docs/adr/README.md",
+        "docs/07_DATA_MODEL.md (indeks secrets_one_active_service_key)",
+        "docs/11_COMMANDS.md (sadmin:service-key-init)",
+        "docs/23_ACCEPTANCE_CRITERIA.md (AC-01 butir kunci layanan)",
+        "../CHANGELOG.md"
+      ],
+      "landmine_tersentuh": [
+        "PHP: objek kosong bersarang di larik asosiatif menjadi [] (bukan {}); sig tetap konsisten tetapi skema agen menolak — Dispatch wajib memakai stdClass untuk objek kosong (ADR 0006 §2.3)",
+        "Teks bingkai Envelope dari ServiceSigner::frame() memuat secret_values: jangan pernah dicatat ke log/tabel"
+      ],
+      "ditunda": [
+        "Penerimaan ADR 0006 + kontrak 0.4.0 oleh pemilik produk: syarat merge feat/m1-service-key",
+        "Merge ke main dan tag pra-rilis: keputusan pemilik produk",
+        "SEDANG-3 review: komitmen placeholder rahasia normatif (byte salt, pengodean nilai, posisi x-secret) + vektor secret-commit/: slice amplop/rencana (F-07/Dispatch) sebelum amplop ber-rahasia pertama",
+        "Format sidik jari kepercayaan enrolment (roster + service_pubkey + audit_pubkey) dan penyelarasan teks CAPSULES §4 / edge AC-02 ('sidik jari roster'): slice enrolment",
+        "RENDAH-2 review: Vault menolak tanda tangan dengan kunci non-aktif di dalam transaksi open(): ADR rotasi kunci",
+        "RENDAH-3 review: QueryException/UnexpectedValueException tak tertangkap di ServiceKeyInitCommand dan AuditKeyInitCommand (stack trace, docs/14): perbaiki keduanya bersama",
+        "RENDAH-4 review: pipa verifikasi & pelaporan E_SIG_SERVICE untuk pesan non-Envelope (Cancel, RosterUpdate, EnrollAccept, Ack) di edge E1 + vektor bentuk bingkai",
+        "Celah teks KONTRAK lain dari oracle: anggota kontrak di semua badan (§1 vs §5), field Envelope (envelope_id vs id, format idempotency_key, plan null vs absen): kontrak/schemas M1",
+        "Pengiriman bingkai via socket gateway, HMAC gateway↔core, CA internal, roster, enrolment: slice F-02 berikutnya",
+        "Arsip 23: AC-01 belum diarsipkan karena F-01 (install.sh) masih aktif"
+      ],
+      "selesai": "2026-10-01T21:49:16+08:00"
     }
   ],
   "akumulasi": {
-    "detik": 11674,
-    "tok_est": 495798,
+    "detik": 12000,
+    "tok_est": 527468,
     "tok_terukur": 0,
-    "step": 60,
-    "fitur": 9
-  },
-  "fitur_aktif": {
-    "fitur": "F-02a Kunci layanan + sig",
-    "rute": "Fitur baru (vertical slice)",
-    "mulai": "2026-10-01T21:13:57+08:00",
-    "rencana": [
-      "../kontrak/KONTRAK.md",
-      "../kontrak/VERSION",
-      "../kontrak/vectors/service-sig/oracle.py",
-      "../kontrak/vectors/service-sig/*.json",
-      "docs/adr/0006-tanda-tangan-layanan.md",
-      "docs/adr/README.md",
-      "docs/07_DATA_MODEL.md",
-      "docs/11_COMMANDS.md",
-      "docs/23_ACCEPTANCE_CRITERIA.md",
-      "../CHANGELOG.md",
-      "database/migrations/2026_10_01_000800_add_single_active_service_key_index_to_secrets.php",
-      "app/Domain/Execution/Dispatch/ServiceSigner.php",
-      "app/Domain/Execution/Actions/InitializeServiceKey.php",
-      "app/Console/Commands/ServiceKeyInitCommand.php",
-      "tests/Contract/ServiceSignatureVectorsTest.php",
-      "tests/Feature/Execution/InitializeServiceKeyTest.php",
-      "tests/Feature/Execution/ServiceSignerTest.php"
-    ],
-    "total_step": 0,
-    "step": [
-      {
-        "no": 1,
-        "nama": "Kontrak 0.4.0 + ADR 0006",
-        "mulai": "2026-10-01T21:14:22+08:00",
-        "selesai": "2026-10-01T21:17:55+08:00",
-        "detik": 214,
-        "tok_est": 15067,
-        "muat": [
-          "../kontrak/KONTRAK.md",
-          "docs/adr/0006-tanda-tangan-layanan.md",
-          "docs/adr/0004-checkpoint-audit.md",
-          "docs/21_SECURITY_RULES.md",
-          "docs/22_CHANGE_POLICY.md",
-          "docs/adr/README.md"
-        ]
-      },
-      {
-        "no": 2,
-        "nama": "Skema: indeks satu kunci layanan aktif",
-        "mulai": "2026-10-01T21:18:04+08:00",
-        "selesai": "2026-10-01T21:18:26+08:00",
-        "detik": 22,
-        "tok_est": 6421,
-        "muat": [
-          "database/migrations/2026_10_01_000800_add_single_active_service_key_index_to_secrets.php",
-          "docs/07_DATA_MODEL.md"
-        ]
-      },
-      {
-        "no": 3,
-        "nama": "Service: ServiceSigner + InitializeServiceKey",
-        "mulai": "2026-10-01T21:18:26+08:00",
-        "selesai": "2026-10-01T21:19:57+08:00",
-        "detik": 92,
-        "tok_est": 9800,
-        "muat": [
-          "app/Domain/Execution/Dispatch/ServiceSigner.php",
-          "app/Domain/Execution/Actions/InitializeServiceKey.php",
-          "app/Domain/Audit/Actions/InitializeAuditKey.php",
-          "app/Domain/Audit/Services/CheckpointSigner.php",
-          "app/Infrastructure/Vault/Vault.php",
-          "app/Infrastructure/Vault/Ed25519.php",
-          "app/Infrastructure/Jcs/Jcs.php"
-        ]
-      },
-      {
-        "no": 4,
-        "nama": "Endpoint: perintah sadmin:service-key-init",
-        "mulai": "2026-10-01T21:19:57+08:00",
-        "selesai": "2026-10-01T21:19:57+08:00",
-        "detik": 1,
-        "tok_est": 1095,
-        "muat": [
-          "app/Console/Commands/ServiceKeyInitCommand.php",
-          "app/Console/Commands/AuditKeyInitCommand.php"
-        ]
-      },
-      {
-        "no": 5,
-        "nama": "UI",
-        "mulai": "2026-10-01T21:21:05+08:00",
-        "selesai": "2026-10-01T21:21:05+08:00",
-        "detik": 1,
-        "tok_est": 0,
-        "muat": []
-      },
-      {
-        "no": 6,
-        "nama": "Tes: kontrak + fitur + redaksi",
-        "mulai": "2026-10-01T21:21:05+08:00",
-        "selesai": "2026-10-01T21:27:51+08:00",
-        "detik": 407,
-        "tok_est": 24834,
-        "muat": [
-          "tests/Contract/ServiceSignatureVectorsTest.php",
-          "tests/Feature/Execution/InitializeServiceKeyTest.php",
-          "tests/Feature/Execution/ServiceSignerTest.php",
-          "tests/Feature/Audit/InitializeAuditKeyTest.php",
-          "tests/Support/InteractsWithVault.php",
-          "tests/Feature/VaultBoundaryTest.php",
-          "../kontrak/vectors/service-sig/01-envelope-l0-empty-params.json",
-          "docs/11_COMMANDS.md",
-          "docs/23_ACCEPTANCE_CRITERIA.md",
-          "../CHANGELOG.md"
-        ]
-      }
-    ],
-    "detik": 737,
-    "tok_est": 57217
+    "step": 61,
+    "fitur": 10
   }
 }
