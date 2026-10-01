@@ -18,11 +18,12 @@ final class SmtpNotifier implements Notifier
 
     public function send(NotificationChannel $channel, NotificationMessage $message, float $timeoutSeconds): void
     {
-        $config = $channel->config;
         $password = $this->vault->reveal($channel->secret_id, SecretPurpose::Smtp, $channel->tenant_id);
-        $implicitTls = $config['tls'] === 'implicit';
+        $implicitTls = false;
 
         try {
+            $config = $channel->config;
+            $implicitTls = $config['tls'] === 'implicit';
             $mailer = $this->transports->create([
                 'transport' => 'smtp',
                 'scheme' => $implicitTls ? 'smtps' : 'smtp',
@@ -30,12 +31,12 @@ final class SmtpNotifier implements Notifier
                 'port' => (int) $config['port'],
                 'username' => (string) $config['username'],
                 'password' => $password->expose(),
+                // Timeout per pembacaan soket, bukan batas total (ADR 0005 §2.3).
                 'timeout' => $timeoutSeconds,
-                // STARTTLS wajib: tanpa ini Symfony diam-diam mengirim polos bila server tak menawarkan TLS.
                 'require_tls' => ! $implicitTls,
             ]);
 
-            $mailer->raw($message->body, function (Message $mail) use ($config, $message): void {
+            $sent = $mailer->raw($message->body, function (Message $mail) use ($config, $message): void {
                 $mail->from((string) $config['from'], 'sAdmin')
                     ->to(array_map('strval', (array) $config['to']))
                     ->subject($message->subject);
@@ -43,5 +44,23 @@ final class SmtpNotifier implements Notifier
         } catch (Throwable $e) {
             throw NotifyFailed::from($e, [$password->expose()]);
         }
+
+        if ($sent === null) {
+            throw NotifyFailed::scrubbed('Pengiriman email dibatalkan sebelum terkirim.', []);
+        }
+        // require_tls Symfony terlewati bila server menolak EHLO lalu menerima HELO: kiriman polos tanpa STARTTLS.
+        // Kiriman seperti itu dihitung gagal agar tak menjadi bukti kirim palsu (ADR 0005 §2.5).
+        if (! $implicitTls && ! self::startTlsNegotiated((string) $sent->getDebug())) {
+            throw NotifyFailed::scrubbed('Server SMTP tidak terbukti memakai STARTTLS; kiriman dianggap gagal.', []);
+        }
+    }
+
+    /**
+     * Transkrip Symfony mencatat `> STARTTLS` lalu `< 220` hanya bila server menerima STARTTLS; jabat tangan TLS
+     * yang gagal sesudahnya sudah melempar galat sebelum pesan terkirim.
+     */
+    public static function startTlsNegotiated(string $transcript): bool
+    {
+        return preg_match('/^\[[^\]\n]*\] > STARTTLS\r?\n\[[^\]\n]*\] < 220[ -]/m', $transcript) === 1;
     }
 }

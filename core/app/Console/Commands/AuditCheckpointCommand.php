@@ -29,7 +29,11 @@ class AuditCheckpointCommand extends Command
         } catch (VaultUnavailable $e) {
             return $this->failed('brankas tak tersedia: '.$e->getMessage(), critical: false);
         } catch (VaultIntegrityError $e) {
-            return $this->failed('kunci audit di brankas gagal dibuka: '.$e->getMessage(), critical: true);
+            // Kelas Integritas (ADR 0003 §2.5, docs/14) di jalur audit: alert, bukan hanya log (ADR 0005 §2.1).
+            $code = $this->failed('kunci audit di brankas gagal dibuka: '.$e->getMessage(), critical: true);
+            $this->raiseIntegrityAlert($alerts, IntegrityAlert::auditKeyUnreadable($e->getMessage()));
+
+            return $code;
         } catch (UnexpectedValueException $e) {
             // Tertulis ⇒ terverifikasi gagal (ADR 0004 §2.4 no. 7): kelas Integritas docs/14, alert ADR 0005 §2.1.
             $code = $this->failed($e->getMessage(), critical: true);

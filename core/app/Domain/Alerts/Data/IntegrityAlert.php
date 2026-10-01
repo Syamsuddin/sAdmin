@@ -16,6 +16,8 @@ final readonly class IntegrityAlert
 
     public const CHECK_CHECKPOINT_READBACK = 'checkpoint_readback';
 
+    public const CHECK_AUDIT_KEY = 'audit_key';
+
     public const MAX_REASON = 500;
 
     public ?int $seq;
@@ -51,6 +53,12 @@ final readonly class IntegrityAlert
     public static function checkpointReadback(string $reason): self
     {
         return new self('sadmin:audit-checkpoint', self::CHECK_CHECKPOINT_READBACK, null, $reason);
+    }
+
+    /** Kunci audit di brankas gagal dibuka saat membuat checkpoint (kelas Integritas docs/14). */
+    public static function auditKeyUnreadable(string $reason): self
+    {
+        return new self('sadmin:audit-checkpoint', self::CHECK_AUDIT_KEY, null, $reason);
     }
 
     /** Satu alert belum selesai per lokasi kerusakan (ADR 0005 §2.2). */

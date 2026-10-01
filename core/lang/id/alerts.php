@@ -12,6 +12,7 @@ return [
             'checkpoint' => 'Verifikasi checkpoint audit (sadmin:audit-verify)',
             'checkpoint_create' => 'Pembuatan checkpoint audit (sadmin:audit-checkpoint)',
             'checkpoint_readback' => 'Pembuatan checkpoint audit (sadmin:audit-checkpoint)',
+            'audit_key' => 'Pembukaan kunci audit untuk checkpoint (sadmin:audit-checkpoint)',
         ],
         'penyebab_seq' => 'kerusakan terdeteksi pada seq :seq: :reason.',
         'penyebab' => ':reason.',

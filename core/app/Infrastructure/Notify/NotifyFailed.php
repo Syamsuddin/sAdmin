@@ -14,8 +14,13 @@ final class NotifyFailed extends RuntimeException
 {
     private const MAX_MESSAGE = 300;
 
-    /** @param  list<string>  $secrets */
-    public static function scrubbed(string $message, #[SensitiveParameter] array $secrets): self
+    /**
+     * Pesan mentah dan galat asli ditandai sensitif: keduanya ikut tercatat sebagai argumen di jejak exception ini
+     * bila zend.exception_ignore_args mati, dan bisa memuat URL bertoken.
+     *
+     * @param  list<string>  $secrets
+     */
+    public static function scrubbed(#[SensitiveParameter] string $message, #[SensitiveParameter] array $secrets): self
     {
         foreach ($secrets as $secret) {
             if ($secret !== '') {
@@ -28,7 +33,7 @@ final class NotifyFailed extends RuntimeException
     }
 
     /** @param  list<string>  $secrets */
-    public static function from(Throwable $e, #[SensitiveParameter] array $secrets): self
+    public static function from(#[SensitiveParameter] Throwable $e, #[SensitiveParameter] array $secrets): self
     {
         return self::scrubbed(class_basename($e).': '.$e->getMessage(), $secrets);
     }

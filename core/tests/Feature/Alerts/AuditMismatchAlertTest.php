@@ -3,6 +3,8 @@
 namespace Tests\Feature\Alerts;
 
 use App\Models\Alert;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +71,7 @@ class AuditMismatchAlertTest extends TestCase
         $this->artisan('sadmin:audit-verify')->assertExitCode(1);
 
         $this->artisan('sadmin:audit-verify')
-            ->expectsOutputToContain('sudah terkirim sebelumnya')
+            ->expectsOutputToContain('sudah terkirim dalam 24 jam terakhir')
             ->assertExitCode(1);
 
         Http::assertSentCount(1);
@@ -109,6 +111,35 @@ class AuditMismatchAlertTest extends TestCase
         $alert = Alert::query()->sole();
         $this->assertSame('checkpoint_create', $alert->detail['check']);
         $this->assertSame('sadmin:audit-checkpoint', $alert->detail['detector']);
+    }
+
+    public function test_unreadable_audit_key_while_checkpointing_raises_an_alert(): void
+    {
+        // Review F-04c RENDAH-3: kunci induk lain = kelas Integritas di jalur audit. Kanal pun tak bisa dibuka
+        // dengan kunci yang sama, jadi alert tersimpan dan tercatat tak terkirim.
+        $this->initAuditKey();
+        $this->useVaultKey();
+
+        $this->artisan('sadmin:audit-checkpoint')
+            ->expectsOutputToContain('kunci audit di brankas gagal dibuka')
+            ->expectsOutputToContain('TIDAK terkirim')
+            ->assertExitCode(1);
+
+        $alert = Alert::query()->sole();
+        $this->assertSame('audit_key', $alert->detail['check']);
+        $this->assertSame('audit_mismatch:audit_key', $alert->dedup_key);
+        Http::assertNothingSent();
+    }
+
+    public function test_scheduled_detectors_never_overlap(): void
+    {
+        $events = collect(app(Schedule::class)->events())
+            ->filter(fn (Event $event): bool => str_contains((string) $event->command, 'sadmin:audit-'))
+            ->keyBy(fn (Event $event): string => str_contains((string) $event->command, 'audit-verify') ? 'verify' : 'checkpoint');
+
+        $this->assertTrue($events['verify']->withoutOverlapping);
+        $this->assertTrue($events['checkpoint']->withoutOverlapping);
+        $this->assertSame(10, $events['checkpoint']->expiresAt);
     }
 
     public function test_vault_unavailable_exit_2_is_not_an_audit_mismatch(): void

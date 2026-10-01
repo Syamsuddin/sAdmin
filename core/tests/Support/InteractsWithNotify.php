@@ -11,19 +11,23 @@ use App\Models\NotificationChannel;
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Mail\Mailer;
-use Illuminate\Mail\MailManager;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use SensitiveParameter;
+use Symfony\Component\Mailer\Envelope;
+use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\RawMessage;
 use Tests\TestCase;
 
 /**
  * Kanal notifikasi uji (ADR 0005 §2.5) lewat Action sungguhan dan brankas uji, Bot API Telegram palsu (Http::fake,
- * tanpa permintaan keluar), dan SMTP palsu yang mencatat konfigurasi transport lalu menampung email di memori.
- * Pakai bersama InteractsWithVault dan instansi yang sudah ada.
+ * tanpa permintaan keluar), dan SMTP palsu yang mencatat konfigurasi transport, menampung email di memori, dan
+ * melampirkan transkrip SMTP (`smtpTranscript`) seperti transport Symfony sungguhan. Pakai bersama
+ * InteractsWithVault dan instansi yang sudah ada.
  */
 trait InteractsWithNotify
 {
@@ -36,12 +40,33 @@ trait InteractsWithNotify
     /** Bila diisi, dipanggil dengan konfigurasi transport dan boleh melempar, meniru server SMTP yang menolak. */
     public ?Closure $smtpFailure = null;
 
+    /** Transkrip yang dilampirkan ke tiap kiriman; bawaannya STARTTLS yang berhasil. */
+    public string $smtpTranscript = '';
+
+    public const STARTTLS_TRANSCRIPT = "[2026-10-01T00:00:00.000000+00:00] < 220 smtp.contoh-instansi.test ESMTP\n"
+        ."[2026-10-01T00:00:00.000001+00:00] > EHLO [127.0.0.1]\n"
+        ."[2026-10-01T00:00:00.000002+00:00] < 250-smtp.contoh-instansi.test\r\n"
+        ."[2026-10-01T00:00:00.000003+00:00] < 250 STARTTLS\r\n"
+        ."[2026-10-01T00:00:00.000004+00:00] > STARTTLS\n"
+        ."[2026-10-01T00:00:00.000005+00:00] < 220 2.0.0 Ready to start TLS\r\n"
+        ."[2026-10-01T00:00:00.000006+00:00] > EHLO [127.0.0.1]\n";
+
+    /** Server (atau penyerang di jalur) menolak EHLO lalu menerima HELO: Symfony mengirim polos tanpa STARTTLS. */
+    public const DOWNGRADED_TRANSCRIPT = "[2026-10-01T00:00:00.000000+00:00] < 220 smtp.contoh-instansi.test ESMTP\n"
+        ."[2026-10-01T00:00:00.000001+00:00] > EHLO [127.0.0.1]\n"
+        ."[2026-10-01T00:00:00.000002+00:00] < 502 5.5.2 Error: command not recognized\r\n"
+        ."[2026-10-01T00:00:00.000003+00:00] > HELO [127.0.0.1]\n"
+        ."[2026-10-01T00:00:00.000004+00:00] < 250 smtp.contoh-instansi.test\r\n"
+        ."[2026-10-01T00:00:00.000005+00:00] > MAIL FROM:<sadmin@contoh-instansi.test>\n"
+        ."[2026-10-01T00:00:00.000006+00:00] < 250 2.1.0 Ok STARTTLS\r\n";
+
     protected function setUpInteractsWithNotify(): void
     {
         Http::preventStrayRequests();
         $this->smtpConfigs = [];
         $this->smtpTransports = [];
         $this->smtpFailure = null;
+        $this->smtpTranscript = self::STARTTLS_TRANSCRIPT;
 
         $this->app->instance(SmtpTransportFactory::class, new class($this->app, $this) extends SmtpTransportFactory
         {
@@ -56,14 +81,27 @@ trait InteractsWithNotify
                 if ($this->test->smtpFailure !== null) {
                     ($this->test->smtpFailure)($config);
                 }
-                /** @var MailManager $manager */
-                $manager = $this->application->make('mail.manager');
-                $mailer = $manager->build(['transport' => 'array']);
-                $transport = $mailer->getSymfonyTransport();
-                assert($transport instanceof ArrayTransport);
-                $this->test->smtpTransports[] = $transport;
+                $inner = new ArrayTransport;
+                $this->test->smtpTransports[] = $inner;
+                $transport = new class($inner, $this->test) implements TransportInterface
+                {
+                    public function __construct(private readonly ArrayTransport $inner, private readonly TestCase $test) {}
 
-                return $mailer;
+                    public function send(RawMessage $message, ?Envelope $envelope = null): ?SentMessage
+                    {
+                        $sent = $this->inner->send($message, $envelope);
+                        $sent?->appendDebug($this->test->smtpTranscript);
+
+                        return $sent;
+                    }
+
+                    public function __toString(): string
+                    {
+                        return 'uji';
+                    }
+                };
+
+                return new Mailer('uji', $this->application->make('view'), $transport, $this->application->make('events'));
             }
         });
     }

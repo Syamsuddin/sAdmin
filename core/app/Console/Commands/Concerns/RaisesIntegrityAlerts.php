@@ -23,13 +23,14 @@ trait RaisesIntegrityAlerts
         }
 
         if ($raised->alreadyNotified) {
-            $this->line("Alert audit_mismatch {$raised->alertId} untuk kejadian ini sudah terkirim sebelumnya.");
+            $this->line("Alert audit_mismatch {$raised->alertId} untuk kejadian ini sudah terkirim dalam 24 jam terakhir.");
 
             return;
         }
         if ($raised->delivered()) {
             $count = count($raised->report->delivered ?? []);
-            $this->line("Alert audit_mismatch critical {$raised->alertId} terkirim ke {$count} kanal.");
+            $what = $raised->reminder ? 'Pengingat alert' : 'Alert';
+            $this->line("{$what} audit_mismatch critical {$raised->alertId} terkirim ke {$count} kanal.");
 
             return;
         }

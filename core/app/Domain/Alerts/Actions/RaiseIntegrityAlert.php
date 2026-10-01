@@ -19,18 +19,27 @@ use App\Models\Institution;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Throwable;
 
 /**
  * Membuka alert `audit_mismatch` critical lalu mengirimnya langsung ke semua kanal (ADR 0005 §2.2–2.3).
- * Satu kejadian = satu alert belum selesai; yang sudah terkirim tidak dikirim ulang. Penyimpanan yang gagal tak
- * pernah menghentikan pengiriman, dan tak ada galat yang lolos ke pendeteksi: exit code verify tak boleh berubah.
+ * Satu kejadian = satu alert belum selesai; yang sudah terkirim tidak dikirim ulang sebelum 24 jam, lalu dikirim
+ * sebagai pengingat selama kerusakannya masih terdeteksi. Penyimpanan yang gagal tak pernah menghentikan
+ * pengiriman, dan tak ada galat yang lolos ke pendeteksi: exit code verify tak boleh berubah.
  */
 final class RaiseIntegrityAlert
 {
     /** Kunci advisory dua bagian (kelas, hashtext(dedup_key)): satu pengirim per kejadian di semua proses. */
     public const LOCK_CLASS = 7301005;
+
+    /** Kunci yang dipegang proses lain ditunggu paling lama ±5 detik; sesudahnya kirim tanpa kunci (ganda > senyap). */
+    public const LOCK_ATTEMPTS = 10;
+
+    public const LOCK_POLL_MILLISECONDS = 500;
+
+    public const REMIND_AFTER_HOURS = 24;
 
     public function __construct(
         private readonly AppendAuditEntry $audit,
@@ -55,8 +64,7 @@ final class RaiseIntegrityAlert
         try {
             $stored = null;
             try {
-                DB::select('SELECT pg_advisory_lock(?, hashtext(?))', [self::LOCK_CLASS, $data->dedupKey()]);
-                $locked = true;
+                $locked = $this->lock($data);
                 $stored = $this->store($tenantId, $alertId, $data);
                 $alertId = $stored['id'];
             } catch (Throwable $e) {
@@ -67,9 +75,10 @@ final class RaiseIntegrityAlert
                 ]);
             }
 
-            if ($stored !== null && $stored['notified']) {
+            if ($stored !== null && $stored['notified'] && ! $stored['remind']) {
                 return new RaisedAlert($alertId, true, false, true, null);
             }
+            $reminder = $stored['remind'] ?? false;
 
             try {
                 $report = $this->dispatcher->deliver($tenantId, $this->message($data, $alertId, (string) $institution->console_hostname), $alertId);
@@ -84,10 +93,10 @@ final class RaiseIntegrityAlert
                     'channels_failed' => count($report->failed),
                 ]);
             } elseif ($stored !== null) {
-                $this->markNotified($tenantId, $alertId, $report);
+                $this->markNotified($tenantId, $alertId, $report, $reminder);
             }
 
-            return new RaisedAlert($alertId, $stored !== null, $stored['created'] ?? false, false, $report);
+            return new RaisedAlert($alertId, $stored !== null, $stored['created'] ?? false, false, $report, $reminder);
         } finally {
             if ($locked) {
                 $this->unlock($data);
@@ -95,7 +104,27 @@ final class RaiseIntegrityAlert
         }
     }
 
-    /** @return array{id: string, created: bool, notified: bool} */
+    /**
+     * Kunci advisory sesi dengan batas tunggu: `pg_advisory_lock` menunggu selamanya, sehingga pemegang kunci yang
+     * macet (SMTP yang menetes) atau sesi lain yang sengaja memegangnya akan menggantung pendeteksi.
+     */
+    private function lock(IntegrityAlert $data): bool
+    {
+        for ($attempt = 1; $attempt <= self::LOCK_ATTEMPTS; $attempt++) {
+            if (DB::scalar('SELECT pg_try_advisory_lock(?, hashtext(?))', [self::LOCK_CLASS, $data->dedupKey()]) === true) {
+                return true;
+            }
+            if ($attempt < self::LOCK_ATTEMPTS) {
+                Sleep::for(self::LOCK_POLL_MILLISECONDS)->milliseconds();
+            }
+        }
+
+        Log::warning('alert_lock_busy', ['dedup_key' => $data->dedupKey()]);
+
+        return false;
+    }
+
+    /** @return array{id: string, created: bool, notified: bool, remind: bool} */
     private function store(string $tenantId, string $alertId, IntegrityAlert $data): array
     {
         return DB::transaction(function () use ($tenantId, $alertId, $data): array {
@@ -147,7 +176,7 @@ final class RaiseIntegrityAlert
                     ],
                 ));
 
-                return ['id' => $alertId, 'created' => true, 'notified' => false];
+                return ['id' => $alertId, 'created' => true, 'notified' => false, 'remind' => false];
             }
 
             $existing = Alert::query()
@@ -156,18 +185,33 @@ final class RaiseIntegrityAlert
                 ->where('status', '<>', AlertStatus::Resolved->value)
                 ->firstOrFail();
 
-            return ['id' => $existing->id, 'created' => false, 'notified' => $existing->notified_at !== null];
+            $notified = $existing->notified_at !== null;
+
+            return [
+                'id' => $existing->id,
+                'created' => false,
+                'notified' => $notified,
+                'remind' => $notified && $existing->notified_at->lessThanOrEqualTo($this->remindBefore()),
+            ];
         });
     }
 
-    /** Hanya keberhasilan yang diaudit, agar percobaan ulang tak menumbuhkan audit tanpa batas (ADR 0005 §2.3). */
-    private function markNotified(string $tenantId, string $alertId, DeliveryReport $report): void
+    private function remindBefore(): CarbonImmutable
+    {
+        return CarbonImmutable::now()->subHours(self::REMIND_AFTER_HOURS);
+    }
+
+    /**
+     * Hanya keberhasilan yang diaudit, agar percobaan ulang tak menumbuhkan audit tanpa batas (ADR 0005 §2.3);
+     * pengingat menambah paling banyak satu entri per hari.
+     */
+    private function markNotified(string $tenantId, string $alertId, DeliveryReport $report, bool $reminder): void
     {
         try {
-            DB::transaction(function () use ($tenantId, $alertId, $report): void {
+            DB::transaction(function () use ($tenantId, $alertId, $report, $reminder): void {
                 $updated = Alert::query()
                     ->whereKey($alertId)
-                    ->whereNull('notified_at')
+                    ->where(fn ($query) => $query->whereNull('notified_at')->orWhere('notified_at', '<=', $this->remindBefore()))
                     ->update(['notified_at' => CarbonImmutable::now()]);
 
                 if ($updated === 1) {
@@ -178,7 +222,7 @@ final class RaiseIntegrityAlert
                         actionKey: 'alert.notify',
                         outcome: AuditOutcome::Ok,
                         target: "alert:{$alertId}",
-                        paramsRedacted: ['delivered' => count($report->delivered), 'failed' => count($report->failed)],
+                        paramsRedacted: ['delivered' => count($report->delivered), 'failed' => count($report->failed), 'reminder' => $reminder],
                     ));
                 }
             });

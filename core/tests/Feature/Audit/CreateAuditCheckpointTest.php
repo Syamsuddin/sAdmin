@@ -187,6 +187,7 @@ class CreateAuditCheckpointTest extends TestCase
     public function test_wrong_master_key_fails_closed_as_integrity_failure(): void
     {
         $this->useVaultKey();
+        $this->expectUndeliveredIntegrityAlert();
         Log::shouldReceive('critical')->once()->withArgs(fn (string $message): bool => $message === 'audit_checkpoint_failed');
 
         $this->artisan('sadmin:audit-checkpoint')

@@ -14,7 +14,8 @@ final class TelegramNotifier implements Notifier
 {
     public const API = 'https://api.telegram.org';
 
-    private const TOKEN_PATTERN = '/^[0-9]{5,20}:[A-Za-z0-9_-]{30,64}$/';
+    /** `D`: `$` tak boleh cocok sebelum baris baru di akhir. */
+    private const TOKEN_PATTERN = '/^[0-9]{5,20}:[A-Za-z0-9_-]{30,64}$/D';
 
     private const CONNECT_TIMEOUT = 5.0;
 

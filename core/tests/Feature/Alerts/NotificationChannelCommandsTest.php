@@ -105,6 +105,15 @@ class NotificationChannelCommandsTest extends TestCase
             ->expectsOutputToContain('alamat penerima bukan alamat email yang sah.')
             ->assertExitCode(1);
 
+        // Review F-04c RENDAH-2: `$` tanpa `D` menerima baris baru di akhir.
+        $this->artisan('sadmin:notify-channel-add', ['kind' => 'telegram', '--chat-id' => "12345\n"])
+            ->expectsOutputToContain('ID chat Telegram tidak sah.')
+            ->assertExitCode(1);
+        $this->artisan('sadmin:notify-channel-add', array_merge(self::SMTP_OPTIONS, ['--username' => "sadmin\n", '--host' => "smtp.contoh.test\n"]))
+            ->expectsOutputToContain('nama pengguna SMTP tidak sah.')
+            ->expectsOutputToContain('host SMTP tidak sah.')
+            ->assertExitCode(1);
+
         $this->assertSame(0, NotificationChannel::query()->count());
         $this->assertSame(0, Secret::query()->count());
         $this->assertSame(0, DB::table('audit_entries')->count());

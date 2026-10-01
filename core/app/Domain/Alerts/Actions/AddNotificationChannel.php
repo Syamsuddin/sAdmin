@@ -87,13 +87,13 @@ final class AddNotificationChannel
     {
         $rules = match ($kind) {
             ChannelKind::Telegram => [
-                'chat_id' => ['required', 'string', 'regex:/^(-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})$/'],
+                'chat_id' => ['required', 'string', 'regex:/^(-?[0-9]{1,20}|@[A-Za-z0-9_]{5,32})$/D'],
             ],
             ChannelKind::Smtp => [
-                'host' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/'],
+                'host' => ['required', 'string', 'max:253', 'regex:/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/D'],
                 'port' => ['required', 'integer', 'between:1,65535'],
                 'tls' => ['required', 'string', Rule::in(['implicit', 'starttls'])],
-                'username' => ['required', 'string', 'max:320', 'regex:/^[^\x00-\x1F\x7F]+$/'],
+                'username' => ['required', 'string', 'max:320', 'regex:/^[^\x00-\x1F\x7F]+$/D'],
                 'from' => ['required', 'string', 'email'],
                 'to' => ['required', 'array', 'min:1', 'max:10'],
                 'to.*' => ['required', 'string', 'email', 'distinct'],

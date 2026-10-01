@@ -6,6 +6,8 @@ use App\Domain\Alerts\Actions\RaiseIntegrityAlert;
 use App\Domain\Alerts\Data\IntegrityAlert;
 use App\Domain\Alerts\Data\RaisedAlert;
 use App\Domain\Alerts\Services\AlertDispatcher;
+use App\Domain\Audit\Data\ActorType;
+use App\Domain\Vault\Actions\DestroySecret;
 use App\Infrastructure\Notify\NotificationMessage;
 use App\Models\Alert;
 use App\Models\Institution;
@@ -92,7 +94,7 @@ class RaiseIntegrityAlertTest extends TestCase
         $this->assertEquals(['kind' => 'audit_mismatch', 'seq' => 57, 'severity' => 'critical'], json_decode($open->params_redacted, true));
         [$notify] = $this->auditEntries('alert.notify');
         $this->assertSame("alert:{$alert->id}", $notify->target);
-        $this->assertEquals(['delivered' => 2, 'failed' => 0], json_decode($notify->params_redacted, true));
+        $this->assertEquals(['delivered' => 2, 'failed' => 0, 'reminder' => false], json_decode($notify->params_redacted, true));
     }
 
     public function test_the_same_incident_is_never_sent_twice(): void
@@ -295,6 +297,88 @@ class RaiseIntegrityAlertTest extends TestCase
         $this->assertSame([$smtp->id], $raised->report?->delivered);
         $this->assertArrayHasKey($telegram->id, $raised->report->failed);
         $this->assertSame(['alert_notify_failed'], $this->loggedMessages('critical'));
+    }
+
+    public function test_unresolved_alert_is_resent_as_a_reminder_after_24_hours(): void
+    {
+        // Review F-04c SEDANG-4: kerusakan sesudah kerusakan pertama tak membuka alert baru, jadi insidennya diingatkan.
+        // Presisi detik: kolom timestamptz(0) menyimpan per detik.
+        $this->freezeSecond();
+        Institution::factory()->create();
+        $this->addTelegramChannel();
+        $this->telegramAccepts();
+
+        $first = $this->raise();
+        $this->travel(23)->hours();
+        $quiet = $this->raise();
+        $this->travel(2)->hours();
+        $reminder = $this->raise();
+
+        $this->assertTrue($quiet->alreadyNotified);
+        $this->assertFalse($reminder->alreadyNotified);
+        $this->assertTrue($reminder->reminder);
+        $this->assertTrue($reminder->delivered());
+        $this->assertSame($first->alertId, $reminder->alertId);
+        Http::assertSentCount(2);
+        $this->assertSame(1, Alert::query()->count());
+        $this->assertTrue(Alert::query()->sole()->notified_at->equalTo(now()));
+        $notifies = array_map(fn (object $row): array => json_decode($row->params_redacted, true), $this->auditEntries('alert.notify'));
+        $this->assertEquals([['delivered' => 1, 'failed' => 0, 'reminder' => false], ['delivered' => 1, 'failed' => 0, 'reminder' => true]], $notifies);
+        $this->assertCount(1, $this->auditEntries('alert.open'));
+    }
+
+    public function test_busy_lock_is_waited_for_a_bounded_time_then_delivery_goes_ahead(): void
+    {
+        // Review F-04c SEDANG-2: sesi lain (atau pengirim yang macet) memegang kunci kejadian ini.
+        Institution::factory()->create();
+        $this->addTelegramChannel();
+        $this->telegramAccepts();
+        config(['database.connections.pgsql_pemegang_kunci' => config('database.connections.pgsql')]);
+        $holder = DB::connection('pgsql_pemegang_kunci');
+        $holder->select('SELECT pg_advisory_lock(?, hashtext(?))', [RaiseIntegrityAlert::LOCK_CLASS, 'audit_mismatch:seq:57']);
+
+        try {
+            $raised = $this->raise();
+        } finally {
+            $holder->select('SELECT pg_advisory_unlock_all()');
+            DB::disconnect('pgsql_pemegang_kunci');
+        }
+
+        $this->assertTrue($raised->delivered());
+        Sleep::assertSleptTimes(RaiseIntegrityAlert::LOCK_ATTEMPTS - 1);
+        $this->assertSame(['alert_lock_busy'], $this->loggedMessages('warning'));
+        $this->assertSame(0, $this->advisoryLocks());
+    }
+
+    public function test_unexpected_error_on_one_channel_never_stops_the_others(): void
+    {
+        // Review F-04c SEDANG-3: rahasia kanal pertama dihancurkan, config kanal kedua rusak.
+        Institution::factory()->create();
+        $destroyed = $this->addTelegramChannel('-1001');
+        $broken = $this->addSmtpChannel();
+        $healthy = $this->addTelegramChannel('-1003');
+        app(DestroySecret::class)->handle($destroyed->secret_id, ActorType::LocalRoot, null);
+        DB::table('notification_channels')->where('id', $broken->id)->update(['config' => '{"host": "smtp.contoh-instansi.test"}']);
+        $this->telegramAccepts();
+
+        $raised = $this->raise();
+
+        $this->assertSame([$healthy->id], $raised->report?->delivered);
+        $this->assertArrayHasKey($destroyed->id, $raised->report->failed);
+        $this->assertArrayHasKey($broken->id, $raised->report->failed);
+        $this->assertNotNull(Alert::query()->sole()->notified_at);
+    }
+
+    public function test_telegram_channels_are_tried_before_smtp(): void
+    {
+        Institution::factory()->create();
+        $smtp = $this->addSmtpChannel();
+        $telegram = $this->addTelegramChannel();
+        $this->telegramAccepts();
+
+        $raised = $this->raise();
+
+        $this->assertSame([$telegram->id, $smtp->id], $raised->report?->delivered);
     }
 
     public function test_message_has_the_three_parts_of_docs_14_and_the_correlation_id(): void

@@ -7,6 +7,7 @@ use App\Infrastructure\Notify\NotifyFailed;
 use App\Infrastructure\Notify\SmtpNotifier;
 use App\Infrastructure\Notify\SmtpTransportFactory;
 use App\Infrastructure\Notify\TelegramNotifier;
+use App\Infrastructure\Vault\SecretValue;
 use App\Models\Institution;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -18,6 +19,7 @@ use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
 use Tests\Support\InteractsWithNotify;
 use Tests\Support\InteractsWithVault;
 use Tests\TestCase;
+use Throwable;
 
 /** Adaptor Notify (ADR 0005 §2.4–2.6): bentuk permintaan, TLS wajib, dan galat yang dibersihkan. */
 class NotifierTest extends TestCase
@@ -131,6 +133,101 @@ class NotifierTest extends TestCase
         $this->assertSame('[sAdmin][CRITICAL] Uji — host', $email->getSubject());
         $this->assertSame("Baris satu <b>bukan markup</b>\nBaris dua", $email->getTextBody());
         $this->assertNull($email->getHtmlBody());
+    }
+
+    public function test_stripped_starttls_counts_as_failed_not_delivered(): void
+    {
+        // Review F-04c SEDANG-1: server menolak EHLO lalu menerima HELO, Symfony melewati require_tls.
+        $channel = $this->addSmtpChannel(['tls' => 'starttls']);
+        $this->smtpTranscript = self::DOWNGRADED_TRANSCRIPT;
+
+        $this->expectException(NotifyFailed::class);
+        $this->expectExceptionMessage('tidak terbukti memakai STARTTLS');
+
+        app(SmtpNotifier::class)->send($channel, $this->message, 10);
+    }
+
+    public function test_implicit_tls_needs_no_starttls_in_the_transcript(): void
+    {
+        $channel = $this->addSmtpChannel(['port' => 465, 'tls' => 'implicit']);
+        $this->smtpTranscript = '';
+
+        app(SmtpNotifier::class)->send($channel, $this->message, 10);
+
+        $this->assertCount(1, $this->sentEmails());
+    }
+
+    public function test_starttls_proof_requires_the_client_command_answered_with_220(): void
+    {
+        $this->assertTrue(SmtpNotifier::startTlsNegotiated(self::STARTTLS_TRANSCRIPT));
+        $this->assertFalse(SmtpNotifier::startTlsNegotiated(self::DOWNGRADED_TRANSCRIPT));
+        $this->assertFalse(SmtpNotifier::startTlsNegotiated("[t] > STARTTLS\n[t] < 454 4.7.0 TLS not available\r\n"));
+        // Baris server selalu berawalan `< `: teks balasan tak bisa memalsukan perintah klien.
+        $this->assertFalse(SmtpNotifier::startTlsNegotiated("[t] < 250 ok [t] > STARTTLS\n[t] < 220 ready\r\n"));
+        $this->assertFalse(SmtpNotifier::startTlsNegotiated(''));
+    }
+
+    public function test_failure_stack_trace_never_carries_the_token(): void
+    {
+        // Review F-04c RENDAH-1: argumen jejak (zend.exception_ignore_args mati) memuat galat asli bertoken.
+        $token = self::telegramToken();
+        $channel = $this->addTelegramChannel(token: $token);
+        Http::fake(['api.telegram.org/*' => Http::failedConnection()]);
+
+        try {
+            app(TelegramNotifier::class)->send($channel, $this->message, 10);
+            $this->fail('Koneksi gagal seharusnya NotifyFailed.');
+        } catch (NotifyFailed $e) {
+            $this->assertSame([], $this->traceArgumentsContaining($e, explode(':', $token)[1]));
+        }
+    }
+
+    /**
+     * Argumen jejak yang memuat $needle: string, larik, dan exception (pesan serta jejaknya) ditelusuri sampai
+     * kedalaman terbatas; objek lain dilewati karena serializer jejak tak membukanya.
+     *
+     * @return list<string>
+     */
+    private function traceArgumentsContaining(Throwable $e, string $needle, int $depth = 0): array
+    {
+        $hits = [];
+        foreach ($e->getTrace() as $i => $frame) {
+            foreach ($frame['args'] ?? [] as $j => $arg) {
+                foreach ($this->valuesContaining($arg, $needle, $depth) as $hit) {
+                    $hits[] = "frame {$i} arg {$j}: {$hit}";
+                }
+            }
+        }
+
+        return $hits;
+    }
+
+    /** @return list<string> */
+    private function valuesContaining(mixed $value, string $needle, int $depth): array
+    {
+        if ($depth > 3) {
+            return [];
+        }
+        if (is_string($value)) {
+            return str_contains($value, $needle) ? ['string'] : [];
+        }
+        if (is_array($value)) {
+            return array_merge([], ...array_map(fn (mixed $item): array => $this->valuesContaining($item, $needle, $depth + 1), array_values($value)));
+        }
+        if ($value instanceof Throwable) {
+            return array_merge(
+                str_contains($value->getMessage(), $needle) ? [class_basename($value).' message'] : [],
+                $this->traceArgumentsContaining($value, $needle, $depth + 1),
+            );
+        }
+
+        return [];
+    }
+
+    public function test_token_with_a_trailing_newline_is_not_valid(): void
+    {
+        $this->assertTrue(TelegramNotifier::isValidToken(new SecretValue(self::telegramToken())));
+        $this->assertFalse(TelegramNotifier::isValidToken(new SecretValue(self::telegramToken()."\n")));
     }
 
     public function test_implicit_tls_channel_uses_smtps(): void
