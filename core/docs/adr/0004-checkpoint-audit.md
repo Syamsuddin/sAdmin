@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-01 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Format checkpoint dan isi yang ditandatangani termasuk gerbang manusia (docs/22_CHANGE_POLICY.md, "perubahan format rantai audit atau checkpoint"; `../kontrak/KONTRAK.md` §1). Setelah checkpoint produksi pertama dijangkarkan ke agen, mengubah format memutus verifikasi riwayat |
 | Lingkup | Kunci audit (pembuatan, penyimpanan, kunci publik), format tanda tangan checkpoint, penyimpanan `audit_checkpoints`, kapan checkpoint dibuat, dan cara `sadmin:audit-verify` memakainya |
@@ -132,3 +132,4 @@ Bila brankas tidak tersedia (`VaultUnavailable`) saat langkah 1, langkah 1–2 d
 - 2026-10-01: diusulkan bersama slice F-04b Checkpoint audit (M1).
 - 2026-10-01: direvisi setelah review adversarial (0 kritis, 0 tinggi, 2 sedang, 7 rendah). Perubahannya: verify memakai batas checkpoint yang dibaca sebelum rantai ditelusuri; pemeriksaan struktural tetap berjalan saat brankas tak tersedia; baris checkpoint tak lengkap jadi galat integritas; `audit-key-init` menolak bila kunci pernah ada atau checkpoint sudah ada; `reveal()` menolak seed Ed25519; kegagalan baca-ulang checkpoint dicatat `critical`; KONTRAK §3 mewajibkan base64 kanonik (vektor 04). Format pesan yang ditandatangani dan vektor 01–03 tidak berubah.
 - 2026-10-01: klausul titik pakai `SecretValue::expose()` di §2.1 diperluas ke `app/Infrastructure/Notify` oleh ADR 0005 §2.6 (dipilih pemilik produk). Kunci audit, format, dan verifikasi tidak berubah.
+- 2026-10-01: **diterima** pemilik produk bersama kontrak 0.3.0 (`../kontrak/KONTRAK.md` §3). Mulai saat ini, setiap perubahan pada bagian 2 wajib lewat gerbang manusia (docs/22, "perubahan format rantai audit atau checkpoint").

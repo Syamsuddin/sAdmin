@@ -7,9 +7,9 @@ Keputusan arsitektural atau keamanan baru dicatat di sini **sebelum** diimplemen
 |---|---|---|
 | [0001](0001-format-rantai-audit.md) | Format hash rantai audit | Diterima |
 | [0002](0002-pustaka-webauthn.md) | Pustaka WebAuthn: web-auth/webauthn-lib | Diterima |
-| [0003](0003-format-brankas.md) | Format brankas: enkripsi envelope dan kunci induk | Diusulkan |
-| [0004](0004-checkpoint-audit.md) | Checkpoint audit bertanda tangan | Diusulkan |
-| [0005](0005-peringatan-integritas.md) | Peringatan integritas dan kanal notifikasi core | Diusulkan |
+| [0003](0003-format-brankas.md) | Format brankas: enkripsi envelope dan kunci induk | Diterima |
+| [0004](0004-checkpoint-audit.md) | Checkpoint audit bertanda tangan | Diterima |
+| [0005](0005-peringatan-integritas.md) | Peringatan integritas dan kanal notifikasi core | Diterima |
 
 ## Templat
 ```markdown

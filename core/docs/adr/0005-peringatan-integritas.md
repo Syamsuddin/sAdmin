@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Diusulkan** — menunggu keputusan pemilik produk |
+| Status | **Diterima** — disetujui pemilik produk, 2026-10-01 |
 | Tanggal | 2026-10-01 |
 | Pemutus | Pemilik produk. Ini perubahan keamanan (gerbang manusia, docs/22_CHANGE_POLICY.md): ADR ini menambah titik pakai nilai rahasia di luar brankas dan menentukan apakah insiden integritas sampai ke admin. Dua pilihan inti (§2.3 sinkron, §2.6 titik pakai) sudah dipilih pemilik produk pada 2026-10-01 |
 | Lingkup | Kapan core membuka alert `audit_mismatch`, deduplikasi dan pencatatannya, pengiriman ke kanal notifikasi (Telegram, SMTP instansi), penyimpanan kanal beserta rahasianya, dan titik pakai `SecretValue::expose()` |
@@ -119,3 +119,4 @@ Exit 2 `sadmin:audit-verify` (brankas tak tersedia) **bukan** `audit_mismatch` d
   - argumen jejak `NotifyFailed` ditandai sensitif;
   - regex validasi memakai `D`;
   - kunci audit yang gagal dibuka saat checkpoint kini membuka alert.
+- 2026-10-01: **diterima** pemilik produk. Mulai saat ini, setiap perubahan pada bagian 2 wajib lewat gerbang manusia (docs/22).
